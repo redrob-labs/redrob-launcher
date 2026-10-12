@@ -70,4 +70,5 @@ writes the same key into the app's own file. It knows these:
 | Redrob Code | `$XDG_DATA_HOME/redrob/auth.json` (`~/.local/share/redrob/auth.json`) on every platform | `"redrob": {"type": "api", "key": "rk_…"}`; the file's other providers are kept |
 
 Every other app shows **Not supported yet** until it reads the shared file or the launcher learns its
-own. The code is `crates/native/src/account.rs` (`connector`).
+own. The code is `crates/native/src/account.rs` (`connector`). Where each app stands:
+[app-integration.md](./app-integration.md).
