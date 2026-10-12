@@ -36,8 +36,10 @@ jobs:
         with:
           release: "15.1"
           usesh: true
-          cpu: 4
-          mem: 12288
+          # Private repositories get the 2-CPU, 7 GB runner: a bigger VM fails to start
+          # ("cannot set up guest memory").
+          cpu: 2
+          mem: 5120
           copyback: false
           prepare: |
             pkg install -y bash git curl pkgconf cmake python3 libxkbcommon wayland libX11 libXcursor libXrandr libXi libxcb mesa-libs vulkan-loader gtk3 fontconfig freetype2 alsa-lib
@@ -47,7 +49,7 @@ jobs:
             . "$HOME/.cargo/env"
             git config --global --add safe.directory "*"
             rustc --version
-            export CARGO_TARGET_DIR=/var/tmp/redrob-launcher-target CARGO_BUILD_JOBS=4
+            export CARGO_TARGET_DIR=/var/tmp/redrob-launcher-target CARGO_BUILD_JOBS=2
             CARGO_PROFILE_DEV_DEBUG=0 cargo test --workspace --locked
             bash packaging/freebsd/package.sh
             tar -tzf dist/release/redrob-launcher-*-freebsd-x86_64.tar.gz \
