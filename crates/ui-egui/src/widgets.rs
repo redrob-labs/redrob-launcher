@@ -1,4 +1,4 @@
-//! Small building blocks in getartcraft.com's style: mono labels, square buttons, badges and
+//! Small building blocks in the Redrob design system's style: labels, square buttons, badges and
 //! hairline cell groups.
 //!
 //! Upper-case text is drawn upper case but announced to screen readers as written.
@@ -20,13 +20,14 @@ pub fn tone_color(t: &Tokens, tone: Tone) -> Color32 {
     }
 }
 
-/// `text` laid out upper case in `family`, `spacing` points between letters.
+/// `text` laid out as written in `family`, `spacing` points between letters. The design system
+/// never sets labels in capitals, so the text is not upper-cased.
 pub fn caps(ui: &Ui, text: &str, size: f32, family: egui::FontFamily, spacing: f32, color: Color32) -> Arc<Galley> {
     let format = egui::TextFormat { font_id: egui::FontId::new(size, family), color, extra_letter_spacing: spacing, ..Default::default() };
-    ui.painter().layout_job(egui::text::LayoutJob::single_section(text.to_uppercase(), format))
+    ui.painter().layout_job(egui::text::LayoutJob::single_section(text.to_owned(), format))
 }
 
-/// A `.hud-label`: 11 px Geist Mono, upper case, widely spaced.
+/// A label: the design system's meta line (12 px Pretendard 500, sentence case).
 pub fn hud_galley(ui: &Ui, text: &str, color: Color32) -> Arc<Galley> {
     caps(ui, text, theme::HUD_SIZE, theme::mono(), theme::HUD_SPACING, color)
 }
@@ -60,7 +61,7 @@ pub fn hud_elided(ui: &mut Ui, text: &str, color: Color32, max_width: f32) -> Re
         extra_letter_spacing: theme::HUD_SPACING,
         ..Default::default()
     };
-    let mut job = egui::text::LayoutJob::single_section(text.to_uppercase(), format);
+    let mut job = egui::text::LayoutJob::single_section(text.to_owned(), format);
     job.wrap = egui::text::TextWrapping::truncate_at_width(max_width.min(ui.available_width()).max(0.0));
     let galley = ui.painter().layout_job(job);
     let elided = galley.elided;
@@ -486,31 +487,10 @@ pub fn more_menu<R>(ui: &mut Ui, add_contents: impl FnOnce(&mut Ui) -> R) {
     });
 }
 
-/// ArtCraft's social accounts as a row of small monochrome icons (faint, brighter on hover).
-/// In a right-to-left layout they still read left to right.
-pub fn social_icons(ui: &mut Ui, size: f32) {
+/// An app's name in the display face, in ink: product colour is never text (design system,
+/// `20-color.md`).
+pub fn wordmark(ui: &mut Ui, app: &redrob_launcher_core::CraftApp, size: f32) -> Response {
     let t = Tokens::get(ui.ctx());
-    let rtl = ui.layout().prefer_right_to_left();
-    let services = artcraft_launcher_core::catalog::SOCIAL;
-    let ordered: Vec<&(&str, &str)> = if rtl { services.iter().rev().collect() } else { services.iter().collect() };
-    for (name, url) in ordered {
-        let Some(icon) = crate::icons::social(name) else { continue };
-        let pad = 4.0;
-        let (rect, resp) = ui.allocate_exact_size(vec2(size + 2.0 * pad, size + 2.0 * pad), Sense::click());
-        let color = if resp.hovered() { t.ink_strong } else { t.faint };
-        egui::Image::new(icon).tint(color).paint_at(ui, rect.shrink(pad));
-        resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Link, true, *name));
-        let resp = resp.on_hover_text(crate::i18n::fmt(tl!("ArtCraft on {name}"), &[("name", name)])).on_hover_cursor(egui::CursorIcon::PointingHand);
-        if resp.clicked() {
-            ui.ctx().open_url(egui::OpenUrl::new_tab(*url));
-        }
-    }
-}
-
-/// An app's name as the site sets it: Archivo, with "Craft" in the app's colour.
-pub fn wordmark(ui: &mut Ui, app: &artcraft_launcher_core::CraftApp, size: f32) -> Response {
-    let t = Tokens::get(ui.ctx());
-    let (prefix, craft) = app.name.strip_suffix("Craft").map_or((app.name, ""), |p| (p, "Craft"));
     let mut job = egui::text::LayoutJob::default();
     let format = |color| egui::TextFormat {
         font_id: egui::FontId::new(size, theme::display()),
@@ -518,8 +498,7 @@ pub fn wordmark(ui: &mut Ui, app: &artcraft_launcher_core::CraftApp, size: f32) 
         extra_letter_spacing: -0.03 * size,
         ..Default::default()
     };
-    job.append(prefix, 0.0, format(t.ink_strong));
-    job.append(craft, 0.0, format(t.app_ink(app)));
+    job.append(app.name, 0.0, format(t.ink_strong));
     ui.add(egui::Label::new(job).selectable(false))
 }
 

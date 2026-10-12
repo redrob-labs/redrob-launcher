@@ -26,16 +26,17 @@ English: [UPSTREAM.md](./UPSTREAM.md)
 
 ## 이 포크가 소유하지 않는 것
 
-상류 `NOTICE`, [`docs/brand/LICENSE-brand.txt`](./docs/brand/LICENSE-brand.txt),
-[`assets/app-icon/LICENSE.txt`](./assets/app-icon/LICENSE.txt)는 ArtCraft 이름·워드마크·로고·"A" 마크와 그것으로
+상류 `NOTICE`, [`docs/brand/LICENSE-brand.txt`](https://github.com/storytold/craft-launcher/blob/v0.3.2/docs/brand/LICENSE-brand.txt),
+[`assets/app-icon/LICENSE.txt`](https://github.com/storytold/craft-launcher/blob/v0.3.2/assets/app-icon/LICENSE.txt)는 ArtCraft 이름·워드마크·로고·"A" 마크와 그것으로
 만든 앱 아이콘·트레이 아이콘이 ArtCraft Team의 상표이며 MIT OR Apache-2.0에 포함되지 **않고**, 포크와 변형본은
 이를 제거해야 한다고 명시합니다. `upstream-base.json`은 `docs/brand/`와 `assets/app-icon/`을
-`proprietaryPrefixes`에 적어 두고, 브랜드 작업이 그 아래 모든 파일을 레드롭 디자인 시스템 원본으로 교체하면
-`proprietaryReplaced`를 `true`로 바꿉니다. 그 뒤로는 `scripts/check_upstream_boundary.py`가 상류와 바이트가 같은
-파일이 하나라도 있으면 실패합니다.
+`proprietaryPrefixes`에 적어 두었습니다. 브랜드 작업에서 `docs/brand/`를 지우고 `assets/app-icon/`을 레드롭
+디자인 시스템 원본(`assets/brand/`)으로 다시 만들었으므로 `proprietaryReplaced`는 `true`이고,
+`scripts/check_upstream_boundary.py`는 그 아래 파일이 상류와 바이트가 같아지면 실패합니다.
 
-`assets/app-icons/` 아래 Craft 앱 아이콘은 각 상류 앱 저장소에서 MIT OR Apache-2.0으로 온 것입니다. 앱 목록을
-레드롭 앱으로 옮길 때 레드롭 제품 아이콘으로 교체합니다. 이유는 라이선스가 아니라 제품 정체성입니다.
+`assets/app-icons/` 아래 상류 Craft 앱 아이콘(MIT OR Apache-2.0)은 앱 목록과 함께 레드롭 제품 아이콘으로
+바꿨습니다. 이유는 라이선스가 아니라 제품 정체성입니다. 상류의 릴리스 피드(`api.storyteller.ai`)와 재사용 CI
+워크플로는 호출하지 않습니다. 피드 주소는 비워 두었고(`crates/core/src/feed.rs`) CI 워크플로는 저장소 안에 풀어 썼습니다.
 
 상류의 `release.yml`은 유지하지 않고 제거했습니다. 상류 자체의 `craft-common-actions` 저장소에 있는 재사용
 워크플로를 상류의 서명 시크릿으로 호출하기 때문입니다. 우리 릴리스 워크플로는 이 조직의 시크릿 기준으로 작성합니다.

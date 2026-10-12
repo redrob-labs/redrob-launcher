@@ -166,8 +166,8 @@ mod tests {
     #[test]
     fn face_index_finds_families_in_real_fonts() {
         // The bundled Latin faces stand in for system fonts the test machine may not have.
-        let inter: &[u8] = include_bytes!("../../../assets/fonts/Inter-Variable.ttf");
-        assert_eq!(face_index(inter, "Inter"), Some(0));
+        let inter: &[u8] = include_bytes!("../../../assets/fonts/Pretendard-Regular.ttf");
+        assert_eq!(face_index(inter, "Pretendard"), Some(0));
         assert_eq!(face_index(inter, "PingFang SC"), None);
     }
 

@@ -29,18 +29,20 @@ replay a growing collision surface on every bump for no gain.
 
 ## What this fork does not own
 
-Upstream's `NOTICE`, [`docs/brand/LICENSE-brand.txt`](./docs/brand/LICENSE-brand.txt) and
-[`assets/app-icon/LICENSE.txt`](./assets/app-icon/LICENSE.txt) state that the ArtCraft name, wordmark, logo
+Upstream's `NOTICE`, [`docs/brand/LICENSE-brand.txt`](https://github.com/storytold/craft-launcher/blob/v0.3.2/docs/brand/LICENSE-brand.txt) and
+[`assets/app-icon/LICENSE.txt`](https://github.com/storytold/craft-launcher/blob/v0.3.2/assets/app-icon/LICENSE.txt) state that the ArtCraft name, wordmark, logo
 and "A" mark, including the app icon and tray icon rendered from it, are trademarks of the ArtCraft Team,
 **not** covered by MIT OR Apache-2.0, and that forks and modified versions must remove them.
 `upstream-base.json` lists `docs/brand/` and `assets/app-icon/` under `proprietaryPrefixes`;
-`proprietaryReplaced` flips to `true` when the brand pass replaces every file there with Redrob
-design-system sources, after which `scripts/check_upstream_boundary.py` fails if any file is ever
-byte-identical to upstream's again.
+The brand pass removed `docs/brand/` and rebuilt `assets/app-icon/` from Redrob design-system
+sources (`assets/brand/`), so `proprietaryReplaced` is `true` and
+`scripts/check_upstream_boundary.py` fails if any file there is ever byte-identical to upstream's
+again.
 
-The Craft app icons under `assets/app-icons/` come from each upstream app's repository under MIT OR
-Apache-2.0. They are replaced with Redrob product icons when the catalogue moves to Redrob apps, for
-product identity, not for licensing.
+Upstream's Craft app icons under `assets/app-icons/` (MIT OR Apache-2.0, from each upstream app) were
+replaced with Redrob product icons along with the catalogue, for product identity, not for licensing.
+Upstream's release feed (`api.storyteller.ai`) and its reusable CI workflows are never called: the
+feed URL is unset (`crates/core/src/feed.rs`) and the CI workflows are inlined.
 
 Upstream's `release.yml` was removed rather than kept: it called a reusable workflow in upstream's own
 `craft-common-actions` repository with upstream's signing secrets. Our release workflow is written against

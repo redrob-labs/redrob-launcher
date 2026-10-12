@@ -1,14 +1,14 @@
-//! Finding Craft Apps that are already installed, however they got there.
+//! Finding Redrob apps that are already installed, however they got there.
 //!
 //! - macOS: `<App>.app` in `/Applications` or `~/Applications`, read from its `Info.plist`.
-//! - Windows: the Windows Installer's uninstall entries (`Learning Machines LLC`), and portable
+//! - Windows: the Windows Installer's uninstall entries (`Redrob`), and portable
 //!   copies the launcher unpacked.
 //! - Linux: AppImages in `~/Applications` (where the launcher and AppImageLauncher put them),
 //!   `~/AppImages` (Gear Lever) and `~/.local/bin`, Debian/RPM packages, Flatpaks, and tarball
 //!   installs.
 //! - FreeBSD: tarball installs and `/usr/local/bin/<app>`.
 
-use artcraft_launcher_core::{CraftApp, InstallSource, Installed, version};
+use redrob_launcher_core::{CraftApp, InstallSource, Installed, version};
 
 use crate::manifest::Manifest;
 
@@ -70,8 +70,8 @@ fn from_manifest(app: &CraftApp, manifest: &Manifest) -> Option<Installed> {
 
 /// Whether a file name is an AppImage of the app with asset stems `stems`, and the version its
 /// name gives. Matches only the names a release AppImage ends up with: the release's own
-/// (`photocraft-0.6.0-linux-x86_64.AppImage`) and the bare app name Gear Lever renames it to
-/// (`photocraft.appimage`, version unknown). The extension's case doesn't matter.
+/// (`redrob-canvas-0.6.0-linux-x86_64.AppImage`) and the bare app name Gear Lever renames it to
+/// (`redrob-canvas.appimage`, version unknown). The extension's case doesn't matter.
 #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 pub(crate) fn appimage_version(name: &str, stems: &[&str]) -> Option<Option<String>> {
     let split = name.len().checked_sub(".appimage".len())?;
@@ -82,8 +82,8 @@ pub(crate) fn appimage_version(name: &str, stems: &[&str]) -> Option<Option<Stri
     if stems.iter().any(|s| base.eq_ignore_ascii_case(s)) {
         return Some(None);
     }
-    let parsed = artcraft_launcher_core::platform::parse_asset_name(&format!("{base}.AppImage"), stems)?;
-    (parsed.kind == artcraft_launcher_core::PackageKind::AppImage && parsed.token.starts_with("linux-")).then_some(Some(parsed.version))
+    let parsed = redrob_launcher_core::platform::parse_asset_name(&format!("{base}.AppImage"), stems)?;
+    (parsed.kind == redrob_launcher_core::PackageKind::AppImage && parsed.token.starts_with("linux-")).then_some(Some(parsed.version))
 }
 
 #[cfg(target_os = "macos")]
@@ -132,12 +132,12 @@ pub mod windows {
     use super::*;
 
     const UNINSTALL: &str = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall";
-    const PUBLISHER: &str = "Learning Machines LLC";
+    const PUBLISHER: &str = "Redrob";
 
     /// An MSI install found in the registry.
     pub struct MsiInstall {
         pub product_code: String,
-        pub version: Option<artcraft_launcher_core::version::Version>,
+        pub version: Option<redrob_launcher_core::version::Version>,
         pub exe: Option<PathBuf>,
     }
 
@@ -211,11 +211,11 @@ pub mod linux {
     use crate::packages::{self, Package};
     use crate::process::capture;
 
-    /// Installed Craft App packages from every package manager on this system (dpkg, rpm,
+    /// Installed Redrob app packages from every package manager on this system (dpkg, rpm,
     /// pacman, Flatpak). Read once per detection pass.
     pub fn packages() -> Vec<Package> {
         let ours = |name: &str| {
-            artcraft_launcher_core::SUITE.iter().any(|a| {
+            redrob_launcher_core::SUITE.iter().any(|a| {
                 [InstallSource::Deb, InstallSource::Rpm, InstallSource::Pacman, InstallSource::Flatpak]
                     .iter()
                     .any(|m| crate::packages::candidate_names(a, *m).iter().any(|n| n == name))
@@ -239,7 +239,7 @@ pub mod linux {
         if let Some(list) = crate::process::capture_flatpak(&["list", "--app", &arch, "--columns=application,version"], t) {
             let mut flatpaks = packages::parse_flatpak_list(&list);
             // Bundles built from a release tarball often list no version: ask Flatpak directly.
-            for (id, version) in flatpaks.iter_mut().filter(|(id, v)| v.is_empty() && id.starts_with("ai.storyteller.")) {
+            for (id, version) in flatpaks.iter_mut().filter(|(id, v)| v.is_empty() && id.starts_with("ai.redrob.")) {
                 if let Some(v) = crate::process::capture_flatpak(&["info", &arch, id], t).as_deref().and_then(packages::parse_flatpak_info) {
                     *version = v;
                 }
@@ -373,23 +373,23 @@ mod linux_tests {
     #[test]
     fn ours_filter_matches_rpm_packages() {
         let ours = |name: &str| {
-            artcraft_launcher_core::SUITE.iter().any(|a| {
+            redrob_launcher_core::SUITE.iter().any(|a| {
                 [InstallSource::Deb, InstallSource::Rpm, InstallSource::Pacman, InstallSource::Flatpak]
                     .iter()
                     .any(|m| crate::packages::candidate_names(a, *m).iter().any(|n| n == name))
             })
         };
-        assert!(ours("photocraft"));
-        assert!(ours("ai.storyteller.photocraft"));
+        assert!(ours("redrob-canvas"));
+        assert!(ours("ai.redrob.canvas"));
         assert!(!ours("unrelated-package"));
     }
 
     #[test]
     fn reads_binary_version_from_cli() {
-        let photo = CraftApp::by_id("photocraft").unwrap();
+        let photo = CraftApp::by_id("redrob-canvas").unwrap();
         let temp_dir = tempfile::tempdir().unwrap();
-        let bin = temp_dir.path().join("photocraft");
-        std::fs::write(&bin, "#!/bin/sh\necho 'photocraft 0.6.0 (0c72d9542, 2026-10-10)'\n").unwrap();
+        let bin = temp_dir.path().join("redrob-canvas");
+        std::fs::write(&bin, "#!/bin/sh\necho 'redrob-canvas 0.6.0 (0c72d9542, 2026-10-10)'\n").unwrap();
         use std::os::unix::fs::PermissionsExt;
         std::fs::set_permissions(&bin, std::fs::Permissions::from_mode(0o755)).unwrap();
         let ver = linux::binary_version(&bin, photo.id);
@@ -403,22 +403,22 @@ mod tests {
 
     #[test]
     fn recognises_appimage_names_conservatively() {
-        let pdf = ["pdfcraft", "printcraft"];
+        let pdf = ["redrob-office", "redrob-docs"];
         let v = |n: &str| appimage_version(n, &pdf);
-        assert_eq!(v("pdfcraft-0.3.0-linux-x86_64.AppImage"), Some(Some("0.3.0".into())));
-        assert_eq!(v("printcraft-0.2.1-linux-aarch64.appimage"), Some(Some("0.2.1".into())));
-        assert_eq!(v("pdfcraft-0.3.0-rc.1-linux-x86_64.AppImage"), Some(Some("0.3.0-rc.1".into())));
+        assert_eq!(v("redrob-office-0.3.0-linux-x86_64.AppImage"), Some(Some("0.3.0".into())));
+        assert_eq!(v("redrob-docs-0.2.1-linux-aarch64.appimage"), Some(Some("0.2.1".into())));
+        assert_eq!(v("redrob-office-0.3.0-rc.1-linux-x86_64.AppImage"), Some(Some("0.3.0-rc.1".into())));
         // Gear Lever's rename, and a plain rename by hand.
-        assert_eq!(v("pdfcraft.appimage"), Some(None));
-        assert_eq!(v("PdfCraft.AppImage"), Some(None));
+        assert_eq!(v("redrob-office.appimage"), Some(None));
+        assert_eq!(v("Redrob-Office.AppImage"), Some(None));
         for other in [
-            "pdfcraft-0.3.0-linux-x86_64.AppImage.zsync",
-            "pdfcraft-0.3.0-linux-x86_64.deb",
-            "pdfcraft-0.3.0-windows-x64.AppImage",
-            "pdfcraft-cli-0.3.0-linux-x86_64.AppImage",
-            "photocraft-0.6.0-linux-x86_64.AppImage",
+            "redrob-office-0.3.0-linux-x86_64.AppImage.zsync",
+            "redrob-office-0.3.0-linux-x86_64.deb",
+            "redrob-office-0.3.0-windows-x64.AppImage",
+            "redrob-office-cli-0.3.0-linux-x86_64.AppImage",
+            "redrob-canvas-0.6.0-linux-x86_64.AppImage",
             "mypdfcraft.AppImage",
-            "pdfcraft-latest.AppImage",
+            "redrob-office-latest.AppImage",
             ".appimage",
             "x",
         ] {
@@ -429,25 +429,25 @@ mod tests {
     #[cfg(target_os = "linux")]
     #[test]
     fn finds_appimages_in_every_folder_newest_first() {
-        let app = CraftApp::by_id("photocraft").unwrap();
+        let app = CraftApp::by_id("redrob-canvas").unwrap();
         let root = tempfile::tempdir().unwrap();
         let (apps, gear, bin) = (root.path().join("Applications"), root.path().join("AppImages"), root.path().join("bin"));
         for d in [&apps, &gear, &bin] {
             std::fs::create_dir_all(d).unwrap();
         }
-        std::fs::write(apps.join("photocraft-0.5.0-linux-x86_64.AppImage"), b"").unwrap();
-        std::fs::write(apps.join("wordcraft-0.3.0-linux-x86_64.AppImage"), b"").unwrap();
-        std::fs::write(gear.join("photocraft.appimage"), b"").unwrap();
-        std::fs::write(bin.join("photocraft-0.6.0-linux-x86_64.AppImage"), b"").unwrap();
-        std::fs::create_dir(bin.join("photocraft.AppImage")).unwrap();
+        std::fs::write(apps.join("redrob-canvas-0.5.0-linux-x86_64.AppImage"), b"").unwrap();
+        std::fs::write(apps.join("redrob-code-0.3.0-linux-x86_64.AppImage"), b"").unwrap();
+        std::fs::write(gear.join("redrob-canvas.appimage"), b"").unwrap();
+        std::fs::write(bin.join("redrob-canvas-0.6.0-linux-x86_64.AppImage"), b"").unwrap();
+        std::fs::create_dir(bin.join("redrob-canvas.AppImage")).unwrap();
         let found = linux::appimages_in(app, &[apps.clone(), gear.clone(), bin.clone(), root.path().join("missing")]);
         let names: Vec<_> = found.iter().map(|(p, v)| (p.clone(), v.as_ref().map(ToString::to_string))).collect();
         assert_eq!(
             names,
             [
-                (bin.join("photocraft-0.6.0-linux-x86_64.AppImage"), Some("0.6.0".to_string())),
-                (apps.join("photocraft-0.5.0-linux-x86_64.AppImage"), Some("0.5.0".to_string())),
-                (gear.join("photocraft.appimage"), None),
+                (bin.join("redrob-canvas-0.6.0-linux-x86_64.AppImage"), Some("0.6.0".to_string())),
+                (apps.join("redrob-canvas-0.5.0-linux-x86_64.AppImage"), Some("0.5.0".to_string())),
+                (gear.join("redrob-canvas.appimage"), None),
             ]
         );
     }

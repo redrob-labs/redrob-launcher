@@ -1,37 +1,38 @@
 # AGENTS.md: guide for AI agents and contributors
 
-ArtCraft Launcher installs, updates and launches the **Craft App Suite** (PhotoCraft, LightCraft,
-FilmCraft, DesignCraft, VectorCraft, PdfCraft, EffectCraft, WordCraft, DeckCraft, GridCraft,
-CADCraft, SoundCraft). It is written in **Rust only** (no JavaScript or TypeScript): the desktop
+Redrob Launcher installs, updates and launches the **Redrob apps** (Cut, Shape, CAD, Canvas,
+Design, Studio, Browser, Code, IDE, Cowork, Office, Query, Recall: `crates/core/src/catalog.rs`).
+It is a hard fork of an upstream launcher; `UPSTREAM.md` says which and what we do not own.
+It is written in **Rust only** (no JavaScript or TypeScript): the desktop
 app is native egui/eframe, and the web build is the same Rust compiled to WebAssembly (trunk +
 wasm-bindgen). **No Tauri, Electron or webview shells**, ever.
 
-The product name is always **ArtCraft Launcher** in user-facing text: UI, window titles, About,
-tray menu, notifications, installers, release names, docs prose. The suite is the **Craft App
-Suite**. Machine names stay lowercase: crates and binaries (`artcraft-launcher`,
-`artcraft-launcher-*`), file names, and the app id `ai.storyteller.artcraft-launcher`. Note the
-GitHub repo is `storytold/craft-launcher`, while every file and package is `artcraft-launcher-*`.
+The product name is always **Redrob Launcher** in user-facing text: UI, window titles, About,
+tray menu, notifications, installers, release names, docs prose. The apps are the **Redrob
+apps**. Machine names stay lowercase: crates and binaries (`redrob-launcher`,
+`redrob-launcher-*`), file names, and the app id `ai.redrob.launcher`. Note the
+GitHub repo is `redrob-labs/redrob-launcher`, while every file and package is `redrob-launcher-*`.
 
-Standards and learnings shared across the Craft apps live in `../craftrules` (read its
-`README.md` and `AGENTS.md`). Contribute reusable learnings there, never code.
+Organisation-wide rules live in `redrob-labs/.github` (CONTRIBUTING, FORKS).
 
 ## 1. Workspace map
 
 ```text
 crates/
-  core      artcraft-launcher-core      pure and wasm-safe: the app catalog, versions, GitHub
+  core      redrob-launcher-core      pure and wasm-safe: the app catalog, versions, GitHub
                                         release parsing, picking the right asset per platform
-  native    artcraft-launcher-native    desktop only: HTTP, detecting installed apps, download,
+  native    redrob-launcher-native    desktop only: HTTP, detecting installed apps, download,
                                         verify and install
-  ui-egui   artcraft-launcher-ui-egui   the shared egui UI (desktop and web)
+  ui-egui   redrob-launcher-ui-egui   the shared egui UI (desktop and web)
 apps/
-  artcraft-launcher                     desktop shell (eframe): window, tray icon, notifications
-  artcraft-launcher-web                 the same UI in the browser (trunk; catalog and downloads only)
+  redrob-launcher                     desktop shell (eframe): window, tray icon, notifications
+  redrob-launcher-web                 the same UI in the browser (trunk; catalog and downloads only)
 xtask/                                  cargo xtask ci | wasm | version | ico
 packaging/                              macOS, Windows, Linux, FreeBSD and web packaging scripts
-assets/app-icon/                        the launcher's own icon (master SVG, renders, tray icons)
-assets/app-icons/                       the Craft apps' icons, copied from each app's repo
-assets/fonts/                           Archivo, Inter, Geist Mono (OFL-1.1): getartcraft.com's faces
+assets/brand/                           the design system's files, pinned by SHA256SUMS
+assets/app-icon/                        the launcher's own icon and header lockup, derived from assets/brand/
+assets/app-icons/                       each app's 128 px icon, derived from assets/brand/
+assets/fonts/                           Pretendard and Wanted Sans (OFL-1.1): the design system's faces
 ```
 
 Layering: `core` depends on no other workspace crate and must build for `wasm32-unknown-unknown`.
@@ -44,8 +45,7 @@ the apps opens windows, tray icons or notifications.
 ### Never crash (outranks feature work)
 
 A bad network response, a malformed release, a half-downloaded file, a full disk or a corrupt
-settings file must produce an error the user can act on, never a panic. Shared standard:
-`../craftrules/standards/never-crash.md`.
+settings file must produce an error the user can act on, never a panic.
 
 - **Non-test code never panics.** No `unwrap()`, `expect()`, `panic!`, `unreachable!`, `todo!` or
   `unimplemented!`. Return the crate's error type and propagate with `?`.
@@ -58,7 +58,7 @@ settings file must produce an error the user can act on, never a panic. Shared s
 ### Installing other people's software safely
 
 - Download only from `https://github.com/storytold/<app>/releases` (and GitHub's asset CDN).
-  The one exception is a developer's own loopback mirror (`ARTCRAFT_LAUNCHER_DOWNLOAD_BASE`,
+  The one exception is a developer's own loopback mirror (`REDROB_LAUNCHER_DOWNLOAD_BASE`,
   `cargo xtask local`); keep it loopback-only and behind the `local-mirror` cargo feature, which
   release builds never enable.
 - Verify each download against the release's `SHA256SUMS.txt` before running or installing it.
@@ -67,35 +67,33 @@ settings file must produce an error the user can act on, never a panic. Shared s
 
 ### Look and feel
 
-The UI matches the apps page on getartcraft.com (`artcraft-website-next` in `artcraft-services`):
-hard square corners, 1 px hairlines instead of shadows, Archivo (620, 118 % width) for headings
-and app names, Inter for body text, upper-case Geist Mono labels and buttons, and the site's
-colour tokens by name (`theme::Tokens`). Build new UI from `widgets.rs`; never hard-code a colour.
+The UI follows the Redrob design system: hard square corners, 1 px hairlines instead of shadows,
+Pretendard for Latin and Wanted Sans for Hangul, sentence-case labels (never capitals, no second
+typeface), and the system's colour roles (`theme::Tokens`, each value commented with its token).
+Blue acts; a product's colour marks its tile, never text. Build new UI from `widgets.rs`; never hard-code a colour.
 
 ### Languages
 
 Every user-facing string goes through `crates/ui-egui/src/i18n` (`tl!("…")` for literals, `fmt`
 for `{placeholders}`, `tn` for counts). English in the code is the lookup key; adding a string
-means adding its row to every catalog marked `complete_menus` (`ru.tsv`, `zh-CN.tsv`, `de.tsv`),
-which the i18n tests check. Product and app names (ArtCraft Launcher, Craft App Suite, PhotoCraft…) stay in English.
-Chinese is drawn with the system's own CJK font (`crates/ui-egui/src/cjk_font.rs`, desktop only;
-English where there is none): never bundle a CJK font, they are 10 MB and more.
+means adding its row to every catalog marked `complete_menus` (`ko.tsv`), which the i18n tests
+check. Product and app names (Redrob Launcher, Redrob CAD…) stay in Latin script. Hangul is drawn
+with the bundled Wanted Sans, so Korean never depends on the system's fonts.
 
 ### Other rules
 
 1. **Assets need attribution.** Every bundled asset gets a row in `ATTRIBUTION.md` (path, title,
-   author, source, license) in the same change. The ArtCraft name, logo and "A" mark in
-   `docs/brand/` (the header logo and the tray icon) are trademarks, **not MIT/Apache**
-   (`docs/brand/LICENSE-brand.txt`): use them exactly as supplied, never redraw or recolor them.
-2. **Icons are generated.** The app icon and the tray icon are the supplied ArtCraft "A" mark from
-   `docs/brand/` (a trademark, not MIT/Apache); never edit the renders by hand. Run `packaging/icons.sh` (needs `resvg`; runs on any OS) and commit the outputs.
-   `assets/app-icons/` is copied verbatim from each app's repo (`assets/app-icon/hicolor/128x128/apps/ai.storyteller.<app>.png`);
-   refresh it from there, never redraw.
+   author, source, license) in the same change. The Redrob logo, tile and product marks in
+   `assets/brand/` are used exactly as the design system ships them: never redrawn, recoloured,
+   tinted or used as a macOS template image (`assets/brand/README.md`).
+2. **Icons are generated.** Everything under `assets/app-icon/` and `assets/app-icons/` comes from
+   `assets/brand/` through `packaging/brand-assets.sh` (needs `magick` and `resvg`); never edit the
+   outputs by hand, and never upscale.
 3. **Never break wasm.** `cargo xtask wasm` must pass. File-system, process and OS code is
    `cfg(not(target_arch = "wasm32"))`.
 4. **Tests are the gate.** Release parsing and asset picking in `core` get unit tests with real
    GitHub release JSON fixtures (small, committed under `crates/core/tests/fixtures/`).
-5. When fetching anything, use a generic `ArtCraft-Launcher/<version>` User-Agent and never put
+5. When fetching anything, use a generic `Redrob-Launcher/<version>` User-Agent and never put
    a person's name, email or other personal details in requests.
 
 ## 3. Before you finish a task
@@ -111,40 +109,40 @@ packaging/linux/AppRun` and `actionlint`.
 ## 4. Releasing
 
 The version lives only in `[workspace.package] version` in the root `Cargo.toml`
-(`cargo xtask version`, `cargo xtask version set X.Y.Z[-pre]`). Pushing to the `release` branch runs
-`.github/workflows/release.yml`, which builds every platform and creates the draft GitHub Release
-**ArtCraft Launcher v<version>** with `SHA256SUMS.txt`. The canonical recipe is
-`../craftrules/release/playbook.md`; cutting a release is `../craftrules/release/cut-a-release.md`.
+(`cargo xtask version`, `cargo xtask version set X.Y.Z[-pre]`). Upstream's release workflow was
+removed (it used upstream's signing secrets, see `UPSTREAM.md`); ours follows the organisation's
+gitflow (`release/x.y.z` from `develop`, a pull request to `main`, tag `vX.Y.Z`) and must publish
+the draft GitHub Release **Redrob Launcher v<version>** with `SHA256SUMS.txt`.
 
 Release assets (keep these names exact; the launcher's own self-update and the README rely on them):
 
 | Platform | Files |
 |---|---|
-| Windows | `artcraft-launcher-<ver>-windows-{x64,x86,arm64}.msi`, `…-windows-{x64,x86,arm64}-portable.zip` |
-| macOS | `artcraft-launcher-<ver>-macos-universal.dmg` |
-| Linux | `artcraft-launcher-<ver>-linux-{x86_64,aarch64}.{AppImage,AppImage.zsync,deb,rpm,tar.gz,flatpak}`, `artcraft-launcher-<ver>-linux-riscv64.{deb,rpm,tar.gz}` |
-| FreeBSD | `artcraft-launcher-<ver>-freebsd-x86_64.tar.gz` |
-| Web | `artcraft-launcher-web-<ver>.zip` |
+| Windows | `redrob-launcher-<ver>-windows-{x64,x86,arm64}.msi`, `…-windows-{x64,x86,arm64}-portable.zip` |
+| macOS | `redrob-launcher-<ver>-macos-universal.dmg` |
+| Linux | `redrob-launcher-<ver>-linux-{x86_64,aarch64}.{AppImage,AppImage.zsync,deb,rpm,tar.gz,flatpak}`, `redrob-launcher-<ver>-linux-riscv64.{deb,rpm,tar.gz}` |
+| FreeBSD | `redrob-launcher-<ver>-freebsd-x86_64.tar.gz` |
+| Web | `redrob-launcher-web-<ver>.zip` |
 
 Packaging facts the code relies on:
 
 - The Windows MSI is **per-user** (no UAC prompt), by default into
-  `%LOCALAPPDATA%\Programs\ArtCraft Launcher`. Double-clicked it opens a WixUI setup wizard
+  `%LOCALAPPDATA%\Programs\Redrob Launcher`. Double-clicked it opens a WixUI setup wizard
   (Welcome; a folder page with a "Create a desktop shortcut" box; Ready; progress; Finish with
   "Launch"), whose art `package.ps1` draws at build time; self-update runs it with `/passive`, no
   wizard. The folder and the shortcut choice are recorded under
-  `HKCU\Software\Learning Machines LLC\ArtCraft Launcher` (`InstallDir`,
+  `HKCU\Software\Redrob\Redrob Launcher` (`InstallDir`,
   `DesktopShortcutChoice`) and reused by the next version, and `self_update.rs` reads `InstallDir`
   to know the running copy came from the MSI. Its shortcuts set AppUserModelID
-  `ai.storyteller.artcraft-launcher`, which toast notifications need. `portable.txt` beside the exe switches on portable mode
-  (`ArtCraftLauncherData\` next to the exe).
-- The macOS bundle is `ArtCraft Launcher.app` (executable `Contents/MacOS/ArtCraft Launcher`), a
+  `ai.redrob.launcher`, which toast notifications need. `portable.txt` beside the exe switches on portable mode
+  (`RedrobLauncherData\` next to the exe).
+- The macOS bundle is `Redrob Launcher.app` (executable `Contents/MacOS/Redrob Launcher`), a
   normal Dock app that can also sit in the menu bar: `LSUIElement` must never be set.
 - Linux: the tray uses StatusNotifierItem over D-Bus and notifications use
   `org.freedesktop.Notifications`, both in pure Rust (no GTK, appindicator or libdbus).
-- `build.rs` reads `ARTCRAFT_LAUNCHER_BUILD_SHA` / `ARTCRAFT_LAUNCHER_BUILD_DATE` and, on Windows,
-  embeds `assets/app-icon/artcraft-launcher.ico`, failing the build when
-  `ARTCRAFT_LAUNCHER_REQUIRE_WINRES=1` and it can't.
+- `build.rs` reads `REDROB_LAUNCHER_BUILD_SHA` / `REDROB_LAUNCHER_BUILD_DATE` and, on Windows,
+  embeds `assets/app-icon/redrob-launcher.ico`, failing the build when
+  `REDROB_LAUNCHER_REQUIRE_WINRES=1` and it can't.
 
 ## 5. Parallel agents
 
