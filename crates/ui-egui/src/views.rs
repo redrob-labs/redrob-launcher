@@ -100,6 +100,7 @@ impl LauncherUi {
                 }
                 ui.add_space(6.0);
                 self.account_link(ui, h);
+                self.models_link(ui, h);
                 ui.add_space(6.0);
                 widgets::rule(ui, h);
                 ui.add_space(6.0);

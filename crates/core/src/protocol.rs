@@ -223,4 +223,8 @@ pub trait Backend {
     fn account(&mut self) -> Option<&mut dyn crate::account::AccountBackend> {
         None
     }
+    /// Downloading the apps' models, where the backend can (desktop only).
+    fn models(&mut self) -> Option<&mut dyn crate::models::ModelBackend> {
+        None
+    }
 }

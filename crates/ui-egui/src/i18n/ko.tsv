@@ -336,3 +336,23 @@ month	Dec	12월
 @msg	Sign in first.	먼저 로그인하세요.
 @msg	The launcher can't connect this app yet.	런처가 아직 이 앱을 연결할 수 없어요.
 @msg	Couldn't write the app's key file: {e}	앱의 키 파일을 쓰지 못했어요: {e}
+
+# Model downloads (models.rs) and the manifest's descriptions (assets/models/models.json).
+	Delete	삭제
+	Download the models the apps use	앱이 쓰는 모델 내려받기
+	Downloaded	내려받음
+	Downloaded into the folder each app reads them from	각 앱이 읽는 폴더에 바로 내려받아요
+	Every file is checked against its published SHA-256 before an app can use it.	앱이 쓰기 전에 모든 파일을 공개된 SHA-256과 대조해요.
+	Licence and source	라이선스와 출처
+	Models	모델
+	Models…	모델…
+	Not available on this system	이 시스템에서는 쓸 수 없음
+	Not downloaded	내려받지 않음
+	Pause	일시 정지
+	Try again	다시 시도
+	39 M parameters. Fastest; fine for clear speech, rough on noisy audio.	매개변수 3,900만 개. 가장 빨라요. 또렷한 말소리에는 충분하고, 잡음이 많으면 거칠어요.
+	74 M parameters. The default: a good balance of speed and accuracy.	매개변수 7,400만 개. 기본값이에요. 속도와 정확도가 균형 잡혀 있어요.
+	244 M parameters. Most accurate here; about 4× slower than base.	매개변수 2억 4,400만 개. 여기서 가장 정확하지만 base보다 4배쯤 느려요.
+	Nine US English narration voices and the CMUdict pronunciation dictionary.	미국 영어 내레이션 목소리 9개와 CMUdict 발음 사전.
+@msg	HTTPS isn't available on this computer.	이 컴퓨터에서 HTTPS를 쓸 수 없어요.
+@msg	the download doesn't match its published checksum, so it wasn't installed	내려받은 파일이 공개된 체크섬과 맞지 않아 쓰지 않았어요

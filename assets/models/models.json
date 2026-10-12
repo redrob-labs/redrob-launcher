@@ -1,0 +1,190 @@
+{
+  "$comment": "Models the launcher can download for each Redrob app, into the folder that app reads them from. Every file is pinned to a revision and its SHA-256. Generated from each app's own catalogue (Redrob Cut: crates/speech/src/models.rs and crates/tts/src/catalog.rs); keep in step with it.",
+  "version": 1,
+  "models": [
+    {
+      "id": "whisper-tiny",
+      "app": "redrob-cut",
+      "name": "Whisper tiny (multilingual)",
+      "description": "39 M parameters. Fastest; fine for clear speech, rough on noisy audio.",
+      "license": "MIT (OpenAI Whisper weights); Hugging Face conversion: Apache-2.0",
+      "source": "https://huggingface.co/openai/whisper-tiny",
+      "files": [
+        {
+          "name": "config.json",
+          "url": "https://huggingface.co/openai/whisper-tiny/resolve/169d4a4341b33bc18d8881c4b69c2e104e1cc0af/config.json",
+          "sha256": "ffdccec4f3211f4c63310f2b7098f309fe70f3952cedc5e4d11e43f5b2379b98",
+          "size": 1983
+        },
+        {
+          "name": "generation_config.json",
+          "url": "https://huggingface.co/openai/whisper-tiny/resolve/169d4a4341b33bc18d8881c4b69c2e104e1cc0af/generation_config.json",
+          "sha256": "a5d5325911f16e74001a72fa13d6e208eee51548f994646de1f4b4cc8b35b512",
+          "size": 3747
+        },
+        {
+          "name": "tokenizer.json",
+          "url": "https://huggingface.co/openai/whisper-tiny/resolve/169d4a4341b33bc18d8881c4b69c2e104e1cc0af/tokenizer.json",
+          "sha256": "27fc476bfe7f17299480be2273fc0608e4d5a99aba2ab5dec5374b4482d1a566",
+          "size": 2480466
+        },
+        {
+          "name": "model.safetensors",
+          "url": "https://huggingface.co/openai/whisper-tiny/resolve/169d4a4341b33bc18d8881c4b69c2e104e1cc0af/model.safetensors",
+          "sha256": "7ebd0e69e78190ffe1438491fa05cc1f5c1aa3a4c4db3bc1723adbb551ea2395",
+          "size": 151061672
+        }
+      ]
+    },
+    {
+      "id": "whisper-base",
+      "app": "redrob-cut",
+      "name": "Whisper base (multilingual)",
+      "description": "74 M parameters. The default: a good balance of speed and accuracy.",
+      "license": "MIT (OpenAI Whisper weights); Hugging Face conversion: Apache-2.0",
+      "source": "https://huggingface.co/openai/whisper-base",
+      "files": [
+        {
+          "name": "config.json",
+          "url": "https://huggingface.co/openai/whisper-base/resolve/e37978b90ca9030d5170a5c07aadb050351a65bb/config.json",
+          "sha256": "a153c53883a6799b6f056b4a8d1a515c9926d03994682ba88a7616618d7da0c1",
+          "size": 1983
+        },
+        {
+          "name": "generation_config.json",
+          "url": "https://huggingface.co/openai/whisper-base/resolve/e37978b90ca9030d5170a5c07aadb050351a65bb/generation_config.json",
+          "sha256": "444b3f636d2fff89dd9ecf549e2a085b61f7ff0fa0246d4628bac6a3b8cc9ba4",
+          "size": 3807
+        },
+        {
+          "name": "tokenizer.json",
+          "url": "https://huggingface.co/openai/whisper-base/resolve/e37978b90ca9030d5170a5c07aadb050351a65bb/tokenizer.json",
+          "sha256": "27fc476bfe7f17299480be2273fc0608e4d5a99aba2ab5dec5374b4482d1a566",
+          "size": 2480466
+        },
+        {
+          "name": "model.safetensors",
+          "url": "https://huggingface.co/openai/whisper-base/resolve/e37978b90ca9030d5170a5c07aadb050351a65bb/model.safetensors",
+          "sha256": "07cadb9f25677c8d50df603e66a98fbd842cce45047139baeb16e6219a1e807b",
+          "size": 290403936
+        }
+      ]
+    },
+    {
+      "id": "whisper-small",
+      "app": "redrob-cut",
+      "name": "Whisper small (multilingual)",
+      "description": "244 M parameters. Most accurate here; about 4\u00d7 slower than base.",
+      "license": "MIT (OpenAI Whisper weights); Hugging Face conversion: Apache-2.0",
+      "source": "https://huggingface.co/openai/whisper-small",
+      "files": [
+        {
+          "name": "config.json",
+          "url": "https://huggingface.co/openai/whisper-small/resolve/973afd24965f72e36ca33b3055d56a652f456b4d/config.json",
+          "sha256": "e6a2b489da1b5aed65a8eb8d1e7466fa867ad5643a8bc138ba708bd56b2875c4",
+          "size": 1967
+        },
+        {
+          "name": "generation_config.json",
+          "url": "https://huggingface.co/openai/whisper-small/resolve/973afd24965f72e36ca33b3055d56a652f456b4d/generation_config.json",
+          "sha256": "71565b8ef50d0bf7a1193ed4bbed195b94e70c18894d81bba2f1233dcec3ab53",
+          "size": 3868
+        },
+        {
+          "name": "tokenizer.json",
+          "url": "https://huggingface.co/openai/whisper-small/resolve/973afd24965f72e36ca33b3055d56a652f456b4d/tokenizer.json",
+          "sha256": "27fc476bfe7f17299480be2273fc0608e4d5a99aba2ab5dec5374b4482d1a566",
+          "size": 2480466
+        },
+        {
+          "name": "model.safetensors",
+          "url": "https://huggingface.co/openai/whisper-small/resolve/973afd24965f72e36ca33b3055d56a652f456b4d/model.safetensors",
+          "sha256": "1d7734884874f1a1513ed9aa760a4f8e97aaa02fd6d93a3a85d27b2ae9ca596b",
+          "size": 966995080
+        }
+      ]
+    },
+    {
+      "id": "kokoro-82m",
+      "app": "redrob-cut",
+      "name": "Natural voices (Kokoro-82M)",
+      "description": "Nine US English narration voices and the CMUdict pronunciation dictionary.",
+      "license": "Apache-2.0 (Kokoro-82M by hexgrad); CMUdict: BSD-style (Carnegie Mellon University)",
+      "source": "https://huggingface.co/hexgrad/Kokoro-82M",
+      "files": [
+        {
+          "name": "config.json",
+          "url": "https://huggingface.co/hexgrad/Kokoro-82M/resolve/f3ff3571791e39611d31c381e3a41a3af07b4987/config.json",
+          "sha256": "5abb01e2403b072bf03d04fde160443e209d7a0dad49a423be15196b9b43c17f",
+          "size": 2351
+        },
+        {
+          "name": "kokoro-v1_0.pth",
+          "url": "https://huggingface.co/hexgrad/Kokoro-82M/resolve/f3ff3571791e39611d31c381e3a41a3af07b4987/kokoro-v1_0.pth",
+          "sha256": "496dba118d1a58f5f3db2efc88dbdc216e0483fc89fe6e47ee1f2c53f18ad1e4",
+          "size": 327212226
+        },
+        {
+          "name": "cmudict.dict",
+          "url": "https://raw.githubusercontent.com/cmusphinx/cmudict/74790861f652b15e4ac49015a90074ad62a27690/cmudict.dict",
+          "sha256": "81917843c7f44ce2b094ac63873c2c7a4cf802040792c455ba3ca406891c3d22",
+          "size": 3618488
+        },
+        {
+          "name": "af_heart.pt",
+          "url": "https://huggingface.co/hexgrad/Kokoro-82M/resolve/f3ff3571791e39611d31c381e3a41a3af07b4987/voices/af_heart.pt",
+          "sha256": "0ab5709b8ffab19bfd849cd11d98f75b60af7733253ad0d67b12382a102cb4ff",
+          "size": 523425
+        },
+        {
+          "name": "af_bella.pt",
+          "url": "https://huggingface.co/hexgrad/Kokoro-82M/resolve/f3ff3571791e39611d31c381e3a41a3af07b4987/voices/af_bella.pt",
+          "sha256": "8cb64e02fcc8de0327a8e13817e49c76c945ecf0052ceac97d3081480e8e48d6",
+          "size": 523425
+        },
+        {
+          "name": "af_nicole.pt",
+          "url": "https://huggingface.co/hexgrad/Kokoro-82M/resolve/f3ff3571791e39611d31c381e3a41a3af07b4987/voices/af_nicole.pt",
+          "sha256": "c5561808bcf5250fe8c5f5de32caf2d94f27e57e95befdb098c5c85991d4c5da",
+          "size": 523430
+        },
+        {
+          "name": "af_aoede.pt",
+          "url": "https://huggingface.co/hexgrad/Kokoro-82M/resolve/f3ff3571791e39611d31c381e3a41a3af07b4987/voices/af_aoede.pt",
+          "sha256": "c03bd1a4c3716c2d8eaa3d50022f62d5c31cfbd6e15933a00b17fefe13841cc4",
+          "size": 523425
+        },
+        {
+          "name": "af_kore.pt",
+          "url": "https://huggingface.co/hexgrad/Kokoro-82M/resolve/f3ff3571791e39611d31c381e3a41a3af07b4987/voices/af_kore.pt",
+          "sha256": "8bfbc512321c3db49dff984ac675fa5ac7eaed5a96cc31104d3a9080e179d69d",
+          "size": 523420
+        },
+        {
+          "name": "af_sarah.pt",
+          "url": "https://huggingface.co/hexgrad/Kokoro-82M/resolve/f3ff3571791e39611d31c381e3a41a3af07b4987/voices/af_sarah.pt",
+          "sha256": "49bd364ea3be9eb3e9685e8f9a15448c4883112a7c0ff7ab139fa4088b08cef9",
+          "size": 523425
+        },
+        {
+          "name": "am_michael.pt",
+          "url": "https://huggingface.co/hexgrad/Kokoro-82M/resolve/f3ff3571791e39611d31c381e3a41a3af07b4987/voices/am_michael.pt",
+          "sha256": "9a443b79a4b22489a5b0ab7c651a0bcd1a30bef675c28333f06971abbd47bd37",
+          "size": 523435
+        },
+        {
+          "name": "am_fenrir.pt",
+          "url": "https://huggingface.co/hexgrad/Kokoro-82M/resolve/f3ff3571791e39611d31c381e3a41a3af07b4987/voices/am_fenrir.pt",
+          "sha256": "98e507eca1db08230ae3b6232d59c10aec9630022d19accac4f5d12fcec3c37a",
+          "size": 523430
+        },
+        {
+          "name": "am_puck.pt",
+          "url": "https://huggingface.co/hexgrad/Kokoro-82M/resolve/f3ff3571791e39611d31c381e3a41a3af07b4987/voices/am_puck.pt",
+          "sha256": "dd1d8973f4ce4b7d8ae407c77a435f485dabc052081b80ea75c4f30b84f36223",
+          "size": 523420
+        }
+      ]
+    }
+  ]
+}

@@ -25,7 +25,10 @@ Redrob Launcher is one place to install, update, sign in and connect every Redro
   every Redrob app can read it, and hands it to apps that keep their own key
   ([docs/shared-account.md](docs/shared-account.md)).
 
-Downloading the apps' models from the same window is on the way.
+- Downloads the models the apps use (today Redrob Cut's Whisper speech models and natural voices)
+  straight into the folder each app reads them from: resumable, pausable, every file checked
+  against its pinned SHA-256. The list is `assets/models/models.json`, regenerated from each app's
+  own catalogue by `scripts/gen_models_manifest.py`.
 
 ## Build from source
 
