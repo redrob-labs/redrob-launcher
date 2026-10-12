@@ -109,9 +109,9 @@ mod tests {
 
     #[test]
     fn committed_icon_is_valid() {
-        let path = crate::root().join("assets/app-icon/artcraft-launcher.icns");
+        let path = crate::root().join("assets/app-icon/redrob-launcher.icns");
         let Ok(icns) = std::fs::read(&path) else { return };
         assert_eq!(&icns[..4], b"icns");
-        assert!(entries(&icns).iter().any(|(k, _)| k == "ic10"), "expected a 1024 px image in {}", path.display());
+        assert!(entries(&icns).iter().any(|(k, _)| k == "ic09"), "expected a 512 px image in {}", path.display());
     }
 }

@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Redrob Launcher
+GenericName=App Launcher
+Comment=Install, update and launch the Redrob apps
+Exec=redrob-launcher
+TryExec=redrob-launcher
+Icon=ai.redrob.launcher
+Terminal=false
+StartupNotify=true
+StartupWMClass=redrob-launcher
+Categories=Utility;PackageManager;
+Keywords=redrob;launcher;installer;updater;apps;

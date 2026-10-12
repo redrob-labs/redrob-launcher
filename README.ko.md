@@ -8,21 +8,28 @@ English: [README.md](./README.md)
 > 하드 포크입니다. 어디서 갈라졌고, 무엇을 소유하지 않으며, 상류를 어떻게 흡수하는지는
 > [UPSTREAM.ko.md](./UPSTREAM.ko.md)에, 기계가 읽는 핀은 [`upstream-base.json`](./upstream-base.json)에 있습니다.
 > 상류 저작권 표기는 [NOTICE](./NOTICE)에 원문 그대로 두고 그 아래에 우리 줄을 추가했습니다.
-> `docs/brand/` 아래 ArtCraft 이름과 로고, `assets/app-icon/` 아래 앱 아이콘은 상류의 상표이며 교체 중입니다.
+> 상류의 ArtCraft 상표는 모두 제거했습니다.
 
 ## 무엇인가
 
-- 순수 Rust와 egui로 만든 작은 네이티브 앱. Electron도 웹뷰도 없습니다.
-- 각 앱의 GitHub 릴리스를 읽어 내 OS와 CPU에 맞는 빌드(DMG, MSI, AppImage, .deb, .rpm 등)를 고르고, SHA-256으로 검사한 뒤 설치합니다.
-- 설치된 앱과 버전을 보여 주고, 새 버전이 나오면 알립니다. 트레이와 메뉴 막대에서 바로 열 수 있습니다.
-- macOS·Windows·Linux·FreeBSD 네이티브, 브라우저는 WebAssembly.
+- 레드롭 앱 전부를 보여 줍니다: Cut, Shape, CAD, Canvas, Design, Studio, Browser, Code, IDE, Cowork,
+  Office, Query, Recall.
+- 각 앱의 GitHub 릴리스를 읽어 내 OS와 CPU에 맞는 빌드(DMG, MSI, AppImage, .deb, .rpm 등)를 고르고,
+  SHA-256으로 검사한 뒤 설치합니다.
+- 설치된 앱과 버전을 보여 주고, 새 버전이 나오면 알리고 업데이트합니다.
+- 트레이와 메뉴 막대에 머뭅니다. 순수 Rust와 egui로 만들어 Electron도 웹뷰도 없습니다.
+- macOS·Windows·Linux·FreeBSD 네이티브, 웹 빌드는 앱 목록과 다운로드 링크를 보여 줍니다.
+- 영어와 한국어.
 
-## 시작하기
+같은 창에서 레드롭 워크스페이스 로그인, 기기 연결, 모델 다운로드를 하는 기능은 만들고 있습니다.
+
+## 소스에서 빌드
 
 ```sh
-cargo run --release -p artcraft-launcher   # 데스크톱 앱
+cargo run --release -p redrob-launcher     # 데스크톱 앱
 cargo test --workspace                     # 테스트
 python3 scripts/check_upstream_boundary.py # 포크 경계 검사
+packaging/brand-assets.sh                  # assets/brand/에서 아이콘 다시 만들기(magick, resvg)
 ```
 
 ## 브랜치와 기여
@@ -41,4 +48,5 @@ Copyright (c) 2026 ArtCraft Team and the ArtCraft Launcher contributors.
 Copyright (c) 2026-present Janghoon Lee (Redrob) and contributors
 ```
 
-자산별 귀속은 [ATTRIBUTION.md](./ATTRIBUTION.md)에 있습니다.
+레드롭 이름과 마크는 레드롭의 상표이며 위 라이선스에 포함되지 않습니다. 자산별 귀속은
+[ATTRIBUTION.md](./ATTRIBUTION.md)에 있습니다.

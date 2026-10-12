@@ -1,9 +1,9 @@
 //! Modal dialogs: release notes, uninstall confirmation, settings.
 
 use crate::i18n::fmt;
-use artcraft_launcher_core::protocol::Command;
-use artcraft_launcher_core::{Os, PackageKind};
 use egui::{RichText, vec2};
+use redrob_launcher_core::protocol::Command;
+use redrob_launcher_core::{Os, PackageKind};
 
 use crate::app::{Dialog, Host, LauncherUi};
 use crate::settings::{CheckEvery, Settings};
@@ -103,11 +103,11 @@ impl LauncherUi {
         close
     }
 
-    fn launcher_update_dialog(&mut self, ui: &mut egui::Ui, r: &artcraft_launcher_core::Release) -> bool {
+    fn launcher_update_dialog(&mut self, ui: &mut egui::Ui, r: &redrob_launcher_core::Release) -> bool {
         let t = Tokens::get(ui.ctx());
         ui.set_width(480.0f32.min(ui.ctx().content_rect().width() - 80.0));
-        let title = fmt(tl!("ArtCraft Launcher {version} is available."), &[("version", &r.version_label())]);
-        Self::title(ui, Some(crate::icons::artcraft_mark()), &title, "");
+        let title = fmt(tl!("Redrob Launcher {version} is available."), &[("version", &r.version_label())]);
+        Self::title(ui, Some(crate::icons::redrob_mark()), &title, "");
         ui.label(RichText::new(tl!("A new version is available. Would you like to relaunch with the updated version?")).color(t.muted));
         ui.add_space(14.0);
         let mut close = false;
@@ -143,14 +143,12 @@ impl LauncherUi {
         ui.set_width(420.0);
         Self::title(ui, crate::icons::app(id), &fmt(tl!("Uninstall {name}?"), &[("name", entry.app.name)]), "");
         let how = match entry.installed.as_ref().map(|i| i.source) {
-            Some(artcraft_launcher_core::InstallSource::MacApp) => tl!("The app will be moved to the Trash. Your documents and settings stay."),
-            Some(artcraft_launcher_core::InstallSource::Msi) => {
+            Some(redrob_launcher_core::InstallSource::MacApp) => tl!("The app will be moved to the Trash. Your documents and settings stay."),
+            Some(redrob_launcher_core::InstallSource::Msi) => {
                 tl!("Windows will remove it like any installed program. Your documents and settings stay.")
             }
             Some(
-                artcraft_launcher_core::InstallSource::Deb
-                | artcraft_launcher_core::InstallSource::Rpm
-                | artcraft_launcher_core::InstallSource::Pacman,
+                redrob_launcher_core::InstallSource::Deb | redrob_launcher_core::InstallSource::Rpm | redrob_launcher_core::InstallSource::Pacman,
             ) => tl!("Your system's package manager will remove it, and may ask for your password. Your documents and settings stay."),
             _ => tl!("The app will be removed. Your documents and settings stay."),
         };
@@ -173,7 +171,7 @@ impl LauncherUi {
         let t = Tokens::get(ui.ctx());
         // Wide enough for the community buttons and every social icon on one row.
         ui.set_width(520.0);
-        Self::title(ui, Some(crate::icons::artcraft_mark()), tl!("Settings"), &format!("ArtCraft Launcher {}", env!("CARGO_PKG_VERSION")));
+        Self::title(ui, Some(crate::icons::redrob_mark()), tl!("Settings"), &format!("Redrob Launcher {}", env!("CARGO_PKG_VERSION")));
         let section = |ui: &mut egui::Ui, s: &str| {
             ui.add_space(14.0);
             widgets::hud(ui, s, t.faint);
@@ -266,7 +264,7 @@ impl LauncherUi {
                     .on_hover_text(tl!("When on, opening the launcher from the menu bar brings its window to the desktop you're on. When off, macOS switches you to the desktop the window was on."));
             }
             if let Some(mut on) = host.login_item()
-                && ui.checkbox(&mut on, tl!("Start ArtCraft Launcher when I log in")).changed()
+                && ui.checkbox(&mut on, tl!("Start Redrob Launcher when I log in")).changed()
                 && let Err(e) = host.set_login_item(on)
             {
                 let ctx = ui.ctx().clone();
@@ -274,24 +272,17 @@ impl LauncherUi {
             }
         }
 
-        section(ui, tl!("Community"));
-        ui.label(RichText::new(tl!("Questions, ideas and news from the ArtCraft team")).color(t.muted));
+        section(ui, tl!("Redrob"));
+        ui.label(RichText::new(tl!("News and source code for every Redrob app")).color(t.muted));
         ui.add_space(6.0);
         ui.horizontal(|ui| {
-            use artcraft_launcher_core::catalog::{DISCORD_URL, GITHUB_URL, WEBSITE_URL};
-            if widgets::button(ui, tl!("Join the Discord"), Kind::Primary, 0.0).on_hover_text(DISCORD_URL).clicked() {
-                ui.ctx().open_url(egui::OpenUrl::new_tab(DISCORD_URL));
-            }
-            if widgets::button(ui, tl!("Website"), Kind::Secondary, 0.0).on_hover_text(WEBSITE_URL).clicked() {
+            use redrob_launcher_core::catalog::{GITHUB_URL, WEBSITE_URL};
+            if widgets::button(ui, tl!("Website"), Kind::Primary, 0.0).on_hover_text(WEBSITE_URL).clicked() {
                 ui.ctx().open_url(egui::OpenUrl::new_tab(WEBSITE_URL));
             }
             if widgets::button(ui, tl!("GitHub"), Kind::Secondary, 0.0).on_hover_text(GITHUB_URL).clicked() {
                 ui.ctx().open_url(egui::OpenUrl::new_tab(GITHUB_URL));
             }
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                ui.spacing_mut().item_spacing.x = 4.0;
-                widgets::social_icons(ui, 16.0);
-            });
         });
 
         section(ui, tl!("Appearance"));
@@ -304,7 +295,7 @@ impl LauncherUi {
         ui.add_space(24.0);
         let mut close = false;
         ui.horizontal(|ui| {
-            if self.caps.manage_apps && widgets::button(ui, tl!("Quit ArtCraft Launcher"), Kind::Secondary, 0.0).clicked() {
+            if self.caps.manage_apps && widgets::button(ui, tl!("Quit Redrob Launcher"), Kind::Secondary, 0.0).clicked() {
                 host.quit();
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
