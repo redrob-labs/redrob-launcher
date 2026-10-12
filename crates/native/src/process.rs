@@ -92,6 +92,25 @@ fn read_all<R: std::io::Read + Send + 'static>(pipe: Option<R>) -> std::thread::
     })
 }
 
+/// Opens an `https://` page in the default browser (the console's approval page). Anything else is
+/// refused: this never hands a local path or another scheme to the OS opener.
+pub fn open_url(url: &str) -> Result<(), String> {
+    if !url.starts_with("https://") || url.contains(['\n', '\r', '\0']) {
+        return Err("only https pages are opened".into());
+    }
+    let mut cmd = if cfg!(target_os = "macos") {
+        command("open")
+    } else if cfg!(windows) {
+        let mut c = command("rundll32");
+        c.arg("url.dll,FileProtocolHandler");
+        c
+    } else {
+        command("xdg-open")
+    };
+    cmd.arg(url);
+    spawn_detached(cmd)
+}
+
 /// Starts `cmd` without waiting for it, and reaps it when it exits.
 pub fn spawn_detached(mut cmd: Command) -> Result<(), String> {
     let mut child = cmd.stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null()).spawn().map_err(|e| format!("couldn't start it ({e})"))?;

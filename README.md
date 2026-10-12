@@ -21,8 +21,11 @@ Redrob Launcher is one place to install, update, sign in and connect every Redro
 - macOS, Windows, Linux and FreeBSD, plus a web build that lists the apps with download links.
 - English and Korean.
 
-Signing in to a Redrob workspace, connecting devices and downloading models from the same window
-are on the way.
+- Signs the computer in to a Redrob workspace once (the console's device flow), keeps the key where
+  every Redrob app can read it, and hands it to apps that keep their own key
+  ([docs/shared-account.md](docs/shared-account.md)).
+
+Downloading the apps' models from the same window is on the way.
 
 ## Build from source
 

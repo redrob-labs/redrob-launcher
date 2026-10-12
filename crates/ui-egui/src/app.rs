@@ -68,6 +68,8 @@ pub(crate) enum Dialog {
     ConfirmUninstall(String),
     Settings,
     LauncherUpdate(redrob_launcher_core::Release),
+    /// Signing in to Redrob, and which apps use it.
+    Account,
 }
 
 pub struct LauncherUi {
