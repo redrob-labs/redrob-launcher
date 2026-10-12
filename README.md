@@ -1,3 +1,18 @@
+# Redrob Launcher
+
+Redrob Launcher is one place to install, update, sign in and connect every Redrob app.
+
+한국어: [README.ko.md](./README.ko.md)
+
+> **Fork notice.** This repository is a hard fork of [storytold/craft-launcher](https://github.com/storytold/craft-launcher)
+> at tag `v0.3.2`. Where it was cut, what it does not own and how upstream is absorbed are in
+> [UPSTREAM.md](./UPSTREAM.md); the machine-readable pin is [`upstream-base.json`](./upstream-base.json).
+> Upstream's copyright is retained in [NOTICE](./NOTICE) with ours added below it. The ArtCraft name and
+> logos under `docs/brand/` and the app icon under `assets/app-icon/` are upstream's trademarks and are
+> being replaced; see UPSTREAM.md. The rest of this file is upstream's README and is rewritten as the
+> product is rebranded.
+
+---
 <p align="center">
   <a href="https://getartcraft.com/">
     <picture>
