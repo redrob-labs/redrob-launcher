@@ -16,6 +16,7 @@ pub mod http;
 pub mod install;
 pub mod login;
 pub mod manifest;
+pub mod models;
 pub mod packages;
 pub mod paths;
 pub mod process;

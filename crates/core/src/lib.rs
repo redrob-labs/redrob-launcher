@@ -10,6 +10,7 @@ pub mod account;
 pub mod catalog;
 pub mod distro;
 pub mod feed;
+pub mod models;
 pub mod platform;
 pub mod protocol;
 pub mod release;

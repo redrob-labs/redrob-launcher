@@ -70,6 +70,8 @@ pub(crate) enum Dialog {
     LauncherUpdate(redrob_launcher_core::Release),
     /// Signing in to Redrob, and which apps use it.
     Account,
+    /// The apps' downloadable models.
+    Models,
 }
 
 pub struct LauncherUi {
