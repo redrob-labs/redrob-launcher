@@ -9,7 +9,9 @@
 //!   system's polkit password prompt; otherwise a Flatpak, otherwise an AppImage in
 //!   `~/Applications` (the AppImage convention), with a menu entry and icon in
 //!   `~/.local/share` so it shows up like any other app. A Flatpak or AppImage launcher prefers
-//!   its own format.
+//!   its own format. A release with neither (Redrob apps ship a `.deb` and a `.tar.gz`) is
+//!   unpacked whole into `~/.local/share/redrob-launcher/apps/<app>`, so its bundled libraries
+//!   stay beside it, with the same menu entry.
 //! - FreeBSD: the release's `/usr/local` tree, with a polkit prompt (or `~/.local` without one).
 //!
 //! Every download is checked against its published SHA-256 before anything is unpacked, a
@@ -72,6 +74,8 @@ pub fn install(
             let files = linux::integrate(app, &path, &replaced, previous);
             Some(record(&version, kind, path, files, false))
         }),
+        #[cfg(target_os = "linux")]
+        PackageKind::TarGz => linux::install_tree(app, &file, previous).map(|(bin, files)| Some(record(&version, kind, bin, files, false))),
         #[cfg(target_os = "freebsd")]
         PackageKind::TarGz => freebsd::install_tree(app, &file, job.paths).map(|(bin, files, root)| Some(record(&version, kind, bin, files, root))),
         other => Err(format!("{} isn't supported on this system", other.label())),
@@ -232,6 +236,8 @@ pub fn uninstall(app: &CraftApp, installed: &Installed, record: Option<&Record>,
             Some(r) => freebsd::remove_files(&r.files, r.needs_root),
             None => Err("the launcher has no record of these files".into()),
         },
+        #[cfg(target_os = "linux")]
+        InstallSource::Launcher if record.is_some_and(|r| r.kind == PackageKind::TarGz) => linux::remove_tree(app, &path, record),
         #[cfg(target_os = "linux")]
         InstallSource::AppImage | InstallSource::Launcher => remove_appimage(app, &path, record),
         other => Err(format!("{} can't be removed from here", other.label())),
@@ -478,7 +484,51 @@ pub(crate) mod linux {
         if !kinds.contains(&PackageKind::AppImage) {
             kinds.push(PackageKind::AppImage);
         }
+        // Last: the release tarball, unpacked into the launcher's own folder (`install_tree`).
+        kinds.push(PackageKind::TarGz);
         kinds
+    }
+
+    /// Where the launcher unpacks release tarballs: `<data>/redrob-launcher/apps`.
+    pub fn tree_dir() -> Option<PathBuf> {
+        host_data_dir().map(|d| d.join("redrob-launcher").join("apps"))
+    }
+
+    /// Unpacks a release tarball whole into `tree_dir()/<app>` (its `bin/<app>` beside the
+    /// `lib/`, `plugins/` and `qml/` it bundles, which it finds relative to itself) and writes the
+    /// menu entry and icon. Returns the binary and the files written outside that folder.
+    pub fn install_tree(app: &CraftApp, file: &Path, previous: Option<&Record>) -> Result<(PathBuf, Vec<PathBuf>), String> {
+        install_tree_into(&tree_dir().ok_or("no home folder")?, app, file).map(|bin| {
+            let files = integrate(app, &bin, &[], previous);
+            (bin, files)
+        })
+    }
+
+    /// [`install_tree`]'s unpacking into `apps`: staged beside the old copy, swapped in whole.
+    pub(crate) fn install_tree_into(apps: &Path, app: &CraftApp, file: &Path) -> Result<PathBuf, String> {
+        std::fs::create_dir_all(apps).map_err(|e| format!("couldn't create {} ({e})", apps.display()))?;
+        let dest = apps.join(app.id);
+        let staging = apps.join(format!("{}.new", app.id));
+        let result = tree::unpack(app, file, &staging).and_then(|top| swap_into_place(&top, &dest));
+        let _ = std::fs::remove_dir_all(&staging);
+        result?;
+        Ok(dest.join("bin").join(app.id))
+    }
+
+    /// Removes a tarball install: its folder under `tree_dir()` and the menu entry and icon.
+    pub fn remove_tree(app: &CraftApp, bin: &Path, record: Option<&Record>) -> Result<(), String> {
+        remove_tree_from(&tree_dir().ok_or("no home folder")?, app, bin)?;
+        unintegrate(app, bin, record);
+        Ok(())
+    }
+
+    /// [`remove_tree`]'s deletion: only `apps/<app>`, and only when `bin` is its `bin/<app>`.
+    pub(crate) fn remove_tree_from(apps: &Path, app: &CraftApp, bin: &Path) -> Result<(), String> {
+        let dir = apps.join(app.id);
+        if bin != dir.join("bin").join(app.id) {
+            return Err(format!("{} wasn't installed by the launcher. Remove it the way it was added.", bin.display()));
+        }
+        std::fs::remove_dir_all(&dir).map_err(|e| format!("couldn't remove {} ({e})", dir.display()))
     }
 
     /// Installs (or upgrades) a downloaded package with the system's own tools.
@@ -1398,6 +1448,47 @@ mod tests {
         let kinds = order_available_kinds(false, false, true, false, false);
         assert_eq!(kinds.first(), Some(&PackageKind::Flatpak));
         assert_eq!(kinds.get(1), Some(&PackageKind::AppImage));
+
+        // The release tarball is always the last resort.
+        for kinds in [order_available_kinds(false, false, false, false, false), order_available_kinds(true, false, true, true, false)] {
+            assert_eq!(kinds.last(), Some(&PackageKind::TarGz));
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn a_release_tarball_is_unpacked_whole_into_its_own_folder_and_removed_the_same_way() {
+        let dir = tempfile::tempdir().unwrap();
+        let app = CraftApp::by_id("redrob-canvas").unwrap();
+        let tarball = |marker: &str| {
+            let file = dir.path().join(format!("canvas-{marker}.tar.gz"));
+            let mut tar = tar::Builder::new(flate2::write::GzEncoder::new(std::fs::File::create(&file).unwrap(), flate2::Compression::fast()));
+            for (path, body, mode) in
+                [("bin/redrob-canvas", marker, 0o755), ("lib/libQt6Core.so.6", "lib", 0o644), ("qml/QtCore/qmldir", "qml", 0o644)]
+            {
+                let mut h = tar::Header::new_gnu();
+                h.set_size(body.len() as u64);
+                h.set_mode(mode);
+                h.set_cksum();
+                tar.append_data(&mut h, format!("./{path}"), body.as_bytes()).unwrap();
+            }
+            tar.into_inner().unwrap().finish().unwrap();
+            file
+        };
+        let apps = dir.path().join("apps");
+        let bin = linux::install_tree_into(&apps, app, &tarball("v1")).unwrap();
+        assert_eq!(bin, apps.join("redrob-canvas/bin/redrob-canvas"));
+        assert!(apps.join("redrob-canvas/lib/libQt6Core.so.6").is_file() && apps.join("redrob-canvas/qml/QtCore/qmldir").is_file());
+        assert_ne!(std::os::unix::fs::PermissionsExt::mode(&std::fs::metadata(&bin).unwrap().permissions()) & 0o111, 0);
+        // An update replaces the folder whole and leaves no staging behind.
+        linux::install_tree_into(&apps, app, &tarball("v2")).unwrap();
+        assert_eq!(std::fs::read_to_string(&bin).unwrap(), "v2");
+        let names: Vec<_> = std::fs::read_dir(&apps).unwrap().flatten().map(|e| e.file_name()).collect();
+        assert_eq!(names, vec![std::ffi::OsString::from("redrob-canvas")]);
+        // Removal takes only the launcher's own folder.
+        assert!(linux::remove_tree_from(&apps, app, Path::new("/usr/bin/redrob-canvas")).is_err());
+        linux::remove_tree_from(&apps, app, &bin).unwrap();
+        assert!(!apps.join("redrob-canvas").exists());
     }
 
     #[cfg(target_os = "macos")]
