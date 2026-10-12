@@ -64,4 +64,4 @@ Redrob CAD와 Redrob Cut이 이미 자기 `account.json`에 쓰는 모양과 같
 | Redrob Code | 모든 플랫폼에서 `$XDG_DATA_HOME/redrob/auth.json` (`~/.local/share/redrob/auth.json`) | `"redrob": {"type": "api", "key": "rk_…"}`. 파일의 다른 제공자 항목은 그대로 둠 |
 
 다른 앱은 공용 파일을 읽거나 런처가 그 앱의 파일을 알게 될 때까지 **아직 지원 안 됨**으로 보입니다. 코드는
-`crates/native/src/account.rs`(`connector`)에 있습니다.
+`crates/native/src/account.rs`(`connector`)에 있습니다. 앱별 현황은 [app-integration.ko.md](./app-integration.ko.md)에 있습니다.
