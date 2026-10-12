@@ -99,6 +99,8 @@ impl LauncherUi {
                     self.check_now();
                 }
                 ui.add_space(6.0);
+                self.account_link(ui, h);
+                ui.add_space(6.0);
                 widgets::rule(ui, h);
                 ui.add_space(6.0);
                 // Right to left: Table, then Grid, so they read Grid · Table.

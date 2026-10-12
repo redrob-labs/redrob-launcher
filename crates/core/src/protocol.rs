@@ -219,4 +219,8 @@ pub trait Backend {
     fn platform(&self) -> Option<Platform>;
     /// Unix seconds now.
     fn now(&self) -> i64;
+    /// Signing this computer in to a Redrob workspace, where the backend can (desktop only).
+    fn account(&mut self) -> Option<&mut dyn crate::account::AccountBackend> {
+        None
+    }
 }

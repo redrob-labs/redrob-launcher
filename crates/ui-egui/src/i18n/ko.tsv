@@ -295,3 +295,44 @@ month	Dec	12월
 @id	tray.show_on_current_desktop	현재 데스크톱에 창 보이기
 @id	tray.login_item	로그인할 때 Redrob Launcher 시작
 @id	appearance.theme	모양
+
+# Signing in to Redrob (account.rs).
+	Approve the code on console.redrob.ai	console.redrob.ai에서 코드를 승인하세요
+	Approve this code on console.redrob.ai:	console.redrob.ai에서 이 코드를 승인하세요:
+	Apps	앱
+	Asking console.redrob.ai for a code…	console.redrob.ai에 코드를 받는 중…
+	Connect	연결
+	Connected	연결됨
+	Connected with another key	다른 키로 연결됨
+	Forgets the key on this computer. Revoke it on console.redrob.ai to stop it working everywhere.	이 컴퓨터에서 키를 지워요. 어디서도 못 쓰게 하려면 console.redrob.ai에서 키를 폐기하세요.
+	Gives the app this computer's workspace key	이 컴퓨터의 워크스페이스 키를 앱에 넣어 줘요
+	Key: {name}	키: {name}
+	Not connected	연결 안 됨
+	Not supported yet	아직 지원 안 됨
+	One sign-in for every Redrob app on this computer	이 컴퓨터의 모든 Redrob 앱을 한 번에 로그인
+	Open console.redrob.ai	console.redrob.ai 열기
+	Redrob account	Redrob 계정
+	Sign in	로그인
+	Sign in first	먼저 로그인하세요
+	Sign in once and every Redrob app on this computer can use your workspace. You approve a short code on console.redrob.ai; nobody copies a key.	한 번 로그인하면 이 컴퓨터의 모든 Redrob 앱이 워크스페이스를 쓸 수 있어요. console.redrob.ai에서 짧은 코드만 승인하면 되고, 키를 복사할 일은 없어요.
+	Sign in to Redrob	Redrob에 로그인
+	Sign in to Redrob once for every app on this computer	이 컴퓨터의 모든 앱을 위해 Redrob에 한 번 로그인
+	Sign out	로그아웃
+	Signing in…	로그인하는 중…
+	Use this sign-in	이 로그인 쓰기
+	Uses this sign-in	이 로그인을 씀
+	Workspace: {name}	워크스페이스: {name}
+	Your Redrob workspace and the apps that use it	내 Redrob 워크스페이스와 그것을 쓰는 앱
+	{name} is connected. Restart it if it's open.	{name}을(를) 연결했어요. 열려 있으면 다시 시작하세요.
+	{time} left	{time} 남음
+@msg	Couldn't reach console.redrob.ai.	console.redrob.ai에 연결하지 못했어요.
+@msg	console.redrob.ai wouldn't start the sign-in.	console.redrob.ai가 로그인을 시작하지 않았어요.
+@msg	console.redrob.ai didn't return a usable code.	console.redrob.ai가 쓸 수 있는 코드를 주지 않았어요.
+@msg	The sign-in was declined on console.redrob.ai.	console.redrob.ai에서 로그인을 거절했어요.
+@msg	The code expired. Sign in again for a new one.	코드가 만료됐어요. 다시 로그인해 새 코드를 받으세요.
+@msg	Couldn't reach console.redrob.ai. Check the network and sign in again.	console.redrob.ai에 연결하지 못했어요. 네트워크를 확인하고 다시 로그인하세요.
+@msg	console.redrob.ai refused the sign-in ({code}).	console.redrob.ai가 로그인을 거부했어요({code}).
+@msg	Signed in, but the key couldn't be saved: {e}	로그인했지만 키를 저장하지 못했어요: {e}
+@msg	Sign in first.	먼저 로그인하세요.
+@msg	The launcher can't connect this app yet.	런처가 아직 이 앱을 연결할 수 없어요.
+@msg	Couldn't write the app's key file: {e}	앱의 키 파일을 쓰지 못했어요: {e}

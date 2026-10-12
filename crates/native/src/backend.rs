@@ -94,6 +94,8 @@ pub struct NativeBackend {
     platform: Option<Platform>,
     /// How this launcher is installed, when it can replace itself.
     self_install: Option<crate::self_update::Install>,
+    /// This computer's Redrob workspace (the shared key) and the device-flow sign-in.
+    account: crate::account::DeviceAccount,
 }
 
 impl NativeBackend {
@@ -133,7 +135,8 @@ impl NativeBackend {
             feed_throttle: Mutex::new(FeedThrottle::load(&paths.feed_throttle(), crate::now())),
             last_check: Mutex::new(None),
         });
-        let backend = Self { shared, paths, http, source, platform: native_platform(), self_install: crate::self_update::current() };
+        let account = crate::account::DeviceAccount::desktop(shared.waker.clone());
+        let backend = Self { shared, paths, http, source, platform: native_platform(), self_install: crate::self_update::current(), account };
         backend.replay_cache();
         backend.detect_all();
         backend
@@ -951,6 +954,10 @@ impl Backend for NativeBackend {
     fn now(&self) -> i64 {
         crate::now()
     }
+
+    fn account(&mut self) -> Option<&mut dyn redrob_launcher_core::account::AccountBackend> {
+        Some(&mut self.account)
+    }
 }
 
 /// The launcher's own download for this machine, for "a new launcher is available".
@@ -1202,7 +1209,14 @@ mod tests {
         let shared = shared();
         shared.latest.lock().unwrap().insert(APP.to_string(), release("0.5.0"));
         let shared = Arc::new(shared);
-        NativeBackend { shared, paths: Paths::under(root), http: None, source, platform: Some(platform), self_install: None }
+        let account = crate::account::DeviceAccount::new(
+            None,
+            Arc::new(crate::account::Https::new()),
+            "https://example.invalid".into(),
+            Arc::new(|| {}),
+            Arc::new(|_: &str| {}),
+        );
+        NativeBackend { shared, paths: Paths::under(root), http: None, source, platform: Some(platform), self_install: None, account }
     }
 
     /// Reports again, and returns what the UI was last told about a kept download.
