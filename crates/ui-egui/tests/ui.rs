@@ -63,6 +63,7 @@ fn release(id: &str, v: &str, at: i64) -> Release {
             url: format!("https://github.com/storytold/{id}/releases/download/v{v}/{name}"),
             sha256: None,
         }],
+        manifest: None,
     }
 }
 

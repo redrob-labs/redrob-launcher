@@ -211,6 +211,7 @@ impl FeedRelease {
             notes: truncate(&self.notes, 64 * 1024),
             prerelease: self.prerelease,
             assets,
+            manifest: None,
         })
     }
 }
