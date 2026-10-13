@@ -23,7 +23,8 @@ console.redrob.ai에서 자기 키를 받는다는 뜻입니다(콘솔의 `DEVIC
 
 런처 계정 창은 이 표를 `crates/core/src/account.rs`의 `SHARED_READERS`로 읽습니다. 설치된 버전이 표의
 릴리스 이상이면 "이 로그인을 씀", 머지됐지만 릴리스 전이면 "다음 버전부터 이 로그인을 씁니다", IDE와
-Studio는 "로그인이 필요 없습니다"로 보입니다. 앱이 릴리스되면 그 표에 버전을 적습니다.
+Studio는 "로그인이 필요 없습니다"로 보입니다. 앱이 릴리스되면 그 표에 버전을 적거나, 더 좋게는 릴리스에
+[`redrob-launcher.json`](./release-manifest.ko.md)을 실어 보냅니다. 런처는 표보다 그 파일을 믿습니다.
 
 공용 파일을 읽는 앱의 규칙은 [shared-account.ko.md](./shared-account.ko.md)의 네 가지입니다. 읽기만 하고 쓰지
 않기, 키가 필요할 때 읽기, 키를 기록하거나 보여 주지 않기, 앱 자신의 키가 먼저. Redrob CAD와 Redrob Cut의
