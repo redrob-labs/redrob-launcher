@@ -120,7 +120,8 @@ impl LauncherUi {
         let mut connect: Option<&'static str> = None;
         egui::ScrollArea::vertical().max_height(ui.ctx().content_rect().height() * 0.45).show(ui, |ui| {
             for app in &SUITE {
-                let link = self.backend.account().map_or(AppLink::Unsupported, |a| a.app_link(app.id));
+                let installed = self.entry(app.id).and_then(|e| e.installed.as_ref()).and_then(|i| i.version.clone());
+                let link = self.backend.account().map_or(AppLink::Unsupported, |a| a.app_link(app.id, installed.as_ref()));
                 ui.horizontal(|ui| {
                     if let Some(icon) = crate::icons::app(app.id) {
                         ui.add(egui::Image::new(icon).fit_to_exact_size(vec2(22.0, 22.0)));
@@ -129,6 +130,8 @@ impl LauncherUi {
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         let (text, tone, button) = match &link {
                             AppLink::Shared => (tl!("Uses this sign-in"), crate::model::Tone::Good, None),
+                            AppLink::SharedSoon => (tl!("Next release uses this sign-in"), crate::model::Tone::Info, None),
+                            AppLink::NoKey => (tl!("Needs no sign-in"), crate::model::Tone::Faint, None),
                             AppLink::Connected { same_key: true, .. } => (tl!("Connected"), crate::model::Tone::Good, None),
                             AppLink::Connected { same_key: false, .. } => {
                                 (tl!("Connected with another key"), crate::model::Tone::Info, Some(tl!("Use this sign-in")))

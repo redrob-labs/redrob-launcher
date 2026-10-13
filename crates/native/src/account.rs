@@ -514,15 +514,13 @@ impl AccountBackend for DeviceAccount {
         *self.stored.lock().unwrap_or_else(PoisonError::into_inner) = None;
     }
 
-    fn app_link(&self, app: &str) -> AppLink {
-        let Some(c) = connector(app) else { return AppLink::Unsupported };
-        match read_app_key(&c) {
-            Some((key, key_name)) => {
-                let same_key = self.stored().is_some_and(|s| s.api_key == key);
-                AppLink::Connected { same_key, key_name }
-            }
-            None => AppLink::NotConnected,
-        }
+    fn app_link(&self, app: &str, installed: Option<&redrob_launcher_core::version::Version>) -> AppLink {
+        let c = connector(app);
+        let own_key = c.as_ref().and_then(read_app_key).map(|(key, key_name)| {
+            let same_key = self.stored().is_some_and(|s| s.api_key == key);
+            (same_key, key_name)
+        });
+        redrob_launcher_core::account::link_for(app, own_key, installed, c.is_some())
     }
 
     fn connect_app(&mut self, app: &str) -> Result<(), String> {
@@ -725,7 +723,9 @@ mod tests {
         assert_eq!(connector("redrob-office"), None);
         let (w, o) = quiet();
         let mut acct = DeviceAccount::new(None, Arc::new(Script::new(vec![])), "https://c".into(), w, o);
-        assert_eq!(acct.app_link("redrob-office"), AppLink::Unsupported);
+        // Office is merged on develop but unreleased: it will read the file from its next release.
+        assert_eq!(acct.app_link("redrob-office", None), AppLink::SharedSoon);
+        assert_eq!(acct.app_link("redrob-ide", None), AppLink::NoKey);
         assert_eq!(acct.connect_app("redrob-cad"), Err("Sign in first.".into()));
     }
 }
