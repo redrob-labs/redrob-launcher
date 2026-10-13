@@ -111,7 +111,7 @@ function New-InstallerArt([string] $BannerOut, [string] $DialogOut) {
   $line = [System.Drawing.ColorTranslator]::FromHtml('#292e37')
   # The Redrob apps, in the launcher's order (crates/core/src/catalog.rs).
   $apps = 'redrob-cut', 'redrob-shape', 'redrob-cad', 'redrob-canvas', 'redrob-design', 'redrob-studio',
-    'redrob-browser', 'redrob-code', 'redrob-ide', 'redrob-cowork', 'redrob-office', 'redrob-query'
+    'redrob-browser', 'redrob-code', 'redrob-cowork', 'redrob-office', 'redrob-query'
   $mark = [System.Drawing.Image]::FromFile((Join-Path $Root 'assets\app-icon\hicolor\256x256\apps\ai.redrob.launcher.png'))
   $wordmark = [System.Drawing.Image]::FromFile((Join-Path $Root 'assets\app-icon\redrob-logo-dark.png'))
   $icons = $apps | ForEach-Object { [System.Drawing.Image]::FromFile((Join-Path $Root "assets\app-icons\$_.png")) }

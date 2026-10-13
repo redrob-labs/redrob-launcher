@@ -115,7 +115,7 @@ fn signing_in_shows_the_code_then_the_workspace_and_connects_apps() {
             ("redrob-cut", AppLink::Connected { same_key: true, key_name: "Redrob Launcher".into() }),
             ("redrob-shape", AppLink::Shared),
             ("redrob-office", AppLink::SharedSoon),
-            ("redrob-ide", AppLink::NoKey),
+            ("redrob-studio", AppLink::NoKey),
         ],
         ..State::default()
     }));
@@ -162,7 +162,8 @@ fn signing_in_shows_the_code_then_the_workspace_and_connects_apps() {
     h.get_by_label("Uses this sign-in");
     h.get_by_label("Next release uses this sign-in");
     h.get_by_label("Needs no sign-in");
-    assert!(h.query_all_by_label("Not supported yet").count() >= 7);
+    // Every suite app without a link above is listed as unsupported.
+    assert_eq!(h.query_all_by_label("Not supported yet").count(), redrob_launcher_core::SUITE.len() - 6);
     snapshot(&mut h, "account-signed-in");
     h.get_by_label("Connect").click();
     h.run_steps(2);

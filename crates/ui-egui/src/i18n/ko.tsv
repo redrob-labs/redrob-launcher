@@ -224,7 +224,6 @@ redrob-design	Open .fig and .pen files and design by prompt	.fig·.pen 파일을
 redrob-studio	Make images and audio on your own GPU	내 GPU에서 이미지와 오디오를 만들어요
 redrob-browser	A browser whose agent reads, acts on and automates the web	에이전트가 웹을 읽고, 움직이고, 자동화하는 브라우저
 redrob-code	The AI coding agent for your terminal	터미널에서 쓰는 AI 코딩 에이전트
-redrob-ide	Write, refactor and ship with the agent built in	에이전트가 들어 있는 편집기로 쓰고, 고치고, 배포해요
 redrob-cowork	Work with AI agents on your own files	내 파일로 AI 에이전트와 함께 일해요
 redrob-office	Docs, Sheets, Slides, PDF and Hangul in one window	문서·시트·슬라이드·PDF·한글을 한 창에서
 redrob-query	Query PostgreSQL, MySQL, SQLite and MongoDB with AI	AI로 PostgreSQL·MySQL·SQLite·MongoDB를 조회해요

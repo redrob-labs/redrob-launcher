@@ -659,7 +659,6 @@ pub(crate) mod linux {
             "redrob-studio" => include_bytes!("../../../assets/app-icons/redrob-studio.png"),
             "redrob-browser" => include_bytes!("../../../assets/app-icons/redrob-browser.png"),
             "redrob-code" => include_bytes!("../../../assets/app-icons/redrob-code.png"),
-            "redrob-ide" => include_bytes!("../../../assets/app-icons/redrob-ide.png"),
             "redrob-cowork" => include_bytes!("../../../assets/app-icons/redrob-cowork.png"),
             "redrob-office" => include_bytes!("../../../assets/app-icons/redrob-office.png"),
             "redrob-query" => include_bytes!("../../../assets/app-icons/redrob-query.png"),

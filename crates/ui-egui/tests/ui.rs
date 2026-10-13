@@ -75,8 +75,7 @@ fn events() -> Vec<Event> {
         ("redrob-cut", "0.4.0"),
         ("redrob-studio", "0.4.0"),
         ("redrob-office", "0.4.0"),
-        ("redrob-ide", "0.6.0"),
-        ("redrob-browser", "0.4.0"),
+        ("redrob-browser", "0.6.0"),
         ("redrob-code", "0.3.0"),
         ("redrob-cowork", "0.3.0"),
         ("redrob-query", "0.3.0"),
@@ -90,7 +89,7 @@ fn events() -> Vec<Event> {
         });
     }
     ev.push(Event::Latest { app: "redrob-recall".into(), latest: LatestRelease::None, from: Origin::RedrobApi });
-    let installed = [("redrob-canvas", "0.4.1"), ("redrob-studio", "0.4.0"), ("redrob-code", "0.3.0"), ("redrob-ide", "0.5.0")];
+    let installed = [("redrob-canvas", "0.4.1"), ("redrob-studio", "0.4.0"), ("redrob-code", "0.3.0"), ("redrob-browser", "0.5.0")];
     for app in &SUITE {
         let inst = installed.iter().find(|(id, _)| *id == app.id).map(|(_, v)| Installed {
             version: version::parse(v),
@@ -213,7 +212,7 @@ fn grid_shows_every_status_and_installs_on_click() {
     h.run_steps(2);
     let installs: Vec<_> = sent.borrow().iter().filter_map(|c| if let Command::Install { app } = c { Some(app.clone()) } else { None }).collect();
     assert_eq!(installs.len(), 2, "{installs:?}");
-    assert!(installs.contains(&"redrob-canvas".to_string()) && installs.contains(&"redrob-ide".to_string()));
+    assert!(installs.contains(&"redrob-canvas".to_string()) && installs.contains(&"redrob-browser".to_string()));
 }
 
 #[test]
@@ -290,7 +289,7 @@ fn a_dismissed_install_prompt_is_not_called_a_cancelled_download() {
 #[test]
 fn a_kept_update_names_its_version_and_an_up_to_date_app_is_not_downloaded_again() {
     let mut ev = events();
-    for app in ["redrob-ide", "redrob-code"] {
+    for app in ["redrob-browser", "redrob-code"] {
         ev.push(Event::ReadyToInstall { app: app.into(), ready: true });
     }
     let (mut h, sent) = harness_with(ev, ViewMode::Table, egui::Theme::Dark, true, 1.0);
@@ -300,7 +299,7 @@ fn a_kept_update_names_its_version_and_an_up_to_date_app_is_not_downloaded_again
     assert!(h.query_by_label("Update to 0.6.0").is_none());
     h.get_by_label("Retry update to 0.6.0").click();
     h.run_steps(2);
-    assert_eq!(*sent.borrow(), [Command::Install { app: "redrob-ide".into() }]);
+    assert_eq!(*sent.borrow(), [Command::Install { app: "redrob-browser".into() }]);
     // Redrob Code is up to date: its menu offers Reinstall, which uses the kept file.
     let row = h.get_all_by_label("Redrob Code").next().unwrap().rect().center().y;
     h.get_all_by_label("…").find(|n| (n.rect().center().y - row).abs() < 25.0).unwrap().click();
@@ -447,12 +446,12 @@ fn every_table_column_sorts_both_ways() {
     h.get_by_label("Installed").click();
     h.run_steps(3);
     let o = order(&h);
-    assert_eq!(&o[..4], ["Redrob IDE", "Redrob Canvas", "Redrob Studio", "Redrob Code"], "{o:?}");
+    assert_eq!(&o[..4], ["Redrob Browser", "Redrob Canvas", "Redrob Studio", "Redrob Code"], "{o:?}");
     // Reversed: lowest first, the empty cells still last.
     h.get_by_label("Installed").click();
     h.run_steps(3);
     let o = order(&h);
-    assert_eq!(&o[..4], ["Redrob Code", "Redrob Studio", "Redrob Canvas", "Redrob IDE"], "{o:?}");
+    assert_eq!(&o[..4], ["Redrob Code", "Redrob Studio", "Redrob Canvas", "Redrob Browser"], "{o:?}");
     // Kind: A to Z.
     h.get_by_label("Kind").click();
     h.run_steps(3);
@@ -762,7 +761,10 @@ fn automatic_updates_queue_installs_for_outdated_apps_and_launcher() {
         commands.contains(&Command::Install { app: "redrob-canvas".into() }),
         "outdated redrob-canvas should be queued for install: {commands:?}"
     );
-    assert!(commands.contains(&Command::Install { app: "redrob-ide".into() }), "outdated redrob-ide should be queued for install: {commands:?}");
+    assert!(
+        commands.contains(&Command::Install { app: "redrob-browser".into() }),
+        "outdated redrob-browser should be queued for install: {commands:?}"
+    );
     assert!(commands.contains(&Command::UpdateLauncher), "launcher update should be queued: {commands:?}");
 }
 

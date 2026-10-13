@@ -72,8 +72,7 @@ fn events() -> Vec<Event> {
         ("redrob-cut", "0.4.0"),
         ("redrob-studio", "0.4.0"),
         ("redrob-office", "0.4.0"),
-        ("redrob-ide", "0.6.0"),
-        ("redrob-browser", "0.4.0"),
+        ("redrob-browser", "0.6.0"),
         ("redrob-code", "0.3.0"),
         ("redrob-cowork", "0.3.0"),
         ("redrob-query", "0.3.0"),
@@ -88,7 +87,7 @@ fn events() -> Vec<Event> {
         });
     }
     ev.push(Event::Latest { app: "redrob-recall".into(), latest: LatestRelease::None, from: Origin::RedrobApi });
-    let installed = [("redrob-canvas", "0.4.1"), ("redrob-studio", "0.4.0"), ("redrob-code", "0.3.0"), ("redrob-ide", "0.5.0")];
+    let installed = [("redrob-canvas", "0.4.1"), ("redrob-studio", "0.4.0"), ("redrob-code", "0.3.0"), ("redrob-browser", "0.5.0")];
     for app in &SUITE {
         let inst = installed.iter().find(|(id, _)| *id == app.id).map(|(_, v)| Installed {
             version: version::parse(v),
@@ -177,7 +176,7 @@ fn korean_switches_persists_and_keeps_install_actions() {
     h.get_by_label("모두 업데이트(2)").click();
     h.run_steps(2);
     let installs: Vec<_> = sent.borrow().iter().filter_map(|c| if let Command::Install { app } = c { Some(app.clone()) } else { None }).collect();
-    assert_eq!(installs, ["redrob-canvas", "redrob-ide"]);
+    assert_eq!(installs, ["redrob-canvas", "redrob-browser"]);
 
     let (mut table, _) = harness_language(ViewMode::Table, egui::Theme::Light, true, &restored.language);
     table.run_steps(6);

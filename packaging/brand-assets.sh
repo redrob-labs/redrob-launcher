@@ -55,7 +55,7 @@ magick "$B/redrob-logo-primary-white.png" -filter Lanczos -resize x64 "PNG32:$A/
 
 # Each app's 128 px icon. Products with a mark of their own render it from the SVG master.
 marked="redrob-browser redrob-code redrob-design redrob-office"
-tile="redrob-cut redrob-shape redrob-cad redrob-canvas redrob-studio redrob-ide redrob-cowork redrob-query redrob-recall"
+tile="redrob-cut redrob-shape redrob-cad redrob-canvas redrob-studio redrob-cowork redrob-query redrob-recall"
 for id in $marked; do resvg -w 128 -h 128 "$B/$id-icon.svg" "$APPS/$id.png"; done
 for id in $tile; do down "$B/icon-192.png" 128 "$APPS/$id.png"; done
 

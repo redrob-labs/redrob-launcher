@@ -725,7 +725,7 @@ mod tests {
         let mut acct = DeviceAccount::new(None, Arc::new(Script::new(vec![])), "https://c".into(), w, o);
         // Office is merged on develop but unreleased: it will read the file from its next release.
         assert_eq!(acct.app_link("redrob-office", None), AppLink::SharedSoon);
-        assert_eq!(acct.app_link("redrob-ide", None), AppLink::NoKey);
+        assert_eq!(acct.app_link("redrob-studio", None), AppLink::NoKey);
         assert_eq!(acct.connect_app("redrob-cad"), Err("Sign in first.".into()));
     }
 }
