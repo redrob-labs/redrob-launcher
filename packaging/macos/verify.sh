@@ -37,7 +37,8 @@ esac
 DMG="$DIST/$PKG-$VERSION-macos-$ARCH.dmg"
 IDENTITY="${MACOS_SIGN_IDENTITY:--}"
 STRICT=0
-if [ "$IDENTITY" != "-" ] && [ -n "${APPLE_ID:-}" ] && [ -n "${APPLE_PASSWORD:-}" ] && [ -n "${APPLE_TEAM_ID:-}" ]; then
+if [ "$IDENTITY" != "-" ] && { { [ -n "${APPLE_NOTARY_API_KEY_P8_BASE64:-}" ] && [ -n "${APPLE_NOTARY_API_KEY_ID:-}" ] && [ -n "${APPLE_NOTARY_API_ISSUER_ID:-}" ]; } ||
+  { [ -n "${APPLE_ID:-}" ] && [ -n "${APPLE_PASSWORD:-}" ] && [ -n "${APPLE_TEAM_ID:-}" ]; }; }; then
   STRICT=1
 fi
 
