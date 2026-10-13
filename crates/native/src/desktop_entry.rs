@@ -25,7 +25,6 @@ pub fn meta(app: &CraftApp) -> (&'static str, Option<&'static str>) {
         "redrob-cut" => ("AudioVideo;Video;AudioVideoEditing;", None),
         "redrob-browser" => ("Graphics;Publishing;", None),
         "redrob-shape" => ("Graphics;2DGraphics;VectorGraphics;", None),
-        "redrob-ide" => ("AudioVideo;Video;Graphics;2DGraphics;", None),
         "redrob-code" => ("Office;WordProcessor;", None),
         "redrob-cowork" => ("Office;Presentation;", None),
         "redrob-query" => ("Office;Spreadsheet;", None),

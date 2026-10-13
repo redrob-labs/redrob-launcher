@@ -19,7 +19,6 @@ console.redrob.ai에서 자기 키를 받는다는 뜻입니다(콘솔의 `DEVIC
 | Redrob Canvas | `REDROB_API_KEY`, 저장된 `console-key`, 기기 인증 | 머지됨(redrob-canvas#160) | 아니요 | 릴리스 |
 | Redrob Query | `REDROB_API_KEY`, OS 키링 | 머지됨(redrob-query#55) | 아니요 | 릴리스 |
 | Redrob Recall | OS 키링, 붙여 넣은 키 | 머지됨(redrob-recall#49) | 아니요 | 릴리스 |
-| Redrob IDE | 없음. AI 기능도 콘솔 키도 없음 | 필요 없음 | 필요 없음 | 없음 |
 | Redrob Studio | 없음. 모든 모델을 로컬에서 실행 | 필요 없음 | 필요 없음 | 없음 |
 
 런처 계정 창은 이 표를 `crates/core/src/account.rs`의 `SHARED_READERS`로 읽습니다. 설치된 버전이 표의
@@ -49,7 +48,7 @@ Studio는 "로그인이 필요 없습니다"로 보입니다. 앱이 릴리스�
 | Redrob Design | v0.15.0 | `Redrob.Design_0.15.0_aarch64.dmg` | 아니요 | Tauri 기본값 `Redrob.Design_<ver>_<arch>`; Linux·Windows 자산 없음 |
 | Redrob Query | v0.2.0 | `Redrob.Query_0.2.0_amd64.AppImage` | 아니요 | Tauri 기본값, Design과 같음 |
 | Redrob Recall | v0.2.0 | `Redrob.Recall_0.2.0_amd64.AppImage` | 아니요 | Tauri 기본값, Design과 같음 |
-| Redrob Studio, Redrob IDE | 없음 | -- | 아니요 | 아직 릴리스 없음 |
+| Redrob Studio | 없음 | -- | 아니요 | 아직 릴리스 없음 |
 
 메우는 길은 둘입니다. 레포마다 릴리스 워크플로에서 업로드 전에 이름을 바꾸는 단계 하나(패키저 고유
 이름은 사본으로 남김), 또는 런처가 Tauri·electron-builder 표기를 배우는 것. 앞은 모든 앱에 규칙 하나,

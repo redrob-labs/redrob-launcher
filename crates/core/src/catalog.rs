@@ -117,7 +117,7 @@ macro_rules! app {
 ///
 /// Mark colours are the design system's `product-*` marks where a product has one (Browser, Code,
 /// Design, Office); the rest carry Redrob Blue until the design system gives them a mark.
-pub const SUITE: [CraftApp; 13] = [
+pub const SUITE: [CraftApp; 12] = [
     app!("redrob-cut", "Redrob Cut", "Describe the cut and let the agent make it", "Video editing", AppGroup::Create, BLUE, "ai.redrob.cut"),
     app!("redrob-shape", "Redrob Shape", "Shape and shade 3D models by prompt", "3D", AppGroup::Create, BLUE, "ai.redrob.shape"),
     app!("redrob-cad", "Redrob CAD", "Design, constrain and iterate on parts with an agent", "CAD", AppGroup::Create, BLUE, "ai.redrob.cad"),
@@ -142,7 +142,6 @@ pub const SUITE: [CraftApp; 13] = [
         "ai.redrob.browser"
     ),
     app!("redrob-code", "Redrob Code", "The AI coding agent for your terminal", "Coding agent", AppGroup::Work, [0x02, 0xa2, 0x52], "ai.redrob.code"),
-    app!("redrob-ide", "Redrob IDE", "Write, refactor and ship with the agent built in", "Code editor", AppGroup::Work, BLUE, "ai.redrob.ide"),
     app!("redrob-cowork", "Redrob Cowork", "Work with AI agents on your own files", "Agent workspace", AppGroup::Work, BLUE, "ai.redrob.cowork"),
     app!(
         "redrob-office",

@@ -71,7 +71,7 @@ pub const SHARED_READERS: [(&str, Option<&str>); 10] = [
 ];
 
 /// Apps that never hold a console key.
-pub const NO_KEY: [&str; 3] = ["redrob-ide", "redrob-studio", "redrob-launcher"];
+pub const NO_KEY: [&str; 2] = ["redrob-studio", "redrob-launcher"];
 
 /// The released version of `app` from which it reads the shared file. `Some(None)`: merged, unreleased.
 pub fn shared_since(app: &str) -> Option<Option<crate::version::Version>> {
@@ -167,7 +167,7 @@ mod tests {
 
     #[test]
     fn apps_without_a_console_key_and_unknown_apps() {
-        assert_eq!(link_for("redrob-ide", None, None, false), AppLink::NoKey);
+        assert_eq!(link_for("redrob-launcher", None, None, false), AppLink::NoKey);
         assert_eq!(link_for("redrob-studio", None, Some(&v("1.0.0")), false), AppLink::NoKey);
         assert_eq!(link_for("something-else", None, None, false), AppLink::Unsupported);
     }
