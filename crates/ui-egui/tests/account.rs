@@ -46,7 +46,7 @@ impl AccountBackend for FakeAccount {
     fn disconnect(&mut self) {
         self.0.borrow_mut().asked.push(Asked::Disconnect);
     }
-    fn app_link(&self, app: &str) -> AppLink {
+    fn app_link(&self, app: &str, _installed: Option<&redrob_launcher_core::version::Version>) -> AppLink {
         self.0.borrow().links.iter().find(|(a, _)| *a == app).map_or(AppLink::Unsupported, |(_, l)| l.clone())
     }
     fn connect_app(&mut self, app: &str) -> Result<(), String> {
@@ -113,6 +113,9 @@ fn signing_in_shows_the_code_then_the_workspace_and_connects_apps() {
             ("redrob-cad", AppLink::NotConnected),
             ("redrob-code", AppLink::Connected { same_key: false, key_name: String::new() }),
             ("redrob-cut", AppLink::Connected { same_key: true, key_name: "Redrob Launcher".into() }),
+            ("redrob-shape", AppLink::Shared),
+            ("redrob-office", AppLink::SharedSoon),
+            ("redrob-ide", AppLink::NoKey),
         ],
         ..State::default()
     }));
@@ -156,7 +159,10 @@ fn signing_in_shows_the_code_then_the_workspace_and_connects_apps() {
     h.get_by_label("Key: Redrob Launcher");
     h.get_by_label("Connected");
     h.get_by_label("Connected with another key");
-    assert!(h.query_all_by_label("Not supported yet").count() >= 10);
+    h.get_by_label("Uses this sign-in");
+    h.get_by_label("Next release uses this sign-in");
+    h.get_by_label("Needs no sign-in");
+    assert!(h.query_all_by_label("Not supported yet").count() >= 7);
     snapshot(&mut h, "account-signed-in");
     h.get_by_label("Connect").click();
     h.run_steps(2);
