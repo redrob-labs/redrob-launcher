@@ -218,7 +218,9 @@ mod tests {
         let mut e = Engine::new(Arc::new(Fake { installed: true, up: Mutex::new(None), starts: AtomicU32::new(0), fail_start: false }), wake.clone());
         assert_eq!(e.state(), EngineState::Stopped);
         e.start();
-        assert_eq!(e.state(), EngineState::Busy);
+        // The start runs on a thread: it is usually still Busy here, but a fast machine can already
+        // report Running. Either is right; only a Stopped/NotInstalled read would be a bug.
+        assert!(matches!(e.state(), EngineState::Busy | EngineState::Running(_)), "{:?}", e.state());
         settle(&mut e);
         match e.state() {
             EngineState::Running(r) => {
