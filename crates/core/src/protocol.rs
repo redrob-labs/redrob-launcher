@@ -227,4 +227,8 @@ pub trait Backend {
     fn models(&mut self) -> Option<&mut dyn crate::models::ModelBackend> {
         None
     }
+    /// The shared Redrob Code engine, where the backend can reach it (desktop only).
+    fn engine(&mut self) -> Option<&mut dyn crate::engine::EngineBackend> {
+        None
+    }
 }

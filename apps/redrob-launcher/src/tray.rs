@@ -11,6 +11,8 @@ pub enum TrayAction {
     Toggle,
     Show,
     Check,
+    /// Show the window with the engine dialog open.
+    Engine,
     Open(&'static str),
     Quit,
 }
@@ -42,12 +44,13 @@ impl Tray {
     pub fn new(wake: impl Fn() + Send + Sync + Clone + 'static, on_quit: impl Fn() + Send + Sync + 'static) -> Result<Self, String> {
         let show = MenuItem::new(i18n::t("Show Redrob Launcher"), true, None);
         let check = MenuItem::new(i18n::t("Check for Updates"), true, None);
+        let engine = MenuItem::new(i18n::t("Redrob Code engine"), true, None);
         use redrob_launcher_core::catalog::{GITHUB_URL, WEBSITE_URL};
         let website = MenuItem::new(i18n::t("Visit redrob.ai"), true, None);
         let github = MenuItem::new(i18n::t("Redrob on GitHub"), true, None);
         let quit = MenuItem::new(i18n::t("Quit Redrob Launcher"), true, None);
         let menu = Menu::new();
-        menu.append_items(&[&show, &check, &PredefinedMenuItem::separator(), &website, &github, &PredefinedMenuItem::separator(), &quit])
+        menu.append_items(&[&show, &check, &engine, &PredefinedMenuItem::separator(), &website, &github, &PredefinedMenuItem::separator(), &quit])
             .map_err(|e| e.to_string())?;
         let links = [(website.id().clone(), WEBSITE_URL), (github.id().clone(), GITHUB_URL)];
         let icon = TrayIconBuilder::new()
@@ -60,6 +63,7 @@ impl Tray {
             .map_err(|e| e.to_string())?;
         let (tx, rx): (Sender<TrayAction>, Receiver<TrayAction>) = channel();
         let (show_id, check_id, quit_id) = (show.id().clone(), check.id().clone(), quit.id().clone());
+        let engine_id = engine.id().clone();
         {
             let tx = tx.clone();
             let wake = wake.clone();
@@ -71,6 +75,8 @@ impl Tray {
                     TrayAction::Check
                 } else if e.id == ids.2 {
                     TrayAction::Quit
+                } else if e.id == engine_id {
+                    TrayAction::Engine
                 } else if let Some((_, url)) = links.iter().find(|(id, _)| *id == e.id) {
                     TrayAction::Open(url)
                 } else {
@@ -92,6 +98,7 @@ impl Tray {
         let labels = vec![
             (show, "Show Redrob Launcher"),
             (check, "Check for Updates"),
+            (engine, "Redrob Code engine"),
             (website, "Visit redrob.ai"),
             (github, "Redrob on GitHub"),
             (quit, "Quit Redrob Launcher"),

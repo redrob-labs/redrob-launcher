@@ -72,6 +72,8 @@ pub(crate) enum Dialog {
     Account,
     /// The apps' downloadable models.
     Models,
+    /// The shared Redrob Code engine: running or not, who uses it, start and stop.
+    Engine,
 }
 
 pub struct LauncherUi {
@@ -184,6 +186,14 @@ impl LauncherUi {
     }
 
     /// Looks for updates now (the tray's "Check for Updates").
+    /// Open the engine dialog (the tray's "Redrob Code engine" item).
+    pub fn show_engine(&mut self) {
+        if let Some(engine) = self.backend.engine() {
+            engine.refresh();
+        }
+        self.dialog = Some(Dialog::Engine);
+    }
+
     pub fn check_now(&mut self) {
         self.auto_update_attempted.clear();
         self.backend.send(Command::CheckForUpdates { force: true });

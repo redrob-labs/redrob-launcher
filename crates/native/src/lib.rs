@@ -11,6 +11,7 @@ pub mod account;
 pub mod backend;
 pub mod desktop_entry;
 pub mod detect;
+pub mod engine;
 pub mod feed_throttle;
 pub mod http;
 pub mod install;
