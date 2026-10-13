@@ -98,6 +98,8 @@ pub struct NativeBackend {
     account: crate::account::DeviceAccount,
     /// The apps' model downloads.
     models: crate::models::Models,
+    /// The shared Redrob Code engine.
+    engine: crate::engine::Engine,
 }
 
 impl NativeBackend {
@@ -139,7 +141,9 @@ impl NativeBackend {
         });
         let account = crate::account::DeviceAccount::desktop(shared.waker.clone());
         let models = crate::models::Models::desktop(http.clone(), shared.waker.clone());
-        let backend = Self { shared, paths, http, source, platform: native_platform(), self_install: crate::self_update::current(), account, models };
+        let engine = crate::engine::Engine::desktop(shared.waker.clone());
+        let backend =
+            Self { shared, paths, http, source, platform: native_platform(), self_install: crate::self_update::current(), account, models, engine };
         backend.replay_cache();
         backend.detect_all();
         backend
@@ -965,6 +969,10 @@ impl Backend for NativeBackend {
     fn models(&mut self) -> Option<&mut dyn redrob_launcher_core::models::ModelBackend> {
         Some(&mut self.models)
     }
+
+    fn engine(&mut self) -> Option<&mut dyn redrob_launcher_core::engine::EngineBackend> {
+        Some(&mut self.engine)
+    }
 }
 
 /// The launcher's own download for this machine, for "a new launcher is available".
@@ -1224,7 +1232,8 @@ mod tests {
             Arc::new(|_: &str| {}),
         );
         let models = crate::models::Models::new(Vec::new(), None, Arc::new(|| {}), Arc::new(|_: &str| None));
-        NativeBackend { shared, paths: Paths::under(root), http: None, source, platform: Some(platform), self_install: None, account, models }
+        let engine = crate::engine::Engine::desktop(Arc::new(|| {}));
+        NativeBackend { shared, paths: Paths::under(root), http: None, source, platform: Some(platform), self_install: None, account, models, engine }
     }
 
     /// Reports again, and returns what the UI was last told about a kept download.

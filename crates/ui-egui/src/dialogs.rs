@@ -27,6 +27,7 @@ impl LauncherUi {
             Dialog::LauncherUpdate(r) => modal.show(ctx, |ui| close = self.launcher_update_dialog(ui, r)),
             Dialog::Account => modal.show(ctx, |ui| close = self.account_dialog(ui)),
             Dialog::Models => modal.show(ctx, |ui| close = self.models_dialog(ui)),
+            Dialog::Engine => modal.show(ctx, |ui| close = self.engine_dialog(ui)),
         };
         if close || response.should_close() {
             self.dialog = None;

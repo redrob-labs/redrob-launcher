@@ -9,6 +9,7 @@
 pub mod account;
 pub mod catalog;
 pub mod distro;
+pub mod engine;
 pub mod feed;
 pub mod models;
 pub mod platform;
