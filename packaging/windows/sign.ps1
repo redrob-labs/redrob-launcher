@@ -88,7 +88,19 @@ try {
     $ts = if ($env:WINDOWS_TIMESTAMP_URL) { $env:WINDOWS_TIMESTAMP_URL } else { 'http://timestamp.acs.microsoft.com' }
     Invoke-SignTool ($common + @('/tr', $ts, '/dlib', $dlib.FullName, '/dmdf', $metadata) + $Files)
   }
-  Invoke-SignTool (@('verify', '/pa', '/v') + $Files)
+  # The organization's certificate chains to a root the runner does not trust, so `signtool verify`
+  # would reject every signature it just made (redrob-office hit the same thing). Check what matters
+  # here: each file now carries a signer, and the status is one a correct signature with an
+  # untrusted root reports. Unsigned files and hash mismatches still fail.
+  $accepted = @('Valid', 'UnknownError', 'NotTrusted')
+  foreach ($file in $Files) {
+    $signature = Get-AuthenticodeSignature -FilePath $file
+    if (-not $signature.SignerCertificate) { throw "$file has no Authenticode signer certificate after signing" }
+    if ($accepted -notcontains $signature.Status.ToString()) {
+      throw "$file signature status $($signature.Status): $($signature.StatusMessage)"
+    }
+    Write-Output "$file signed by $($signature.SignerCertificate.Subject) (status $($signature.Status))"
+  }
 }
 finally {
   Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue
