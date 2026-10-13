@@ -33,6 +33,35 @@ pub struct Release {
     pub notes: String,
     pub prerelease: bool,
     pub assets: Vec<Asset>,
+    /// What the release's [`MANIFEST_ASSET`] declared; `None` when the release has none (older apps).
+    #[serde(default)]
+    pub manifest: Option<Manifest>,
+}
+
+/// The asset every Redrob app's release workflow uploads beside its installers, so the launcher
+/// learns what a release can do without a launcher change per app release. See
+/// `docs/release-manifest.md`.
+pub const MANIFEST_ASSET: &str = "redrob-launcher.json";
+
+/// `redrob-launcher.json`: what one release of an app tells the launcher.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct Manifest {
+    /// Manifest schema; this launcher reads 1. Unknown fields are ignored, so 1 can grow.
+    pub schema: u32,
+    /// The app reads the launcher's shared account file (`docs/shared-account.md`): signing in
+    /// to the launcher is all it needs.
+    pub shared_account: bool,
+}
+
+/// Reads a release's `redrob-launcher.json`. Untrusted input: only the known fields, bounded by
+/// the caller's size limit, and a schema this launcher does not know is an error, not a guess.
+pub fn parse_manifest(text: &str) -> Result<Manifest, String> {
+    let m: Manifest = serde_json::from_str(text).map_err(|e| format!("unreadable {MANIFEST_ASSET} ({e})"))?;
+    if m.schema != 1 {
+        return Err(format!("{MANIFEST_ASSET} schema {} is not 1", m.schema));
+    }
+    Ok(m)
 }
 
 impl Release {
@@ -51,6 +80,15 @@ impl Release {
 
     pub fn sums_asset(&self) -> Option<&Asset> {
         self.assets.iter().find(|a| a.name == "SHA256SUMS.txt")
+    }
+
+    pub fn manifest_asset(&self) -> Option<&Asset> {
+        self.assets.iter().find(|a| a.name == MANIFEST_ASSET)
+    }
+
+    /// Whether this release's installed copy reads the shared account file, per its manifest.
+    pub fn reads_shared_account(&self) -> bool {
+        self.manifest.as_ref().is_some_and(|m| m.shared_account)
     }
 }
 
@@ -127,6 +165,7 @@ fn release_from_value(v: &serde_json::Value, repo: &str) -> Result<Release, Stri
         notes: v["body"].as_str().map(|b| truncate(b, MAX_NOTES)).unwrap_or_default(),
         prerelease: v["prerelease"].as_bool().unwrap_or(false),
         assets,
+        manifest: None,
     })
 }
 
@@ -148,6 +187,7 @@ pub fn release_from_sums(repo: &str, tag: &str, sums: &[(String, String)]) -> Re
         notes: String::new(),
         prerelease: false,
         assets,
+        manifest: None,
     }
 }
 
@@ -192,6 +232,22 @@ fn truncate(s: &str, max: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn reads_the_release_manifest() {
+        let m = parse_manifest(r#"{"schema": 1, "sharedAccount": true, "somethingNewer": 3}"#).unwrap();
+        assert_eq!(m, Manifest { schema: 1, shared_account: true });
+        // Fields left out read as false; a schema this launcher does not know is refused, not guessed.
+        assert!(!parse_manifest(r#"{"schema": 1}"#).unwrap().shared_account);
+        assert!(parse_manifest(r#"{"schema": 2, "sharedAccount": true}"#).is_err());
+        assert!(parse_manifest("not json").is_err());
+        let mut r = Release::default();
+        assert!(!r.reads_shared_account());
+        r.manifest = Some(m);
+        assert!(r.reads_shared_account());
+        r.assets.push(Asset { name: MANIFEST_ASSET.into(), ..Default::default() });
+        assert_eq!(r.manifest_asset().map(|a| a.name.as_str()), Some("redrob-launcher.json"));
+    }
 
     const REPO: &str = "redrob-labs/redrob-canvas";
     const HASH: &str = "8a5edab282632443219e051e4ade2d1d5bbc671c781051bf1437897cbdfea0f1";

@@ -85,11 +85,14 @@ impl GitHubSource {
             |release: Option<Release>| Answer { latest: release.map_or(LatestRelease::None, LatestRelease::Found), source: Source::GitHubApi };
         match self.http.get_api(&url, saved.as_ref().and_then(|e| e.etag.as_deref()))? {
             Fetched::Body { text, etag } => {
-                let release = if prereleases {
+                let mut release = if prereleases {
                     release::parse_github_release_list(&text, repo, true)?
                 } else {
                     Some(release::parse_github_release(&text, repo)?)
                 };
+                if let Some(r) = release.as_mut() {
+                    self.read_manifest(repo, r);
+                }
                 self.store(repo, Entry { etag, release: release.clone(), prereleases, fetched_at: crate::now() });
                 Ok(Some(found(release)))
             }
@@ -111,6 +114,21 @@ impl GitHubSource {
         }
     }
 
+    /// Reads the release's `redrob-launcher.json` when it has one (a small download, not API quota).
+    /// A missing or unreadable manifest leaves `manifest` as `None`: the launcher then falls back to
+    /// what it knows statically, and says why in the log.
+    fn read_manifest(&self, repo: &str, r: &mut Release) {
+        let Some(asset) = r.manifest_asset() else { return };
+        if !asset.url.starts_with(&release::download_prefix(repo)) {
+            log::warn!("{repo}: {} points outside the release downloads; ignored", release::MANIFEST_ASSET);
+            return;
+        }
+        match self.http.get_text(&asset.url).and_then(|t| t.ok_or_else(|| "not found".to_string())).and_then(|t| release::parse_manifest(&t)) {
+            Ok(m) => r.manifest = Some(m),
+            Err(e) => log::warn!("{repo} {}: {}: {e}", r.tag, release::MANIFEST_ASSET),
+        }
+    }
+
     /// The quota-free route through github.com (stable releases only).
     fn ask_pages(&self, repo: &str) -> Result<Answer, String> {
         let location = self.http.redirect_target(&format!("https://github.com/{repo}/releases/latest"))?;
@@ -125,7 +143,8 @@ impl GitHubSource {
         }
         let sums_url = format!("{}{tag}/SHA256SUMS.txt", release::download_prefix(repo));
         let sums = self.http.get_text(&sums_url)?.map(|t| release::parse_sha256sums(&t)).unwrap_or_default();
-        let r = release::release_from_sums(repo, &tag, &sums);
+        let mut r = release::release_from_sums(repo, &tag, &sums);
+        self.read_manifest(repo, &mut r);
         self.store(repo, Entry { etag: None, release: Some(r.clone()), prereleases: false, fetched_at: crate::now() });
         Ok(Answer { latest: LatestRelease::Found(r), source: Source::GitHubPages })
     }
