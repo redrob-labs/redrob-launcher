@@ -1,21 +1,21 @@
 //! Drives the launcher UI against a fake backend: what's shown for each status, and which
-//! commands the buttons send. `ARTCRAFT_LAUNCHER_SNAPSHOTS=<dir>` also saves screenshots; run that
+//! commands the buttons send. `REDROB_LAUNCHER_SNAPSHOTS=<dir>` also saves screenshots; run that
 //! with `-- --test-threads=1`, as rendering on several threads at once can crash Vulkan loaders
 //! older than 1.4.350 (KhronosGroup/Vulkan-Loader#1863).
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
-use artcraft_launcher_core::protocol::{
-    Backend, CANCELLED, Capabilities, Command, Event, INSTALL_CANCELLED, JobPhase, LatestRelease, Origin, PausedDownload, Source,
-};
-use artcraft_launcher_core::release::{Asset, Release};
-use artcraft_launcher_core::status::InstallSource;
-use artcraft_launcher_core::{Arch, Installed, Os, Platform, SUITE, version};
-use artcraft_launcher_ui_egui::settings::ViewMode;
-use artcraft_launcher_ui_egui::{Host, LauncherUi, Settings};
 use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
+use redrob_launcher_core::protocol::{
+    Backend, CANCELLED, Capabilities, Command, Event, INSTALL_CANCELLED, JobPhase, LatestRelease, Origin, PausedDownload, Source,
+};
+use redrob_launcher_core::release::{Asset, Release};
+use redrob_launcher_core::status::InstallSource;
+use redrob_launcher_core::{Arch, Installed, Os, Platform, SUITE, version};
+use redrob_launcher_ui_egui::settings::ViewMode;
+use redrob_launcher_ui_egui::{Host, LauncherUi, Settings};
 
 const NOW: i64 = 1_791_500_000;
 
@@ -63,6 +63,7 @@ fn release(id: &str, v: &str, at: i64) -> Release {
             url: format!("https://github.com/storytold/{id}/releases/download/v{v}/{name}"),
             sha256: None,
         }],
+        manifest: None,
     }
 }
 
@@ -70,27 +71,26 @@ fn release(id: &str, v: &str, at: i64) -> Release {
 fn events() -> Vec<Event> {
     let mut ev = Vec::new();
     let versions = [
-        ("photocraft", "0.5.0"),
-        ("vectorcraft", "0.7.0"),
-        ("filmcraft", "0.4.0"),
-        ("lightcraft", "0.4.0"),
-        ("pdfcraft", "0.4.0"),
-        ("effectcraft", "0.6.0"),
-        ("designcraft", "0.4.0"),
-        ("wordcraft", "0.3.0"),
-        ("deckcraft", "0.3.0"),
-        ("gridcraft", "0.3.0"),
-        ("cadcraft", "0.3.0"),
+        ("redrob-canvas", "0.5.0"),
+        ("redrob-shape", "0.7.0"),
+        ("redrob-cut", "0.4.0"),
+        ("redrob-studio", "0.4.0"),
+        ("redrob-office", "0.4.0"),
+        ("redrob-browser", "0.6.0"),
+        ("redrob-code", "0.3.0"),
+        ("redrob-cowork", "0.3.0"),
+        ("redrob-query", "0.3.0"),
+        ("redrob-cad", "0.3.0"),
     ];
     for (i, (id, v)) in versions.iter().enumerate() {
         ev.push(Event::Latest {
             app: (*id).into(),
             latest: LatestRelease::Found(release(id, v, NOW - 86_400 - i as i64 * 600)),
-            from: Origin::ArtCraftApi,
+            from: Origin::RedrobApi,
         });
     }
-    ev.push(Event::Latest { app: "soundcraft".into(), latest: LatestRelease::None, from: Origin::ArtCraftApi });
-    let installed = [("photocraft", "0.4.1"), ("lightcraft", "0.4.0"), ("wordcraft", "0.3.0"), ("effectcraft", "0.5.0")];
+    ev.push(Event::Latest { app: "redrob-recall".into(), latest: LatestRelease::None, from: Origin::RedrobApi });
+    let installed = [("redrob-canvas", "0.4.1"), ("redrob-studio", "0.4.0"), ("redrob-code", "0.3.0"), ("redrob-browser", "0.5.0")];
     for app in &SUITE {
         let inst = installed.iter().find(|(id, _)| *id == app.id).map(|(_, v)| Installed {
             version: version::parse(v),
@@ -100,10 +100,10 @@ fn events() -> Vec<Event> {
         });
         ev.push(Event::Detected { app: app.id.into(), installed: inst });
     }
-    ev.push(Event::Progress { app: "filmcraft".into(), phase: JobPhase::Downloading { done: 48 << 20, total: 131 << 20 } });
-    ev.push(Event::Paused { app: "deckcraft".into(), download: Some(PausedDownload { done: 30 << 20, total: 120 << 20 }) });
-    ev.push(Event::Progress { app: "gridcraft".into(), phase: JobPhase::Reconnecting { done: 10 << 20, total: 90 << 20 } });
-    ev.push(Event::ReadyToInstall { app: "cadcraft".into(), ready: true });
+    ev.push(Event::Progress { app: "redrob-cut".into(), phase: JobPhase::Downloading { done: 48 << 20, total: 131 << 20 } });
+    ev.push(Event::Paused { app: "redrob-cowork".into(), download: Some(PausedDownload { done: 30 << 20, total: 120 << 20 }) });
+    ev.push(Event::Progress { app: "redrob-query".into(), phase: JobPhase::Reconnecting { done: 10 << 20, total: 90 << 20 } });
+    ev.push(Event::ReadyToInstall { app: "redrob-cad".into(), ready: true });
     ev.push(Event::CheckFinished { at: NOW - 180, source: Source::GitHubApi, rate_limited_until: None });
     ev
 }
@@ -125,7 +125,7 @@ fn harness_with(
 ) -> (Harness<'static, Option<LauncherUi>>, Rc<RefCell<Vec<Command>>>) {
     // Integration tests compile without cfg!(test), so system_lang() picks up the
     // developer's locale. Force English so labels match the assertions.
-    artcraft_launcher_ui_egui::i18n::set_test_lang(artcraft_launcher_ui_egui::i18n::Lang::EN);
+    redrob_launcher_ui_egui::i18n::set_test_lang(redrob_launcher_ui_egui::i18n::Lang::EN);
     let sent = Rc::new(RefCell::new(Vec::new()));
     let sent2 = sent.clone();
     let mut backend = Some(Fake { events, sent: sent2, manage, clock: Rc::new(Cell::new(NOW)) });
@@ -139,9 +139,9 @@ fn harness_with(
             {
                 let mut s = settings.clone();
                 s.theme = if theme == egui::Theme::Dark {
-                    artcraft_launcher_ui_egui::theme::ThemeChoice::Dark
+                    redrob_launcher_ui_egui::theme::ThemeChoice::Dark
                 } else {
-                    artcraft_launcher_ui_egui::theme::ThemeChoice::Light
+                    redrob_launcher_ui_egui::theme::ThemeChoice::Light
                 };
                 *state = Some(LauncherUi::new(ui.ctx(), Box::new(b), s));
             }
@@ -156,7 +156,7 @@ fn harness_with(
 }
 
 fn snapshot(h: &mut Harness<'_, Option<LauncherUi>>, name: &str) {
-    let Some(dir) = std::env::var_os("ARTCRAFT_LAUNCHER_SNAPSHOTS") else { return };
+    let Some(dir) = std::env::var_os("REDROB_LAUNCHER_SNAPSHOTS") else { return };
     let img = h.render().unwrap();
     img.save(std::path::Path::new(&dir).join(format!("{name}.png"))).unwrap();
 }
@@ -201,18 +201,19 @@ fn grid_shows_every_status_and_installs_on_click() {
     h.get_by_label("Update to 0.5.0");
     h.get_by_label("Update to 0.6.0");
     h.get_by_label_contains("0.4.1 installed → 0.5.0 released");
-    h.get_by_label("Like Adobe Photoshop®");
+    h.get_by_label("Graphics");
     // The window has no title bar of its own here (the web build, and the tests).
     assert!(h.query_by_label("Close").is_none());
-    assert!(h.query_all_by_label_contains("Discord").count() >= 2); // header link and footer link
-    h.get_by_label_contains("Adobe, Photoshop, Illustrator");
+    // No upstream community links, social icons or trademark notice.
+    assert!(h.query_all_by_label_contains("Discord").next().is_none());
+    assert!(h.query_all_by_label_contains("ArtCraft").next().is_none());
     assert!(h.query_all_by_label("Coming soon").count() >= 1);
     h.get_by_label_contains("48 MB of 131 MB");
     h.get_by_label("Update all (2)").click();
     h.run_steps(2);
     let installs: Vec<_> = sent.borrow().iter().filter_map(|c| if let Command::Install { app } = c { Some(app.clone()) } else { None }).collect();
     assert_eq!(installs.len(), 2, "{installs:?}");
-    assert!(installs.contains(&"photocraft".to_string()) && installs.contains(&"effectcraft".to_string()));
+    assert!(installs.contains(&"redrob-canvas".to_string()) && installs.contains(&"redrob-browser".to_string()));
 }
 
 #[test]
@@ -221,7 +222,7 @@ fn downloads_can_be_paused_resumed_and_discarded() {
     h.run_steps(4);
     // Bring the paused and reconnecting apps on screen.
     if let Some(l) = h.state_mut().as_mut() {
-        l.settings.filter = artcraft_launcher_ui_egui::settings::Filter::NotInstalled;
+        l.settings.filter = redrob_launcher_ui_egui::settings::Filter::NotInstalled;
     }
     h.run_steps(6);
     snapshot(&mut h, "grid-downloads-dark");
@@ -229,10 +230,10 @@ fn downloads_can_be_paused_resumed_and_discarded() {
     h.get_by_label("Reconnecting…");
     h.get_by_label_contains("· 25%").click();
     h.run_steps(2);
-    assert!(sent.borrow().contains(&Command::Install { app: "deckcraft".into() }));
+    assert!(sent.borrow().contains(&Command::Install { app: "redrob-cowork".into() }));
     h.get_by_label("Discard download").click();
     h.run_steps(2);
-    assert!(sent.borrow().contains(&Command::Cancel { app: "deckcraft".into() }));
+    assert!(sent.borrow().contains(&Command::Cancel { app: "redrob-cowork".into() }));
     h.get_all_by_label("Pause download").next().unwrap().click();
     h.run_steps(2);
     assert!(sent.borrow().iter().any(|c| matches!(c, Command::Pause { .. })));
@@ -243,7 +244,7 @@ fn a_kept_download_offers_retry_install_and_download_again() {
     let (mut h, sent) = harness(ViewMode::Grid, egui::Theme::Dark, true);
     h.run_steps(4);
     if let Some(l) = h.state_mut().as_mut() {
-        l.settings.filter = artcraft_launcher_ui_egui::settings::Filter::NotInstalled;
+        l.settings.filter = redrob_launcher_ui_egui::settings::Filter::NotInstalled;
     }
     h.run_steps(6);
     // Below the fold in the restyled grid: bring the card on screen first.
@@ -255,7 +256,7 @@ fn a_kept_download_offers_retry_install_and_download_again() {
     let row = retry.rect();
     retry.click();
     h.run_steps(2);
-    assert_eq!(*sent.borrow(), [Command::Install { app: "cadcraft".into() }]);
+    assert_eq!(*sent.borrow(), [Command::Install { app: "redrob-cad".into() }]);
     sent.borrow_mut().clear();
     // The … menu beside it.
     let beside = |r: egui::Rect| row.y_range().contains(r.center().y) && (row.right()..row.right() + 60.0).contains(&r.left());
@@ -264,7 +265,7 @@ fn a_kept_download_offers_retry_install_and_download_again() {
     snapshot(&mut h, "grid-retry-install-menu-dark");
     h.get_by_label("Download again").click();
     h.run_steps(2);
-    assert_eq!(*sent.borrow(), [Command::Cancel { app: "cadcraft".into() }, Command::Install { app: "cadcraft".into() }]);
+    assert_eq!(*sent.borrow(), [Command::Cancel { app: "redrob-cad".into() }, Command::Install { app: "redrob-cad".into() }]);
     // Apps without a kept download don't offer it.
     assert_eq!(h.query_all_by_label("Retry install").count(), 1);
 }
@@ -272,12 +273,12 @@ fn a_kept_download_offers_retry_install_and_download_again() {
 #[test]
 fn a_dismissed_install_prompt_is_not_called_a_cancelled_download() {
     let finished = |app: &str, why: &str| Event::JobFinished { app: app.into(), result: Err(why.into()) };
-    // The password prompt was dismissed with the download kept (cadcraft) and without (pdfcraft);
-    // a download was cancelled (vectorcraft).
+    // The password prompt was dismissed with the download kept (redrob-cad) and without (redrob-office);
+    // a download was cancelled (redrob-shape).
     let mut ev = events();
-    ev.push(finished("cadcraft", INSTALL_CANCELLED));
-    ev.push(finished("pdfcraft", INSTALL_CANCELLED));
-    ev.push(finished("vectorcraft", CANCELLED));
+    ev.push(finished("redrob-cad", INSTALL_CANCELLED));
+    ev.push(finished("redrob-office", INSTALL_CANCELLED));
+    ev.push(finished("redrob-shape", CANCELLED));
     let (mut h, _) = harness_with(ev, ViewMode::Grid, egui::Theme::Dark, true, 1.0);
     h.run_steps(6);
     snapshot(&mut h, "grid-install-cancelled-dark");
@@ -289,7 +290,7 @@ fn a_dismissed_install_prompt_is_not_called_a_cancelled_download() {
 #[test]
 fn a_kept_update_names_its_version_and_an_up_to_date_app_is_not_downloaded_again() {
     let mut ev = events();
-    for app in ["effectcraft", "wordcraft"] {
+    for app in ["redrob-browser", "redrob-code"] {
         ev.push(Event::ReadyToInstall { app: app.into(), ready: true });
     }
     let (mut h, sent) = harness_with(ev, ViewMode::Table, egui::Theme::Dark, true, 1.0);
@@ -299,9 +300,9 @@ fn a_kept_update_names_its_version_and_an_up_to_date_app_is_not_downloaded_again
     assert!(h.query_by_label("Update to 0.6.0").is_none());
     h.get_by_label("Retry update to 0.6.0").click();
     h.run_steps(2);
-    assert_eq!(*sent.borrow(), [Command::Install { app: "effectcraft".into() }]);
-    // WordCraft is up to date: its menu offers Reinstall, which uses the kept file.
-    let row = h.get_all_by_label("WordCraft").next().unwrap().rect().center().y;
+    assert_eq!(*sent.borrow(), [Command::Install { app: "redrob-browser".into() }]);
+    // Redrob Code is up to date: its menu offers Reinstall, which uses the kept file.
+    let row = h.get_all_by_label("Redrob Code").next().unwrap().rect().center().y;
     h.get_all_by_label("…").find(|n| (n.rect().center().y - row).abs() < 25.0).unwrap().click();
     h.run_steps(3);
     h.get_by_label("Reinstall");
@@ -312,8 +313,8 @@ fn a_kept_update_names_its_version_and_an_up_to_date_app_is_not_downloaded_again
 fn an_install_waiting_for_another_says_so_and_can_be_cancelled() {
     let mut events = events();
     // Two updates reached the system's installer together: one runs, the other waits its turn.
-    events.push(Event::Progress { app: "photocraft".into(), phase: JobPhase::Installing });
-    events.push(Event::Progress { app: "effectcraft".into(), phase: JobPhase::Waiting });
+    events.push(Event::Progress { app: "redrob-canvas".into(), phase: JobPhase::Installing });
+    events.push(Event::Progress { app: "redrob-shape".into(), phase: JobPhase::Waiting });
     let (mut h, sent) = harness_with(events, ViewMode::Grid, egui::Theme::Dark, true, 1.0);
     h.run_steps(6);
     snapshot(&mut h, "grid-waiting-dark");
@@ -323,14 +324,14 @@ fn an_install_waiting_for_another_says_so_and_can_be_cancelled() {
     h.get_by_label("Cancel").click();
     h.run_steps(2);
     let cancels: Vec<_> = sent.borrow().iter().filter(|c| matches!(c, Command::Cancel { .. })).cloned().collect();
-    assert_eq!(cancels, [Command::Cancel { app: "effectcraft".into() }]);
+    assert_eq!(cancels, [Command::Cancel { app: "redrob-shape".into() }]);
 }
 
 #[test]
 fn the_launcher_update_waiting_for_other_installs_can_be_cancelled() {
     let mut ev = events();
-    ev.push(Event::LauncherUpdate(release("artcraft-launcher", "0.2.0", NOW)));
-    ev.push(Event::Progress { app: "artcraft-launcher".into(), phase: JobPhase::Waiting });
+    ev.push(Event::LauncherUpdate(release("redrob-launcher", "0.2.0", NOW)));
+    ev.push(Event::Progress { app: "redrob-launcher".into(), phase: JobPhase::Waiting });
     let (mut h, sent) = harness_with(ev, ViewMode::Grid, egui::Theme::Dark, true, 1.0);
     h.run_steps(6);
     snapshot(&mut h, "grid-launcher-waiting-dark");
@@ -338,7 +339,7 @@ fn the_launcher_update_waiting_for_other_installs_can_be_cancelled() {
     sent.borrow_mut().clear();
     h.get_by_label("Cancel update").click();
     h.run_steps(2);
-    assert_eq!(*sent.borrow(), [Command::Cancel { app: "artcraft-launcher".into() }]);
+    assert_eq!(*sent.borrow(), [Command::Cancel { app: "redrob-launcher".into() }]);
 }
 
 #[test]
@@ -346,15 +347,15 @@ fn each_cancellation_says_what_it_called_off() {
     let finished = |app: &str, why: &str| Event::JobFinished { app: app.into(), result: Err(why.into()) };
     let mut ev = events();
     // An uninstall called off while it waited for the installer.
-    ev.push(Event::Progress { app: "lightcraft".into(), phase: JobPhase::Removing });
-    ev.push(Event::Progress { app: "lightcraft".into(), phase: JobPhase::Waiting });
-    ev.push(finished("lightcraft", CANCELLED));
+    ev.push(Event::Progress { app: "redrob-studio".into(), phase: JobPhase::Removing });
+    ev.push(Event::Progress { app: "redrob-studio".into(), phase: JobPhase::Waiting });
+    ev.push(finished("redrob-studio", CANCELLED));
     // The launcher's own update, cancelled while it waited.
-    ev.push(Event::LauncherUpdate(release("artcraft-launcher", "0.2.0", NOW)));
-    ev.push(Event::Progress { app: "artcraft-launcher".into(), phase: JobPhase::Waiting });
-    ev.push(finished("artcraft-launcher", CANCELLED));
+    ev.push(Event::LauncherUpdate(release("redrob-launcher", "0.2.0", NOW)));
+    ev.push(Event::Progress { app: "redrob-launcher".into(), phase: JobPhase::Waiting });
+    ev.push(finished("redrob-launcher", CANCELLED));
     // A download cancelled mid-way.
-    ev.push(finished("filmcraft", CANCELLED));
+    ev.push(finished("redrob-cut", CANCELLED));
     let (mut h, _) = harness_with(ev, ViewMode::Grid, egui::Theme::Dark, true, 1.0);
     h.run_steps(6);
     for toast in ["Uninstall cancelled", "Update cancelled", "Download cancelled"] {
@@ -367,12 +368,11 @@ fn table_view_and_light_theme() {
     let (mut h, sent) = harness(ViewMode::Table, egui::Theme::Light, true);
     h.run_steps(8);
     snapshot(&mut h, "table-light");
-    h.get_by_label("Adobe Photoshop®");
-    h.get_by_label("Microsoft Excel®");
-    h.get_by_label_contains("Avid and Pro Tools are trademarks");
+    h.get_by_label("Graphics");
+    h.get_by_label("Database client");
     h.get_by_label("Update to 0.5.0").click();
     h.run_steps(2);
-    assert!(sent.borrow().contains(&Command::Install { app: "photocraft".into() }));
+    assert!(sent.borrow().contains(&Command::Install { app: "redrob-canvas".into() }));
     h.get_all_by_label("Open").next().unwrap().click();
     h.run_steps(2);
     assert!(sent.borrow().iter().any(|c| matches!(c, Command::Launch { .. })));
@@ -388,8 +388,8 @@ fn switching_views_and_filters() {
     h.get_by_label_contains("Updates").click();
     h.run_steps(4);
     snapshot(&mut h, "table-updates-dark");
-    assert!(h.query_by_label("WordCraft").is_none());
-    h.get_by_label("PhotoCraft");
+    assert!(h.query_by_label("Redrob Code").is_none());
+    h.get_by_label("Redrob Canvas");
 }
 
 /// How far the middle of these lines of text is below the middle of the app icon beside them, in points.
@@ -411,12 +411,12 @@ fn name_and_tagline_are_centred_on_the_icon() {
         let (mut h, _) = harness_at(ViewMode::Grid, egui::Theme::Dark, true, scale);
         h.run_steps(8);
         snapshot(&mut h, &format!("grid-dark{suffix}"));
-        let off = below_icon_centre(&h, &["PhotoCraft", "Image editing", "Like Adobe Photoshop®"]);
+        let off = below_icon_centre(&h, &["Redrob Canvas", "Paint and edit images with an agent", "Graphics"]);
         assert!(off.abs() < 0.25, "grid at {scale}x: {off}");
         let (mut h, _) = harness_at(ViewMode::Table, egui::Theme::Light, true, scale);
         h.run_steps(8);
         snapshot(&mut h, &format!("table-light{suffix}"));
-        let off = below_icon_centre(&h, &["PhotoCraft", "Image editing"]);
+        let off = below_icon_centre(&h, &["Redrob Canvas", "Paint and edit images with an agent"]);
         assert!(off.abs() < 0.25, "table at {scale}x: {off}");
     }
 }
@@ -447,22 +447,22 @@ fn every_table_column_sorts_both_ways() {
     h.get_by_label("Installed").click();
     h.run_steps(3);
     let o = order(&h);
-    assert_eq!(&o[..4], ["EffectCraft", "PhotoCraft", "LightCraft", "WordCraft"], "{o:?}");
+    assert_eq!(&o[..4], ["Redrob Browser", "Redrob Canvas", "Redrob Studio", "Redrob Code"], "{o:?}");
     // Reversed: lowest first, the empty cells still last.
     h.get_by_label("Installed").click();
     h.run_steps(3);
     let o = order(&h);
-    assert_eq!(&o[..4], ["WordCraft", "LightCraft", "PhotoCraft", "EffectCraft"], "{o:?}");
-    // Inspired by: A to Z.
-    h.get_by_label("Inspired by").click();
+    assert_eq!(&o[..4], ["Redrob Code", "Redrob Studio", "Redrob Canvas", "Redrob Browser"], "{o:?}");
+    // Kind: A to Z.
+    h.get_by_label("Kind").click();
     h.run_steps(3);
     let o = order(&h);
-    assert_eq!(o.first().map(String::as_str), Some("PdfCraft"), "{o:?}"); // Adobe Acrobat
-    // Latest: highest version first, SoundCraft (no release) last.
+    assert_eq!(o.first().map(String::as_str), Some("Redrob Shape"), "{o:?}"); // 3D
+    // Latest: highest version first, Redrob Recall (no release) last.
     h.get_by_label("Latest").click();
     h.run_steps(3);
     let o = order(&h);
-    assert_eq!(o.first().map(String::as_str), Some("VectorCraft"), "{o:?}"); // 0.7.0
+    assert_eq!(o.first().map(String::as_str), Some("Redrob Shape"), "{o:?}"); // 0.7.0
     snapshot(&mut h, "table-sorted-latest");
     // App: Z to A on the second click.
     h.get_by_label("App").click();
@@ -470,41 +470,40 @@ fn every_table_column_sorts_both_ways() {
     h.get_by_label("App").click();
     h.run_steps(3);
     let o = order(&h);
-    assert_eq!(o.first().map(String::as_str), Some("WordCraft"), "{o:?}");
+    assert_eq!(o.first().map(String::as_str), Some("Redrob Studio"), "{o:?}");
 }
 
 #[test]
-fn settings_link_to_discord() {
+fn settings_link_to_redrob() {
     let (mut h, _) = harness(ViewMode::Grid, egui::Theme::Dark, true);
     h.run_steps(6);
     h.get_by_label("Settings").click();
     h.run_steps(4);
     snapshot(&mut h, "settings-dark");
-    h.get_by_label("Questions, ideas and news from the ArtCraft team");
-    // The header button and the one in Settings.
-    assert!(h.query_all_by_label_contains("Discord").count() >= 2);
+    h.get_by_label("News and source code for every Redrob app");
+    assert!(h.query_all_by_label_contains("Discord").next().is_none());
 }
 
 #[test]
 fn links_to_the_website_github_and_each_apps_pages() {
     let (mut h, _) = harness(ViewMode::Grid, egui::Theme::Dark, true);
     h.run_steps(6);
-    // Footer: website, GitHub and Discord.
-    for label in ["Website", "GitHub", "Discord"] {
+    // Footer: website and GitHub.
+    for label in ["Website", "GitHub"] {
         assert!(h.query_all_by_label(label).count() >= 1, "{label}");
     }
-    // Cards: every app links to its repo; only the seven classic apps have a website (plus the footer's).
+    // Cards: every app links to its repo; no app has a web page of its own yet (only the footer's).
     let shown_cards = h.query_all_by_label("GitHub").count() - 1;
     let shown_sites = h.query_all_by_label("Website").count() - 1;
     assert!(shown_cards >= 7, "{shown_cards}");
-    assert_eq!(shown_sites, 7, "only classic apps have website pages");
-    // The table's … menu has the app's GitHub repo and, for a new app, no website yet.
+    assert_eq!(shown_sites, 0, "no app has a website page yet");
+    // The table's … menu has the app's GitHub repo and no website entry.
     let (mut h, _) = harness(ViewMode::Table, egui::Theme::Dark, true);
     h.run_steps(6);
-    h.get_all_by_label("…").nth(7).unwrap().click(); // WordCraft
+    h.get_all_by_label("…").nth(7).unwrap().click(); // Redrob Code
     h.run_steps(3);
     h.get_by_label("GitHub repository");
-    h.get_by_label("Website (coming soon)");
+    assert_eq!(h.query_all_by_label_contains("Website").count(), 1, "only the footer's");
 }
 
 /// Clicks the `n`th widget labelled `label` and returns the URL the app asked to open.
@@ -537,24 +536,15 @@ fn all_opened(h: &mut Harness<'_, Option<LauncherUi>>, label: &str) -> Vec<Strin
 fn links_open_the_right_pages() {
     let (mut h, _) = harness(ViewMode::Grid, egui::Theme::Dark, true);
     h.run_steps(6);
-    assert_eq!(click_opens(&mut h, "Discord").as_deref(), Some("https://discord.gg/artcraft"));
-    // The footer's ArtCraft links and each card's own pages.
+    // The footer's Redrob links and each card's own pages.
     let github = all_opened(&mut h, "GitHub");
-    assert!(github.contains(&"https://github.com/storytold".to_string()), "{github:?}");
-    assert!(github.contains(&"https://github.com/storytold/photocraft".to_string()), "{github:?}");
-    let sites = all_opened(&mut h, "Website");
-    assert!(sites.contains(&"https://getartcraft.com".to_string()), "{sites:?}");
-    assert!(sites.contains(&"https://getartcraft.com/apps/photocraft".to_string()), "{sites:?}");
-    // Social icons in the footer.
-    assert_eq!(click_opens(&mut h, "X").as_deref(), Some("https://x.com/get_artcraft"));
-    assert_eq!(click_opens(&mut h, "YouTube").as_deref(), Some("https://www.youtube.com/@OfficialArtcraftStudios"));
-    assert_eq!(click_opens(&mut h, "TikTok").as_deref(), Some("https://www.tiktok.com/@artcraft.studios"));
-    assert_eq!(click_opens(&mut h, "Instagram").as_deref(), Some("https://www.instagram.com/officialartcraftstudios"));
-    assert_eq!(click_opens(&mut h, "LinkedIn").as_deref(), Some("https://www.linkedin.com/company/artcraft-ai"));
+    assert!(github.contains(&"https://github.com/redrob-labs".to_string()), "{github:?}");
+    assert!(github.contains(&"https://github.com/redrob-labs/redrob-canvas".to_string()), "{github:?}");
+    assert_eq!(all_opened(&mut h, "Website"), ["https://redrob.ai"]);
     // The … menu.
     h.get_all_by_label("…").next().unwrap().click();
     h.run_steps(3);
-    assert_eq!(click_opens(&mut h, "All releases").as_deref(), Some("https://github.com/storytold/photocraft/releases"));
+    assert_eq!(click_opens(&mut h, "All releases").as_deref(), Some("https://github.com/redrob-labs/redrob-shape/releases"));
 }
 
 #[test]
@@ -597,7 +587,7 @@ fn the_launcher_updates_itself_and_quits_to_restart() {
     }
     let sent = Rc::new(RefCell::new(Vec::new()));
     let mut events = events();
-    events.push(Event::LauncherUpdate(release("artcraft-launcher", "0.2.0", NOW)));
+    events.push(Event::LauncherUpdate(release("redrob-launcher", "0.2.0", NOW)));
     let shared_events = Rc::new(RefCell::new(Vec::new()));
     struct Scripted {
         inner: Fake,
@@ -641,14 +631,14 @@ fn the_launcher_updates_itself_and_quits_to_restart() {
         None,
     );
     h.run_steps(6);
-    h.get_by_label_contains("ArtCraft Launcher 0.2.0 is available");
+    h.get_by_label_contains("Redrob Launcher 0.2.0 is available");
     h.get_by_label("Update and restart").click();
     h.run_steps(2);
     assert!(sent.borrow().contains(&Command::UpdateLauncher));
     // Downloading: the banner shows progress instead of the button.
     shared_events
         .borrow_mut()
-        .push(Event::Progress { app: "artcraft-launcher".into(), phase: JobPhase::Downloading { done: 5 << 20, total: 10 << 20 } });
+        .push(Event::Progress { app: "redrob-launcher".into(), phase: JobPhase::Downloading { done: 5 << 20, total: 10 << 20 } });
     h.run_steps(3);
     assert!(h.query_by_label("Update and restart").is_none());
     assert!(!quit.get());
@@ -661,11 +651,11 @@ fn the_launcher_updates_itself_and_quits_to_restart() {
 #[test]
 fn launcher_update_prompts_to_relaunch_with_updated_version() {
     let mut ev = events();
-    ev.push(Event::LauncherUpdate(release("artcraft-launcher", "0.2.0", NOW)));
+    ev.push(Event::LauncherUpdate(release("redrob-launcher", "0.2.0", NOW)));
     let (mut h, _) = harness_with(ev, ViewMode::Grid, egui::Theme::Dark, true, 1.0);
     h.run_steps(6);
     // Dialog pops up on launch with the update prompt
-    h.get_by_label_contains("ArtCraft Launcher 0.2.0 is available");
+    h.get_by_label_contains("Redrob Launcher 0.2.0 is available");
     h.get_by_label("A new version is available. Would you like to relaunch with the updated version?");
     h.get_by_label("What's new");
     // Clicking "Later" dismisses the modal dialog
@@ -690,7 +680,7 @@ fn the_current_desktop_setting_is_only_offered_where_the_os_has_desktops() {
 
 #[test]
 fn feed_announcements_and_alerts_show_until_dismissed() {
-    use artcraft_launcher_core::feed::Notice;
+    use redrob_launcher_core::feed::Notice;
     let notice = |id: &str, title: &str, link: Option<&str>| Notice {
         id: id.into(),
         title: title.into(),
@@ -701,8 +691,8 @@ fn feed_announcements_and_alerts_show_until_dismissed() {
     let sent = Rc::new(RefCell::new(Vec::new()));
     let mut evs = events();
     evs.push(Event::Notices {
-        announcements: vec![notice("a1", "CADCraft 1.0 is out", Some("https://getartcraft.com/news"))],
-        alerts: vec![notice("x1", "Security update", Some("https://getartcraft.com/security"))],
+        announcements: vec![notice("a1", "Redrob CAD 1.0 is out", Some("https://redrob.ai/news"))],
+        alerts: vec![notice("x1", "Security update", Some("https://redrob.ai/security"))],
     });
     let mut backend = Some(Fake { events: evs, sent, manage: true, clock: Rc::new(Cell::new(NOW)) });
     let mut h = Harness::builder().with_size(egui::vec2(1180.0, 900.0)).build_ui_state(
@@ -728,17 +718,17 @@ fn feed_announcements_and_alerts_show_until_dismissed() {
     assert!(h.query_by_label("Security update").is_none());
     assert!(h.state().as_ref().unwrap().settings.dismissed_notices.contains("x1"));
     // The announcement stays inline until dismissed.
-    h.get_by_label("CADCraft 1.0 is out");
+    h.get_by_label("Redrob CAD 1.0 is out");
     h.get_by_label("Learn more");
     h.get_all_by_label("Dismiss").next().unwrap().click();
     h.run_steps(4);
-    assert!(h.query_by_label("CADCraft 1.0 is out").is_none());
+    assert!(h.query_by_label("Redrob CAD 1.0 is out").is_none());
     assert!(h.state().as_ref().unwrap().settings.dismissed_notices.contains("a1"));
 }
 
 #[test]
 fn automatic_checks_run_every_five_minutes() {
-    use artcraft_launcher_ui_egui::settings::CheckEvery;
+    use redrob_launcher_ui_egui::settings::CheckEvery;
     assert_eq!(Settings::default().check_every.seconds(), Some(300));
     // Older saved choices still load, and mean "automatically" now.
     assert_eq!(CheckEvery::Day.seconds(), Some(300));
@@ -748,7 +738,7 @@ fn automatic_checks_run_every_five_minutes() {
 #[test]
 fn automatic_updates_queue_installs_for_outdated_apps_and_launcher() {
     let mut ev = events();
-    ev.push(Event::LauncherUpdate(release("artcraft-launcher", "0.2.0", NOW)));
+    ev.push(Event::LauncherUpdate(release("redrob-launcher", "0.2.0", NOW)));
     let sent = Rc::new(RefCell::new(Vec::new()));
     let sent2 = sent.clone();
     let mut backend = Some(Fake { events: ev, sent: sent2, manage: true, clock: Rc::new(Cell::new(NOW)) });
@@ -768,15 +758,21 @@ fn automatic_updates_queue_installs_for_outdated_apps_and_launcher() {
     );
     h.run_steps(4);
     let commands = sent.borrow().clone();
-    assert!(commands.contains(&Command::Install { app: "photocraft".into() }), "outdated photocraft should be queued for install: {commands:?}");
-    assert!(commands.contains(&Command::Install { app: "effectcraft".into() }), "outdated effectcraft should be queued for install: {commands:?}");
+    assert!(
+        commands.contains(&Command::Install { app: "redrob-canvas".into() }),
+        "outdated redrob-canvas should be queued for install: {commands:?}"
+    );
+    assert!(
+        commands.contains(&Command::Install { app: "redrob-browser".into() }),
+        "outdated redrob-browser should be queued for install: {commands:?}"
+    );
     assert!(commands.contains(&Command::UpdateLauncher), "launcher update should be queued: {commands:?}");
 }
 
 #[test]
 fn automatic_updates_are_disabled_by_default() {
     let mut ev = events();
-    ev.push(Event::LauncherUpdate(release("artcraft-launcher", "0.2.0", NOW)));
+    ev.push(Event::LauncherUpdate(release("redrob-launcher", "0.2.0", NOW)));
     let sent = Rc::new(RefCell::new(Vec::new()));
     let sent2 = sent.clone();
     let mut backend = Some(Fake { events: ev, sent: sent2, manage: true, clock: Rc::new(Cell::new(NOW)) });
@@ -796,7 +792,10 @@ fn automatic_updates_are_disabled_by_default() {
     );
     h.run_steps(4);
     let commands = sent.borrow().clone();
-    assert!(!commands.contains(&Command::Install { app: "photocraft".into() }), "photocraft should not be auto-installed when auto_update is false");
+    assert!(
+        !commands.contains(&Command::Install { app: "redrob-canvas".into() }),
+        "redrob-canvas should not be auto-installed when auto_update is false"
+    );
     assert!(!commands.contains(&Command::UpdateLauncher), "launcher should not be auto-updated when auto_update is false");
 }
 
@@ -826,10 +825,10 @@ fn the_footer_names_the_services_behind_what_is_on_screen() {
             h.get_by_label_contains("Checked ").accesskit_node().label().or_else(|| h.get_by_label_contains("Checked ").accesskit_node().value());
         label.unwrap_or_default()
     };
-    assert_eq!(footer(Vec::new()), "Checked 3 min ago · using ArtCraft API");
+    assert_eq!(footer(Vec::new()), "Checked 3 min ago · using Redrob API");
     let from_github =
-        vec![Event::Latest { app: "wordcraft".into(), latest: LatestRelease::Found(release("wordcraft", "0.3.1", NOW)), from: Origin::GitHub }];
-    assert_eq!(footer(from_github), "Checked 3 min ago · using ArtCraft API and GitHub");
+        vec![Event::Latest { app: "redrob-code".into(), latest: LatestRelease::Found(release("redrob-code", "0.3.1", NOW)), from: Origin::GitHub }];
+    assert_eq!(footer(from_github), "Checked 3 min ago · using Redrob API and GitHub");
 }
 
 #[test]
@@ -845,8 +844,8 @@ fn web_build_offers_downloads() {
 fn custom_title_bar_has_window_buttons() {
     struct FramelessHost;
     impl Host for FramelessHost {
-        fn title_bar(&self) -> artcraft_launcher_ui_egui::TitleBar {
-            artcraft_launcher_ui_egui::TitleBar::Custom
+        fn title_bar(&self) -> redrob_launcher_ui_egui::TitleBar {
+            redrob_launcher_ui_egui::TitleBar::Custom
         }
     }
     let mut backend = Some(Fake { events: events(), sent: Rc::new(RefCell::new(Vec::new())), manage: true, clock: Rc::new(Cell::new(NOW)) });
@@ -876,7 +875,7 @@ fn custom_title_bar_has_window_buttons() {
 
 #[test]
 fn the_rate_limit_notice_never_runs_under_the_footer_links() {
-    for width in [720.0, 960.0, 1180.0] {
+    for width in [600.0, 960.0, 1180.0] {
         let mut evs = events();
         evs.push(Event::CheckFinished { at: NOW - 180, source: Source::GitHubApi, rate_limited_until: Some(NOW + 1800) });
         let mut backend = Some(Fake { events: evs, sent: Rc::new(RefCell::new(Vec::new())), manage: true, clock: Rc::new(Cell::new(NOW)) });
@@ -901,15 +900,14 @@ fn the_rate_limit_notice_never_runs_under_the_footer_links() {
         let checked = h.get_by_label_contains("Checked ").rect();
         // Cut short in a narrow window, but enough of it left to read.
         assert!(notice.width() >= 120.0 && notice.right() <= width, "{width}: notice {notice:?}");
-        // Everything on the footer's right: the three links, the social icons and (when there's
-        // room) the platform.
+        // Everything on the footer's right: the two links and (when there's room) the platform.
         let mut right = Vec::new();
-        for label in ["Website", "GitHub", "Discord", "X", "YouTube", "TikTok", "Instagram", "LinkedIn"] {
+        for label in ["Website", "GitHub"] {
             right.extend(h.query_all_by_label(label).map(|n| n.rect()).filter(|r| (r.center().y - notice.center().y).abs() < 12.0));
         }
-        assert_eq!(right.len(), 8, "{width}: {right:?}");
+        assert_eq!(right.len(), 2, "{width}: {right:?}");
         let platform = h.query_by_label_contains("Installing for").map(|n| n.rect());
-        assert_eq!(platform.is_some(), width > 720.0, "{width}: the platform label shows unless the window is narrow");
+        assert_eq!(platform.is_some(), width > 600.0, "{width}: the platform label shows unless the window is narrow");
         right.extend(platform);
         for r in right {
             assert!(!r.intersects(notice), "{width}: notice {notice:?} overlaps {r:?}");

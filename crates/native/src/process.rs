@@ -1,4 +1,4 @@
-//! Starting programs: the Craft Apps themselves, the file manager, and helper tools.
+//! Starting programs: the Redrob apps themselves, the file manager, and helper tools.
 
 use std::path::Path;
 use std::process::{Command, Stdio};
@@ -90,6 +90,25 @@ fn read_all<R: std::io::Read + Send + 'static>(pipe: Option<R>) -> std::thread::
         }
         out
     })
+}
+
+/// Opens an `https://` page in the default browser (the console's approval page). Anything else is
+/// refused: this never hands a local path or another scheme to the OS opener.
+pub fn open_url(url: &str) -> Result<(), String> {
+    if !url.starts_with("https://") || url.contains(['\n', '\r', '\0']) {
+        return Err("only https pages are opened".into());
+    }
+    let mut cmd = if cfg!(target_os = "macos") {
+        command("open")
+    } else if cfg!(windows) {
+        let mut c = command("rundll32");
+        c.arg("url.dll,FileProtocolHandler");
+        c
+    } else {
+        command("xdg-open")
+    };
+    cmd.arg(url);
+    spawn_detached(cmd)
 }
 
 /// Starts `cmd` without waiting for it, and reaps it when it exits.
@@ -290,12 +309,12 @@ mod tests {
 
     #[test]
     fn running_paths_are_matched_literally() {
-        let root = format!("/tmp/artcraft-launcher-process-{}", std::process::id());
+        let root = format!("/tmp/redrob-launcher-process-{}", std::process::id());
         for (actual, requested, expected) in [
-            ("plain/PhotoCraft.app", "plain/PhotoCraft.app", true),
-            ("Apps (work)/PhotoCraft.app", "Apps (work)/PhotoCraft.app", true),
-            ("Apps [work]/PhotoCraft.app", "Apps [work]/PhotoCraft.app", true),
-            ("other/PhotoCraftXapp", "other/PhotoCraft.app", false),
+            ("plain/Redrob Canvas.app", "plain/Redrob Canvas.app", true),
+            ("Apps (work)/Redrob Canvas.app", "Apps (work)/Redrob Canvas.app", true),
+            ("Apps [work]/Redrob Canvas.app", "Apps [work]/Redrob Canvas.app", true),
+            ("other/PhotoCraftXapp", "other/Redrob Canvas.app", false),
             ("symbols/应用.^$*+?()[]{}|\\.app", "symbols/应用.^$*+?()[]{}|\\.app", true),
         ] {
             let actual = format!("{root}/{actual}");
@@ -338,20 +357,20 @@ mod explorer_tests {
 
     #[test]
     fn explorer_select_quotes_only_the_path() {
-        let arg = explorer_select_arg(Path::new(r"C:\Program Files\PhotoCraft\photocraft.exe"));
-        assert_eq!(arg.unwrap(), r#"/select,"C:\Program Files\PhotoCraft\photocraft.exe""#);
+        let arg = explorer_select_arg(Path::new(r"C:\Program Files\Redrob Canvas\redrob-canvas.exe"));
+        assert_eq!(arg.unwrap(), r#"/select,"C:\Program Files\Redrob Canvas\redrob-canvas.exe""#);
     }
 
     #[test]
     fn explorer_select_without_spaces() {
-        let arg = explorer_select_arg(Path::new(r"C:\Apps\photocraft.exe"));
-        assert_eq!(arg.unwrap(), r#"/select,"C:\Apps\photocraft.exe""#);
+        let arg = explorer_select_arg(Path::new(r"C:\Apps\redrob-canvas.exe"));
+        assert_eq!(arg.unwrap(), r#"/select,"C:\Apps\redrob-canvas.exe""#);
         assert_eq!(explorer_select_arg(Path::new(r#"C:\Apps" /root,C:\x.exe"#)), None);
     }
 
     #[test]
     fn explorer_select_uses_backslashes() {
-        let arg = explorer_select_arg(Path::new("C:/Users/A B/AppData/Local/ArtCraft Launcher/apps/photocraft.exe"));
-        assert_eq!(arg.unwrap(), r#"/select,"C:\Users\A B\AppData\Local\ArtCraft Launcher\apps\photocraft.exe""#);
+        let arg = explorer_select_arg(Path::new("C:/Users/A B/AppData/Local/Redrob Launcher/apps/redrob-canvas.exe"));
+        assert_eq!(arg.unwrap(), r#"/select,"C:\Users\A B\AppData\Local\Redrob Launcher\apps\redrob-canvas.exe""#);
     }
 }

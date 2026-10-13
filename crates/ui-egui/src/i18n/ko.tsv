@@ -1,0 +1,360 @@
+# Korean (ko) catalog for Redrob Launcher.
+# Format: context<TAB>English source<TAB>translation.
+# Product and app names (Redrob Launcher, Redrob CAD…) and third-party names stay in Latin script,
+# as they appear in menus, paths and logs. Polite 해요체 for messages, nouns for buttons and labels.
+# Korean has one plural form. Placeholders and trailing ellipses are preserved.
+# Hangul is drawn with the bundled Wanted Sans (the design system's Korean face).
+	Launcher	Launcher
+	Redrob apps	Redrob 앱
+	Settings	설정
+	Check for updates	업데이트 확인
+	Grid	그리드
+	Table	표
+	Show apps as cards	앱을 카드로 보기
+	Show apps as a table	앱을 표로 보기
+	All	전체
+	Updates	업데이트
+	Not installed	설치 안 됨
+	Search apps	앱 검색
+	Sort	정렬
+	Suite order	기본 순서
+	Name	이름
+	Kind	종류
+	Status	상태
+	Installed version	설치된 버전
+	Latest version	최신 버전
+	Newest release	최근 출시
+	GitHub	GitHub
+	Website	웹사이트
+	Create	만들기
+	Work	일하기
+	Install	설치
+	Update to {v}	{v}(으)로 업데이트
+	Open	열기
+	Download for {os}	{os}용 다운로드
+	Download	다운로드
+	Coming soon	곧 출시
+	Checking…	확인 중…
+	Not available	사용할 수 없음
+	Offline	오프라인
+	Downloading {done} of {total}	{total} 중 {done} 다운로드 중
+	Downloading…	다운로드 중…
+	Reconnecting…	다시 연결하는 중…
+	Verifying…	확인하는 중…
+	Installing, then restarting…	설치한 뒤 다시 시작하는 중…
+	Installing…	설치하는 중…
+	Removing…	제거하는 중…
+	Pause download	다운로드 일시 정지
+	Cancel download	다운로드 취소
+	Resume download	다운로드 계속
+	Discard download	다운로드 버리기
+	Release notes	릴리스 노트
+	Show in Finder	Finder에서 보기
+	Show in Explorer	탐색기에서 보기
+	Show in Files	파일에서 보기
+	Reinstall	다시 설치
+	Uninstall…	제거…
+	All releases	모든 릴리스
+	Redrob Launcher {version} is available.	Redrob Launcher {version}이(가) 나왔어요.
+	Dismiss	닫기
+	Update and restart	업데이트하고 다시 시작
+	A new version is available. Would you like to relaunch with the updated version?	새 버전이 나왔어요. 새 버전으로 다시 시작할까요?
+	Later	나중에
+	What's new	새로운 점
+	No notes were published with this release.	이 릴리스에는 노트가 없어요.
+	Released {date}	{date} 출시
+	Open on GitHub	GitHub에서 열기
+	Close	닫기
+	Redrob Launcher {version}	Redrob Launcher {version}
+	Only when I ask	요청할 때만
+	Automatically download and install updates	업데이트를 자동으로 다운로드하고 설치
+	Notify me when an installed app has an update	설치된 앱에 업데이트가 있으면 알림
+	Include pre-releases (betas and release candidates)	시험판 포함(베타와 출시 후보)
+	Installing on Linux	Linux에 설치
+	Install new apps as	새 앱 설치 형식
+	System package (recommended)	시스템 패키지(권장)
+	Updates always use the format an app was installed with.	업데이트는 앱을 설치한 형식을 그대로 써요.
+	Running in the background	백그라운드 실행
+	Keep running in the tray when the window is closed	창을 닫아도 트레이에서 계속 실행
+	Show the window on the current desktop	현재 데스크톱에 창 보이기
+	Start Redrob Launcher when I log in	로그인할 때 Redrob Launcher 시작
+	Redrob	Redrob
+	News and source code for every Redrob app	모든 Redrob 앱의 소식과 소스 코드
+	Appearance	모양
+	Quit Redrob Launcher	Redrob Launcher 종료
+	Done	완료
+	Uninstall {name}?	{name}을(를) 제거할까요?
+	The app will be moved to the Trash. Your documents and settings stay.	앱을 휴지통으로 옮겨요. 문서와 설정은 남아요.
+	Windows will remove it like any installed program. Your documents and settings stay.	Windows가 다른 프로그램처럼 제거해요. 문서와 설정은 남아요.
+	Your system's package manager will remove it, and may ask for your password. Your documents and settings stay.	시스템 패키지 관리자가 제거하고, 암호를 물을 수 있어요. 문서와 설정은 남아요.
+	The app will be removed. Your documents and settings stay.	앱을 제거해요. 문서와 설정은 남아요.
+	Uninstall	제거
+	Cancel	취소
+	Checked {ago}	{ago} 확인함
+	just now	방금
+	yesterday	어제
+	{month} {day}, {year}	{year}년 {month} {day}일
+	Automatically	자동으로
+	Every Redrob app	모든 Redrob 앱
+	Apps on this computer	이 컴퓨터에 있는 앱
+	Installed apps with a newer version	새 버전이 있는 설치된 앱
+	Apps you can install	설치할 수 있는 앱
+	Checked {ago} · using {sources}	{ago} 확인함 · {sources} 사용
+	{a} and {b}	{a}, {b}
+	Learn more	더 알아보기
+	Minimize	최소화
+	Maximize	최대화
+	Restore	복원
+	OK	확인
+	Open link	링크 열기
+	Update	업데이트
+	{name} icon	{name} 아이콘
+	Loading Redrob Launcher…	Redrob Launcher 불러오는 중…
+	Cancel update	업데이트 취소
+	Stop waiting; the update can be started again later	기다리지 않아요. 업데이트는 나중에 다시 시작할 수 있어요
+	Download again	다시 다운로드
+	Install cancelled	설치 취소됨
+	Install cancelled. The download is kept for the next try.	설치를 취소했어요. 다운로드한 파일은 다음에 쓰도록 남겨 둬요.
+	Update cancelled	업데이트 취소됨
+	Uninstall cancelled	제거 취소됨
+	Retry install	다시 설치 시도
+	Retry update to {version}	{version}(으)로 다시 업데이트 시도
+	The download is still here. It's checked again, then installed.	다운로드한 파일이 남아 있어요. 다시 확인한 뒤 설치해요.
+	Waiting for another app…	다른 앱을 기다리는 중…
+	Waiting for other installs…	다른 설치를 기다리는 중…
+	Installer (.msi)	설치 프로그램(.msi)
+	Portable (.zip)	포터블(.zip)
+	Disk image (.dmg)	디스크 이미지(.dmg)
+	AppImage	AppImage
+	Debian package (.deb)	Debian 패키지(.deb)
+	RPM package (.rpm)	RPM 패키지(.rpm)
+	Flatpak bundle	Flatpak 번들
+	Tarball (.tar.gz)	압축 파일(.tar.gz)
+	Video editing	영상 편집
+	3D	3D
+	CAD	CAD
+	Graphics	그래픽
+	Design	디자인
+	Image and audio	이미지·오디오
+	Browser	브라우저
+	Coding agent	코딩 에이전트
+	Code editor	코드 편집기
+	Agent workspace	에이전트 작업 공간
+	Office suite	오피스
+	Database client	데이터베이스 클라이언트
+	File search	파일 검색
+	Not checked yet	아직 확인 안 함
+	GitHub's hourly limit was reached; full details return in {min} min	GitHub 시간당 한도에 걸렸어요. {min}분 뒤에 모든 정보가 돌아와요
+	GitHub limit hit; back in {min} min	GitHub 한도 초과, {min}분 뒤 복구
+	Installing for {platform}	{platform}용으로 설치
+	Downloads for {platform}	{platform}용 다운로드
+	No downloads for this system	이 시스템용 다운로드 없음
+	Couldn't open {name}: {e}	{name}을(를) 열지 못했어요: {e}
+	Download cancelled	다운로드 취소됨
+	Available to install	설치 가능
+	Available	설치 가능
+	Installed · up to date	설치됨 · 최신
+	Update available	업데이트 있음
+	Installed	설치됨
+	installed	설치됨
+	Not available here	여기서는 쓸 수 없음
+	Updating…	업데이트하는 중…
+	Update paused	업데이트 일시 정지됨
+	Download paused	다운로드 일시 정지됨
+	{version} installed → {latest} released	{version} 설치됨 → {latest} 출시
+	Version {version}	버전 {version}
+	{installed} installed · latest {latest}	{installed} 설치됨 · 최신 {latest}
+	Version {version} installed	버전 {version} 설치됨
+	Version {latest}	버전 {latest}
+	No release published yet	아직 출시된 버전 없음
+	Redrob Launcher	Redrob Launcher
+	App	앱
+	Latest	최신
+	Released	출시일
+	Auto	자동
+	Language	언어
+	Ascending	오름차순
+	Descending	내림차순
+	Click to reverse the order	눌러서 순서 뒤집기
+	Click to sort by this column	눌러서 이 열로 정렬
+	{done} of {total}	{total} 중 {done}
+	Downloading	다운로드 중
+	Verifying checksum…	체크섬 확인하는 중…
+	Resume	계속
+	{done} of {total} downloaded	{total} 중 {done} 받음
+	{done} downloaded	{done} 받음
+	Checking for updates…	업데이트 확인하는 중…
+	Downloads the new version, replaces this one and opens it again	새 버전을 받아 지금 버전을 바꾸고 다시 열어요
+	Couldn't check for updates: {f}	업데이트를 확인하지 못했어요: {f}
+	GitHub repository	GitHub 저장소
+	Update 1 app	앱 1개 업데이트
+	Update all ({count})	모두 업데이트({count})
+	⊞  Grid	⊞  그리드
+	☰  Table	☰  표
+	🔍  Search apps	🔍  앱 검색
+	{name} {version}	{name} {version}
+	Match system	시스템 설정 따르기
+	Dark	어둡게
+	Light	밝게
+	Full changelog	전체 변경 기록
+	link	링크
+	No apps match	맞는 앱이 없어요
+	Open Redrob Launcher to update.	업데이트하려면 Redrob Launcher를 여세요.
+	{name} {v} is available	{name} {v}이(가) 나왔어요
+	{count} updates are available	업데이트 {count}개가 있어요
+	These notes weren't fetched (GitHub's request limit was reached). They're on the release page.	GitHub 요청 한도에 걸려 노트를 가져오지 못했어요. 릴리스 페이지에서 볼 수 있어요.
+	When on, opening the launcher from the menu bar brings its window to the desktop you're on. When off, macOS switches you to the desktop the window was on.	켜면 메뉴 막대에서 런처를 열 때 창을 지금 데스크톱으로 가져와요. 끄면 macOS가 창이 있던 데스크톱으로 옮겨 줘요.
+	Couldn't change the login item: {e}	로그인 항목을 바꾸지 못했어요: {e}
+	Show Redrob Launcher	Redrob Launcher 보기
+	Check for Updates	업데이트 확인
+	Visit redrob.ai	redrob.ai 방문
+	Redrob on GitHub	GitHub의 Redrob
+	Redrob API	Redrob API
+
+column	App	앱
+column	Installed	설치됨
+column	Latest	최신
+column	Released	출시일
+filter	Installed	설치됨
+redrob-cut	Describe the cut and let the agent make it	원하는 컷을 말하면 에이전트가 편집해요
+redrob-shape	Shape and shade 3D models by prompt	프롬프트로 3D 모델을 만들고 질감을 입혀요
+redrob-cad	Design, constrain and iterate on parts with an agent	에이전트와 함께 부품을 설계하고 다듬어요
+redrob-canvas	Paint and edit images with an agent	에이전트와 함께 그림을 그리고 이미지를 편집해요
+redrob-design	Open .fig and .pen files and design by prompt	.fig·.pen 파일을 열고 프롬프트로 디자인해요
+redrob-studio	Make images and audio on your own GPU	내 GPU에서 이미지와 오디오를 만들어요
+redrob-browser	A browser whose agent reads, acts on and automates the web	에이전트가 웹을 읽고, 움직이고, 자동화하는 브라우저
+redrob-code	The AI coding agent for your terminal	터미널에서 쓰는 AI 코딩 에이전트
+redrob-cowork	Work with AI agents on your own files	내 파일로 AI 에이전트와 함께 일해요
+redrob-office	Docs, Sheets, Slides, PDF and Hangul in one window	문서·시트·슬라이드·PDF·한글을 한 창에서
+redrob-query	Query PostgreSQL, MySQL, SQLite and MongoDB with AI	AI로 PostgreSQL·MySQL·SQLite·MongoDB를 조회해요
+redrob-recall	Search your files and ask grounded questions	내 파일을 찾고 근거 있는 답을 물어요
+month	Jan	1월
+month	Feb	2월
+month	Mar	3월
+month	Apr	4월
+month	May	5월
+month	Jun	6월
+month	Jul	7월
+month	Aug	8월
+month	Sep	9월
+month	Oct	10월
+month	Nov	11월
+month	Dec	12월
+@plural	{n} app|{n} apps	앱 {n}개
+@plural	{n} min ago|{n} min ago	{n}분 전
+@plural	{n} h ago|{n} h ago	{n}시간 전
+@plural	{n} day ago|{n} days ago	{n}일 전
+@plural	Redrob Launcher · {n} update available|Redrob Launcher · {n} updates available	Redrob Launcher · 업데이트 {n}개
+@msg	Couldn't open {name}: {e}	{name}을(를) 열지 못했어요: {e}
+@msg	Download cancelled	다운로드 취소됨
+@msg	{name} updated to {version}	{name}을(를) {version}(으)로 업데이트했어요
+@msg	{name} installed: {version}	{name} 설치됨: {version}
+@msg	{name} updated to {version} (this release publishes no checksum, so only its size was checked)	{name}을(를) {version}(으)로 업데이트했어요(이 릴리스는 체크섬이 없어 크기만 확인했어요)
+@msg	{name} installed: {version} (this release publishes no checksum, so only its size was checked)	{name} 설치됨: {version}(이 릴리스는 체크섬이 없어 크기만 확인했어요)
+@msg	{name} was removed	{name}을(를) 제거했어요
+@msg	{name} is running. Quit it, then try again.	{name}이(가) 실행 중이에요. 종료한 뒤 다시 해 보세요.
+@id	app.install	설치
+@id	app.update	{v}(으)로 업데이트
+@id	app.open	열기
+@id	app.download	{os}용 다운로드
+@id	app.reveal	Finder에서 보기
+@id	app.reinstall	다시 설치
+@id	app.uninstall	제거…
+@id	app.notes	릴리스 노트
+@id	app.website	웹사이트
+@id	app.github	GitHub 저장소
+@id	app.releases	모든 릴리스
+@id	launcher.update	업데이트하고 다시 시작
+@id	launcher.download	다운로드
+@id	launcher.notes	새로운 점
+@id	launcher.dismiss	닫기
+@id	settings.open	설정
+@id	settings.quit	Redrob Launcher 종료
+@id	view.grid	그리드
+@id	view.table	표
+@id	filter.all	전체
+@id	filter.installed	설치됨
+@id	filter.updates	업데이트
+@id	filter.notinstalled	설치 안 됨
+@id	sort.suite	기본 순서
+@id	sort.name	이름
+@id	sort.inspired	종류
+@id	sort.status	상태
+@id	sort.installed	설치된 버전
+@id	sort.latest	최신 버전
+@id	sort.released	최근 출시
+@id	help.github	GitHub
+@id	help.website	웹사이트
+@id	update.check	업데이트 확인
+@id	update.check_auto	업데이트 자동 확인
+@id	update.notify	설치된 앱에 업데이트가 있으면 알림
+@id	update.prereleases	시험판 포함(베타와 출시 후보)
+@id	linux.preferred_kind	새 앱 설치 형식
+@id	tray.close_to_tray	창을 닫아도 트레이에서 계속 실행
+@id	tray.show_on_current_desktop	현재 데스크톱에 창 보이기
+@id	tray.login_item	로그인할 때 Redrob Launcher 시작
+@id	appearance.theme	모양
+
+# Signing in to Redrob (account.rs).
+	Approve the code on console.redrob.ai	console.redrob.ai에서 코드를 승인하세요
+	Approve this code on console.redrob.ai:	console.redrob.ai에서 이 코드를 승인하세요:
+	Apps	앱
+	Asking console.redrob.ai for a code…	console.redrob.ai에 코드를 받는 중…
+	Connect	연결
+	Connected	연결됨
+	Connected with another key	다른 키로 연결됨
+	Forgets the key on this computer. Revoke it on console.redrob.ai to stop it working everywhere.	이 컴퓨터에서 키를 지워요. 어디서도 못 쓰게 하려면 console.redrob.ai에서 키를 폐기하세요.
+	Gives the app this computer's workspace key	이 컴퓨터의 워크스페이스 키를 앱에 넣어 줘요
+	Key: {name}	키: {name}
+	Not connected	연결 안 됨
+	Not supported yet	아직 지원 안 됨
+	One sign-in for every Redrob app on this computer	이 컴퓨터의 모든 Redrob 앱을 한 번에 로그인
+	Open console.redrob.ai	console.redrob.ai 열기
+	Redrob account	Redrob 계정
+	Sign in	로그인
+	Sign in first	먼저 로그인하세요
+	Sign in once and every Redrob app on this computer can use your workspace. You approve a short code on console.redrob.ai; nobody copies a key.	한 번 로그인하면 이 컴퓨터의 모든 Redrob 앱이 워크스페이스를 쓸 수 있어요. console.redrob.ai에서 짧은 코드만 승인하면 되고, 키를 복사할 일은 없어요.
+	Sign in to Redrob	Redrob에 로그인
+	Sign in to Redrob once for every app on this computer	이 컴퓨터의 모든 앱을 위해 Redrob에 한 번 로그인
+	Sign out	로그아웃
+	Signing in…	로그인하는 중…
+	Use this sign-in	이 로그인 쓰기
+	Uses this sign-in	이 로그인을 씀
+	Next release uses this sign-in	다음 버전부터 이 로그인을 씁니다
+	Update to use this sign-in	업데이트하면 이 로그인을 씁니다
+	Needs no sign-in	로그인이 필요 없습니다
+	Workspace: {name}	워크스페이스: {name}
+	Your Redrob workspace and the apps that use it	내 Redrob 워크스페이스와 그것을 쓰는 앱
+	{name} is connected. Restart it if it's open.	{name}을(를) 연결했어요. 열려 있으면 다시 시작하세요.
+	{time} left	{time} 남음
+@msg	Couldn't reach console.redrob.ai.	console.redrob.ai에 연결하지 못했어요.
+@msg	console.redrob.ai wouldn't start the sign-in.	console.redrob.ai가 로그인을 시작하지 않았어요.
+@msg	console.redrob.ai didn't return a usable code.	console.redrob.ai가 쓸 수 있는 코드를 주지 않았어요.
+@msg	The sign-in was declined on console.redrob.ai.	console.redrob.ai에서 로그인을 거절했어요.
+@msg	The code expired. Sign in again for a new one.	코드가 만료됐어요. 다시 로그인해 새 코드를 받으세요.
+@msg	Couldn't reach console.redrob.ai. Check the network and sign in again.	console.redrob.ai에 연결하지 못했어요. 네트워크를 확인하고 다시 로그인하세요.
+@msg	console.redrob.ai refused the sign-in ({code}).	console.redrob.ai가 로그인을 거부했어요({code}).
+@msg	Signed in, but the key couldn't be saved: {e}	로그인했지만 키를 저장하지 못했어요: {e}
+@msg	Sign in first.	먼저 로그인하세요.
+@msg	The launcher can't connect this app yet.	런처가 아직 이 앱을 연결할 수 없어요.
+@msg	Couldn't write the app's key file: {e}	앱의 키 파일을 쓰지 못했어요: {e}
+
+# Model downloads (models.rs) and the manifest's descriptions (assets/models/models.json).
+	Delete	삭제
+	Download the models the apps use	앱이 쓰는 모델 내려받기
+	Downloaded	내려받음
+	Downloaded into the folder each app reads them from	각 앱이 읽는 폴더에 바로 내려받아요
+	Every file is checked against its published SHA-256 before an app can use it.	앱이 쓰기 전에 모든 파일을 공개된 SHA-256과 대조해요.
+	Licence and source	라이선스와 출처
+	Models	모델
+	Models…	모델…
+	Not available on this system	이 시스템에서는 쓸 수 없음
+	Not downloaded	내려받지 않음
+	Pause	일시 정지
+	Try again	다시 시도
+	39 M parameters. Fastest; fine for clear speech, rough on noisy audio.	매개변수 3,900만 개. 가장 빨라요. 또렷한 말소리에는 충분하고, 잡음이 많으면 거칠어요.
+	74 M parameters. The default: a good balance of speed and accuracy.	매개변수 7,400만 개. 기본값이에요. 속도와 정확도가 균형 잡혀 있어요.
+	244 M parameters. Most accurate here; about 4× slower than base.	매개변수 2억 4,400만 개. 여기서 가장 정확하지만 base보다 4배쯤 느려요.
+	Nine US English narration voices and the CMUdict pronunciation dictionary.	미국 영어 내레이션 목소리 9개와 CMUdict 발음 사전.
+@msg	HTTPS isn't available on this computer.	이 컴퓨터에서 HTTPS를 쓸 수 없어요.
+@msg	the download doesn't match its published checksum, so it wasn't installed	내려받은 파일이 공개된 체크섬과 맞지 않아 쓰지 않았어요

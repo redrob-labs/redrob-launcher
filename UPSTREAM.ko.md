@@ -1,0 +1,64 @@
+# 상류: storytold/craft-launcher
+
+이 저장소는 [storytold/craft-launcher](https://github.com/storytold/craft-launcher)의 **하드 포크**로, 상류의
+릴리스 태그 하나까지의 전체 히스토리를 그대로 담고 있습니다. 패치 스택도, 미러도 아닙니다.
+
+English: [UPSTREAM.md](./UPSTREAM.md)
+
+## 포크 지점
+
+| | |
+|---|---|
+| 상류 태그 | `v0.3.2` |
+| 상류 커밋 | `6e7a122` — 2026-10-11, `Release 0.3.2: sign Windows builds again (#174)` |
+| 상류 기본 브랜치 | `main` |
+| 우리의 장기 브랜치 | `develop`(기본), `main`(릴리스) |
+
+기계가 읽는 기록은 [`upstream-base.json`](./upstream-base.json)입니다. 히스토리를 공유하므로
+`git merge-base develop upstream/main`이 실제로 존재하고, 상류 동기화는 재생이 아닌 평범한 3-way 머지입니다.
+
+## 패치 스택이 아니라 머지된 트리인 이유
+
+이 포크가 바꾸는 것은 국소적이지 않습니다. 브랜드를 교체하고, 앱 목록을 레드롭 제품으로 바꾸고, 설치된
+모든 앱이 읽는 레드롭 계정 레이어(로그인·기기 연결·모델 다운로드)를 넣습니다. 첫 번에 수십 개 파일이고 점점
+늘어납니다. 패치 스택은 깨끗한 체크아웃에 몇 개 파일만 얹을 때 맞는 모양이고, 여기서는 매번 커지는 충돌 면을
+되풀이할 뿐 얻는 것이 없습니다.
+
+## 이 포크가 소유하지 않는 것
+
+상류 `NOTICE`, [`docs/brand/LICENSE-brand.txt`](https://github.com/storytold/craft-launcher/blob/v0.3.2/docs/brand/LICENSE-brand.txt),
+[`assets/app-icon/LICENSE.txt`](https://github.com/storytold/craft-launcher/blob/v0.3.2/assets/app-icon/LICENSE.txt)는 ArtCraft 이름·워드마크·로고·"A" 마크와 그것으로
+만든 앱 아이콘·트레이 아이콘이 ArtCraft Team의 상표이며 MIT OR Apache-2.0에 포함되지 **않고**, 포크와 변형본은
+이를 제거해야 한다고 명시합니다. `upstream-base.json`은 `docs/brand/`와 `assets/app-icon/`을
+`proprietaryPrefixes`에 적어 두었습니다. 브랜드 작업에서 `docs/brand/`를 지우고 `assets/app-icon/`을 레드롭
+디자인 시스템 원본(`assets/brand/`)으로 다시 만들었으므로 `proprietaryReplaced`는 `true`이고,
+`scripts/check_upstream_boundary.py`는 그 아래 파일이 상류와 바이트가 같아지면 실패합니다.
+
+`assets/app-icons/` 아래 상류 Craft 앱 아이콘(MIT OR Apache-2.0)은 앱 목록과 함께 레드롭 제품 아이콘으로
+바꿨습니다. 이유는 라이선스가 아니라 제품 정체성입니다. 상류의 릴리스 피드(`api.storyteller.ai`)와 재사용 CI
+워크플로는 호출하지 않습니다. 피드 주소는 비워 두었고(`crates/core/src/feed.rs`) CI 워크플로는 저장소 안에 풀어 썼습니다.
+
+상류의 `release.yml`은 유지하지 않고 제거했습니다. 상류 자체의 `craft-common-actions` 저장소에 있는 재사용
+워크플로를 상류의 서명 시크릿으로 호출하기 때문입니다. 우리 릴리스 워크플로는 이 조직의 시크릿 기준으로 작성합니다.
+
+## 상류 흡수
+
+상류 **태그**를 따릅니다. 동기화 브랜치는 `sync/upstream-<tag>`이고 `develop`으로 PR을 열며,
+**머지 커밋으로만 머지하고 스쿼시하지 않습니다.** 스쿼시는 머지 베이스를 없애 다음 동기화가 이미 가져온
+작업을 되풀이하게 만듭니다.
+
+```sh
+git fetch upstream --tags
+git checkout -b sync/upstream-vX.Y.Z develop
+git merge vX.Y.Z          # 충돌은 손으로. 우리가 바꾼 이름은 우리 것, 그 주변은 상류 것
+cargo build --release && cargo test && python3 scripts/check_upstream_boundary.py
+```
+
+그리고 같은 PR에서 `upstream-base.json`의 `base`, `baseTag`, `baseDate`, `baseSubject`,
+`lastSyncedUpstream`을 갱신합니다.
+
+## 귀속
+
+[`NOTICE`](./NOTICE)의 상류 저작권 줄은 원문 그대로 두고 그 아래에 우리 줄을 추가했습니다. 두 라이선스 전문
+([`LICENSE-MIT`](./LICENSE-MIT), [`LICENSE-APACHE`](./LICENSE-APACHE))은 바꾸지 않았습니다. 자산별 귀속은
+[`ATTRIBUTION.md`](./ATTRIBUTION.md)에 이어집니다.

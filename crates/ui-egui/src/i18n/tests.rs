@@ -4,7 +4,6 @@
 use std::collections::{BTreeSet, HashSet};
 
 use super::catalog::{Catalog, unescape};
-use super::lang::plural_east_slavic;
 use super::{LANGUAGES, Lang, LangInfo, lang_from_tag, message, tr, trn};
 
 /// Each catalog's rows as (line number, context, source, translation), split exactly as the
@@ -123,15 +122,17 @@ fn ellipsis_preserved() {
 #[test]
 fn complete_catalogs_cover_every_ui_literal() {
     let sources = [
+        include_str!("../account.rs"),
         include_str!("../app.rs"),
         include_str!("../dialogs.rs"),
         include_str!("../model.rs"),
+        include_str!("../models.rs"),
         include_str!("../notes.rs"),
         include_str!("../settings.rs"),
         include_str!("../views.rs"),
         include_str!("../widgets.rs"),
         // The desktop shell's tray menu and tooltip.
-        include_str!("../../../../apps/artcraft-launcher/src/tray.rs"),
+        include_str!("../../../../apps/redrob-launcher/src/tray.rs"),
     ];
     let mut keys = BTreeSet::new();
     for source in sources {
@@ -178,7 +179,7 @@ fn complete_catalogs_cover_every_ui_literal() {
 #[test]
 fn complete_catalogs_translate_every_tagline() {
     for lang in Lang::all().filter(|l| l.complete_menus()) {
-        for app in &artcraft_launcher_core::SUITE {
+        for app in &redrob_launcher_core::SUITE {
             assert_ne!(super::tr_ctx(lang, app.id, app.tagline), app.tagline, "{}: {}", lang.code(), app.id);
         }
     }
@@ -187,126 +188,64 @@ fn complete_catalogs_translate_every_tagline() {
 #[test]
 fn product_names_stay_in_english() {
     for lang in Lang::all() {
-        for name in ["ArtCraft Launcher", "Craft App Suite", "Launcher"] {
+        for name in ["Redrob Launcher", "Craft App Suite", "Launcher"] {
             assert_eq!(tr(lang, name), name, "{}", lang.code());
         }
     }
 }
 
 #[test]
-fn russian_plural_rule_works() {
-    for n in [1, 21, 31, 101] {
-        assert_eq!(plural_east_slavic(n), 0, "{n}");
-    }
-    for n in [2, 3, 4, 22, 23, 24, 102] {
-        assert_eq!(plural_east_slavic(n), 1, "{n}");
-    }
-    for n in [0, 5, 11, 12, 13, 14, 15, 100, 111] {
-        assert_eq!(plural_east_slavic(n), 2, "{n}");
-    }
-    assert_eq!(trn(Lang::RU, 21, "{n} day ago", "{n} days ago"), "21 день назад");
-    assert_eq!(trn(Lang::RU, 3, "{n} day ago", "{n} days ago"), "3 дня назад");
-}
-
-#[test]
 fn untranslated_plurals_fall_back_to_english_by_count() {
-    // Russian's rule says "one" for 21, but English says "other".
-    assert_eq!(trn(Lang::RU, 21, "{n} unknown item", "{n} unknown items"), "21 unknown items");
-    assert_eq!(trn(Lang::RU, 1, "{n} unknown item", "{n} unknown items"), "1 unknown item");
+    assert_eq!(trn(Lang::KO, 21, "{n} unknown item", "{n} unknown items"), "21 unknown items");
+    assert_eq!(trn(Lang::KO, 1, "{n} unknown item", "{n} unknown items"), "1 unknown item");
     assert_eq!(trn(Lang::EN, 0, "{n} app", "{n} apps"), "0 apps");
 }
 
 #[test]
 fn locale_tags_resolve() {
-    assert_eq!(lang_from_tag("pt_BR.UTF-8"), Some(Lang::PT_BR));
-    assert_eq!(lang_from_tag("pt-BR"), Some(Lang::PT_BR));
-    assert_eq!(lang_from_tag("pt"), Some(Lang::PT_BR));
-    assert_eq!(lang_from_tag("ru_RU.UTF-8"), Some(Lang::RU));
-    assert_eq!(lang_from_tag("ru-RU"), Some(Lang::RU));
+    for tag in ["ko", "ko-KR", "ko_KR.UTF-8", "KO_kr"] {
+        assert_eq!(lang_from_tag(tag), Some(Lang::KO), "{tag}");
+    }
     assert_eq!(lang_from_tag("en-US"), Some(Lang::EN));
     assert_eq!(lang_from_tag("C"), Some(Lang::EN));
     assert_eq!(lang_from_tag("C.UTF-8"), Some(Lang::EN));
     assert_eq!(lang_from_tag("POSIX"), Some(Lang::EN));
+    assert_eq!(lang_from_tag("ru-RU"), None);
     assert_eq!(lang_from_tag("xx-XX"), None);
     assert_eq!(lang_from_tag(""), None);
-    assert_eq!(super::detect::first_supported(["xx-XX", "ru-RU", "en-US"]), Some(Lang::RU));
+    assert_eq!(super::detect::first_supported(["xx-XX", "ko-KR", "en-US"]), Some(Lang::KO));
+    assert_eq!(super::detect::first_supported(["de-DE", "en-US"]), Some(Lang::EN));
 }
 
 #[test]
-fn german_locales_resolve() {
-    for tag in ["de", "de-DE", "de_DE.UTF-8", "de-AT", "de-CH", "de_CH.UTF-8", "DE_de"] {
-        assert_eq!(lang_from_tag(tag), Some(Lang::DE), "{tag}");
-    }
-    assert_eq!(super::detect::first_supported(["xx-XX", "de-DE", "en-US"]), Some(Lang::DE));
-}
-
-#[test]
-fn german_counts_dates_and_messages_work() {
-    assert_eq!(trn(Lang::DE, 1, "{n} app", "{n} apps"), "1 App");
-    assert_eq!(trn(Lang::DE, 0, "{n} app", "{n} apps"), "0 Apps");
-    assert_eq!(trn(Lang::DE, 21, "{n} day ago", "{n} days ago"), "vor 21 Tagen");
-    assert_eq!(trn(Lang::DE, 1, "{n} day ago", "{n} days ago"), "vor 1 Tag");
-    assert_eq!(super::tr_ctx(Lang::DE, "month", "Mar"), "März");
-    assert_eq!(tr(Lang::DE, "{month} {day}, {year}"), "{day}. {month} {year}");
-    assert_eq!(message(Lang::DE, "PhotoCraft updated to 0.5.0"), "PhotoCraft auf 0.5.0 aktualisiert");
-    assert_eq!(tr(Lang::DE, "Untranslated diagnostic"), "Untranslated diagnostic");
-}
-
-#[test]
-fn french_locales_and_plurals_work() {
-    for tag in ["fr", "fr-FR", "fr_CA.UTF-8", "fr-BE", "FR_ch"] {
-        assert_eq!(lang_from_tag(tag), Some(Lang::FR), "{tag}");
-    }
-    assert_eq!(super::detect::first_supported(["xx-XX", "fr-FR", "en-US"]), Some(Lang::FR));
-    // 0 and 1 are singular in French, unlike English.
-    assert_eq!(trn(Lang::FR, 0, "{n} app", "{n} apps"), "0 application");
-    assert_eq!(trn(Lang::FR, 1, "{n} app", "{n} apps"), "1 application");
-    assert_eq!(trn(Lang::FR, 2, "{n} app", "{n} apps"), "2 applications");
-    assert_eq!(trn(Lang::FR, 3, "{n} day ago", "{n} days ago"), "il y a 3 jours");
-}
-
-#[test]
-fn simplified_chinese_locales_respect_the_script() {
-    for tag in ["zh", "zh-CN", "zh_CN.UTF-8", "zh-SG", "zh-Hans", "zh-Hans-CN", "zh-Hans-HK", "ZH_cn"] {
-        assert_eq!(lang_from_tag(tag), Some(Lang::ZH_CN), "{tag}");
-    }
-    for tag in ["zh-TW", "zh-HK", "zh-MO", "zh-Hant", "zh-Hant-CN", "zh-Hant-SG", "zh_TW.UTF-8"] {
-        assert_eq!(lang_from_tag(tag), None, "{tag}");
-    }
-    // A Traditional Chinese system that also lists English gets English, not Simplified.
-    assert_eq!(super::detect::first_supported(["zh-Hant-TW", "en-US"]), Some(Lang::EN));
-}
-
-#[test]
-fn chinese_counts_and_english_fallback_work() {
+fn korean_counts_dates_and_messages_work() {
     for n in [0, 1, 2, 11, 100] {
-        assert_eq!(trn(Lang::ZH_CN, n, "{n} app", "{n} apps"), format!("{n} 个应用"));
-        assert_eq!(trn(Lang::ZH_CN, n, "{n} min ago", "{n} min ago"), format!("{n} 分钟前"));
+        assert_eq!(trn(Lang::KO, n, "{n} app", "{n} apps"), format!("앱 {n}개"));
+        assert_eq!(trn(Lang::KO, n, "{n} min ago", "{n} min ago"), format!("{n}분 전"));
     }
-    assert_eq!(trn(Lang::ZH_CN, 2, "{n} unknown item", "{n} unknown items"), "2 unknown items");
-    assert_eq!(tr(Lang::ZH_CN, "Untranslated diagnostic"), "Untranslated diagnostic");
-    assert_eq!(message(Lang::ZH_CN, "PhotoCraft updated to 0.5.0"), "PhotoCraft 已更新至 0.5.0");
+    assert_eq!(super::tr_ctx(Lang::KO, "month", "Mar"), "3월");
+    assert_eq!(tr(Lang::KO, "{month} {day}, {year}"), "{year}년 {month} {day}일");
+    assert_eq!(message(Lang::KO, "Redrob Canvas updated to 0.5.0"), "Redrob Canvas을(를) 0.5.0(으)로 업데이트했어요");
+    assert_eq!(tr(Lang::KO, "Untranslated diagnostic"), "Untranslated diagnostic");
 }
 
-/// With the system's Chinese font installed, every UI family can draw the whole Chinese catalog.
-/// Machines without one (CI, the web) skip this; the UI then stays in English.
+/// The bundled fonts draw the whole Korean catalog in every UI family: Hangul never depends on
+/// what the system has installed.
 #[test]
-fn system_font_covers_chinese_in_every_ui_family() {
+fn bundled_font_covers_korean_in_every_ui_family() {
     use egui::{FontFamily, FontId};
-    if !crate::theme::cjk_font_available() {
-        return;
-    }
     let ctx = egui::Context::default();
-    crate::theme::install_fonts(&ctx, true);
+    crate::theme::install_fonts(&ctx, false);
     let mut output = ctx.run_ui(egui::RawInput::default(), |_| {});
     output.textures_delta.clear();
-    let text: String = Lang::ZH_CN
+    let text: String = Lang::KO
         .0
         .source
         .lines()
+        .filter(|line| !line.starts_with('#'))
         .filter_map(|line| line.split('\t').nth(2))
         .flat_map(str::chars)
-        .filter(|c| ('\u{3400}'..='\u{9fff}').contains(c))
+        .filter(|c| ('\u{ac00}'..='\u{d7a3}').contains(c))
         .collect();
     assert!(text.chars().count() > 500);
     for family in [
@@ -325,17 +264,9 @@ fn system_font_covers_chinese_in_every_ui_family() {
 #[test]
 fn language_labels_come_from_the_registry() {
     use crate::settings::Settings;
-    for lang in Lang::all().filter(|l| !l.needs_cjk_font()) {
+    for lang in Lang::all() {
         assert_eq!(Settings::language_label(lang.code()), lang.name());
     }
-    // Chinese: in English until its font is loaded (which a label never does), then both.
-    // (Other tests may load the font meanwhile.)
-    let before = crate::theme::cjk_font_loaded();
-    let label = Settings::language_label(Lang::ZH_CN.code());
-    let after = crate::theme::cjk_font_loaded();
-    assert!(label == "Simplified Chinese (简体中文)" || label == "Simplified Chinese", "{label}");
-    assert!(!before || label.contains("简体中文"), "{label}");
-    assert!(after || !label.contains("简体中文"), "{label}");
     assert_eq!(Settings::language_label(Settings::LANGUAGE_AUTO), "Auto");
     assert_eq!(Settings::language_label("xx"), "Auto");
 }
@@ -374,10 +305,10 @@ fn message_templates_match_real_messages() {
          @msg\t{a}{b}\tnever\n",
     );
     assert_eq!(cat.message("Download cancelled").as_deref(), Some("Скачивание отменено"));
-    assert_eq!(cat.message("Couldn't open PhotoCraft: no such file: x").as_deref(), Some("Не удалось открыть PhotoCraft: no such file: x"));
-    assert_eq!(cat.message("PhotoCraft updated to 0.5.0").as_deref(), Some("PhotoCraft обновлено до 0.5.0"));
+    assert_eq!(cat.message("Couldn't open Redrob Canvas: no such file: x").as_deref(), Some("Не удалось открыть Redrob Canvas: no such file: x"));
+    assert_eq!(cat.message("Redrob Canvas updated to 0.5.0").as_deref(), Some("Redrob Canvas обновлено до 0.5.0"));
     // The template that spells out more of the message wins.
-    assert_eq!(cat.message("PhotoCraft updated to 0.5.0 (no checksum)").as_deref(), Some("PhotoCraft обновлено до 0.5.0 (без суммы)"));
+    assert_eq!(cat.message("Redrob Canvas updated to 0.5.0 (no checksum)").as_deref(), Some("Redrob Canvas обновлено до 0.5.0 (без суммы)"));
     // Placeholders never match nothing, and unknown messages aren't touched.
     assert_eq!(cat.message("Couldn't open : x"), None);
     assert_eq!(cat.message("Something else"), None);
@@ -386,7 +317,7 @@ fn message_templates_match_real_messages() {
 
 #[test]
 fn complete_catalogs_translate_package_formats() {
-    use artcraft_launcher_core::PackageKind;
+    use redrob_launcher_core::PackageKind;
     let kinds =
         [PackageKind::Msi, PackageKind::PortableZip, PackageKind::Dmg, PackageKind::Deb, PackageKind::Rpm, PackageKind::Flatpak, PackageKind::TarGz];
     for lang in Lang::all().filter(|l| l.complete_menus()) {

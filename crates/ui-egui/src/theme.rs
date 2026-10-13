@@ -1,10 +1,9 @@
-//! Colours, type and shapes, matching getartcraft.com: hard edges, hairline rules, Archivo
-//! display type, Inter body text and Geist Mono labels. Widgets read [`Tokens::get`]; nothing
-//! hard-codes a colour.
+//! Colours, type and shapes from the Redrob design system: its colour roles (`tokens.css`),
+//! Pretendard for Latin and Wanted Sans for Korean, hairline rules. Widgets read
+//! [`Tokens::get`]; nothing hard-codes a colour.
 
 use std::sync::Arc;
 
-use egui::epaint::text::VariationCoords;
 use egui::{Color32, CornerRadius, FontData, FontDefinitions, FontFamily, FontId, FontTweak, Stroke, TextStyle, Visuals};
 use serde::{Deserialize, Serialize};
 
@@ -64,54 +63,49 @@ pub struct Tokens {
     pub bad: Color32,
 }
 
-const fn ink_alpha(rgb: u32, alpha: u8) -> Color32 {
-    let [_, r, g, b] = rgb.to_be_bytes();
-    Color32::from_rgba_unmultiplied_const(r, g, b, alpha)
-}
-
 const fn hex(rgb: u32) -> Color32 {
     let [_, r, g, b] = rgb.to_be_bytes();
     Color32::from_rgb(r, g, b)
 }
 
 impl Tokens {
+    // Values are the Redrob design system's (`tokens.css`), by role; the comment names the token.
     pub const DARK: Self = Self {
         dark: true,
-        bg: hex(0x121316),
-        sunken: hex(0x060607),
-        ink: hex(0xf2f1ee),
-        ink_strong: hex(0xffffff),
-        muted: ink_alpha(0xf2f1ee, 153),
-        faint: ink_alpha(0xf2f1ee, 97),
-        line: ink_alpha(0xf2f1ee, 38),
-        line_strong: ink_alpha(0xf2f1ee, 102),
-        accent: hex(0x2d81ff),
-        accent_ink: hex(0x74aaff),
-        invert_bg: hex(0xffffff),
-        invert_fg: hex(0x0b0b0c),
-        // PdfCraft's and LightCraft's inks, so status colours come from the site's palette.
-        good: hex(0x3fd6b8),
-        warn: hex(0xffc14d),
-        bad: hex(0xff6259),
+        bg: hex(0x0a0b0c),          // surface-base: redrob-black
+        sunken: hex(0x000000),      // surface-sunken
+        ink: hex(0xf8f9fb),         // ink-primary: gray-1
+        ink_strong: hex(0xffffff),  // redrob-white
+        muted: hex(0xaab0bb),       // ink-secondary: gray-5
+        faint: hex(0x7c8390),       // ink-muted: gray-6
+        line: hex(0x292e37),        // border-subtle: gray-8
+        line_strong: hex(0x7c8390), // border-strong: gray-6
+        accent: hex(0x2b52ff),      // action-primary: blue-6 (Redrob Blue)
+        accent_ink: hex(0x8aafff),  // ink-brand: blue-4
+        invert_bg: hex(0xffffff),   // the white pill on dark grounds
+        invert_fg: hex(0x0a0b0c),
+        good: hex(0x29e474), // status-success: accent-green-3
+        warn: hex(0xff9c1b), // status-warning: accent-orange-3
+        bad: hex(0xff4b4b),  // status-danger: accent-red-3
     };
 
     pub const LIGHT: Self = Self {
         dark: false,
-        bg: hex(0xf2f1ee),
-        sunken: hex(0xe9e8e4),
-        ink: hex(0x101014),
+        bg: hex(0xffffff),     // surface-base: redrob-white
+        sunken: hex(0xeff1f4), // surface-sunken: gray-2
+        ink: hex(0x0a0b0c),    // ink-primary: redrob-black
         ink_strong: hex(0x000000),
-        muted: ink_alpha(0x101014, 158),
-        faint: ink_alpha(0x101014, 107),
-        line: ink_alpha(0x101014, 41),
-        line_strong: ink_alpha(0x101014, 102),
-        accent: hex(0x2d81ff),
-        accent_ink: hex(0x1659c4),
-        invert_bg: hex(0x101014),
-        invert_fg: hex(0xf2f1ee),
-        good: hex(0x0a7563),
-        warn: hex(0x8a5800),
-        bad: hex(0xb3261e),
+        muted: hex(0x576071),       // ink-secondary: gray-7
+        faint: hex(0x7c8390),       // ink-muted: gray-6
+        line: hex(0xdfe2e8),        // border-subtle: gray-3
+        line_strong: hex(0x7c8390), // border-strong: gray-6
+        accent: hex(0x2b52ff),      // action-primary: blue-6 (Redrob Blue)
+        accent_ink: hex(0x1733d5),  // ink-brand: blue-7
+        invert_bg: hex(0x0a0b0c),
+        invert_fg: hex(0xffffff),
+        good: hex(0x00864a), // status-success: accent-green-4
+        warn: hex(0xae5100), // status-warning: accent-orange-4
+        bad: hex(0xa31310),  // status-danger: accent-red-4
     };
 
     pub fn get(ctx: &egui::Context) -> Self {
@@ -123,7 +117,7 @@ impl Tokens {
     }
 
     /// An app's text colour (`--app-ink`): readable on this appearance's background.
-    pub fn app_ink(&self, app: &artcraft_launcher_core::CraftApp) -> Color32 {
+    pub fn app_ink(&self, app: &redrob_launcher_core::CraftApp) -> Color32 {
         rgb(if self.dark { app.ink_dark } else { app.ink_light })
     }
 }
@@ -207,64 +201,77 @@ pub fn apply(ctx: &egui::Context, choice: ThemeChoice) {
     });
 }
 
+/// The Korean system face of the Redrob design system (Wanted Sans Regular, SIL OFL 1.1; licence
+/// beside the file). Pretendard carries no Hangul, so Korean falls to this face.
+pub const KOREAN_FONT: &[u8] = include_bytes!("../../../assets/fonts/WantedSans-Regular.ttf");
+
+/// Korean system text is set at 96% of the Latin size (design system, `35-korean.md`).
+const KOREAN_SCALE: f32 = 0.96;
+
 /// Height of buttons, inputs and filter cells (the site's medium button).
 pub const CONTROL_H: f32 = 34.0;
 
-/// The site's `.hud-label`: 11 px Geist Mono 500, upper case, 0.15 em apart.
-pub const HUD_SIZE: f32 = 11.0;
-pub const HUD_SPACING: f32 = HUD_SIZE * 0.15;
-/// Buttons: 11 px Geist Mono 700, upper case, 0.12 em apart.
-pub const BUTTON_SPACING: f32 = HUD_SIZE * 0.12;
+/// Labels: the design system's meta line, 12 px Pretendard 500, sentence case, no extra tracking.
+pub const HUD_SIZE: f32 = 12.0;
+pub const HUD_SPACING: f32 = 0.0;
+/// Buttons: the design system's label, Pretendard 600, no extra tracking.
+pub const BUTTON_SPACING: f32 = 0.0;
 
-/// Inter 500.
+/// Pretendard 500.
 pub fn medium() -> FontFamily {
     FontFamily::Name("medium".into())
 }
 
-/// Inter 600.
+/// Pretendard 600.
 pub fn semibold() -> FontFamily {
     FontFamily::Name("semibold".into())
 }
 
-/// Archivo 620 at 118 % width: the site's `.font-display` headings and app wordmarks.
+/// Headings and app names: Pretendard 600 (the design system's card and dialog title).
 pub fn display() -> FontFamily {
     FontFamily::Name("display".into())
 }
 
-/// Geist Mono 500: labels and badges.
+/// Labels and badges: Pretendard 500 (the design system's meta line). The system uses one
+/// typeface; a monospace face is for code only.
 pub fn mono() -> FontFamily {
     FontFamily::Name("mono".into())
 }
 
-/// Geist Mono 700: buttons and app number tabs.
+/// Buttons and app number tabs: Pretendard 600 (the design system's label).
 pub fn mono_bold() -> FontFamily {
     FontFamily::Name("mono-bold".into())
 }
 
-/// A font registered under `name`: its file, its variation coordinates and its family.
-type Face<'a> = (&'a str, &'static [u8], &'a [([u8; 4], f32)], FontFamily);
+/// A font registered under `name`, and the family it sets.
+type Face<'a> = (&'a str, &'static [u8], FontFamily);
 
-/// Registers the site's three variable fonts, each at the weights (and width) it uses there.
+/// The Redrob design system's Latin face (Pretendard, at the weights the UI uses) and its Korean
+/// face (Wanted Sans) behind it in every family. Pretendard carries no Hangul, so each glyph
+/// falls to the right face (design system `30-typography.md`). Files are the design system's,
+/// byte for byte (SIL OFL 1.1, licences beside them).
 pub fn install_fonts(ctx: &egui::Context, cjk: bool) {
-    const INTER: &[u8] = include_bytes!("../../../assets/fonts/Inter-Variable.ttf");
-    const ARCHIVO: &[u8] = include_bytes!("../../../assets/fonts/Archivo-Variable.ttf");
-    const GEIST_MONO: &[u8] = include_bytes!("../../../assets/fonts/GeistMono-Variable.ttf");
+    const REGULAR: &[u8] = include_bytes!("../../../assets/fonts/Pretendard-Regular.ttf");
+    const MEDIUM: &[u8] = include_bytes!("../../../assets/fonts/Pretendard-Medium.ttf");
+    const SEMIBOLD: &[u8] = include_bytes!("../../../assets/fonts/Pretendard-SemiBold.ttf");
     let mut fonts = FontDefinitions::default();
     // egui's own fonts stay behind ours, for symbols and emoji ours don't have.
     let fallback: Vec<String> = fonts.families.get(&FontFamily::Proportional).cloned().unwrap_or_default();
+    fonts
+        .font_data
+        .insert("WantedSans".to_owned(), Arc::new(FontData::from_static(KOREAN_FONT).tweak(FontTweak { scale: KOREAN_SCALE, ..Default::default() })));
     let faces: [Face<'_>; 7] = [
-        ("Inter", INTER, &[(*b"wght", 400.0), (*b"opsz", 14.0)], FontFamily::Proportional),
-        ("Inter-Medium", INTER, &[(*b"wght", 500.0), (*b"opsz", 14.0)], medium()),
-        ("Inter-SemiBold", INTER, &[(*b"wght", 600.0), (*b"opsz", 14.0)], semibold()),
-        ("Archivo-Display", ARCHIVO, &[(*b"wght", 620.0), (*b"wdth", 118.0)], display()),
-        ("GeistMono", GEIST_MONO, &[(*b"wght", 400.0)], FontFamily::Monospace),
-        ("GeistMono-Medium", GEIST_MONO, &[(*b"wght", 500.0)], mono()),
-        ("GeistMono-Bold", GEIST_MONO, &[(*b"wght", 700.0)], mono_bold()),
+        ("Pretendard", REGULAR, FontFamily::Proportional),
+        ("Pretendard-Medium", MEDIUM, medium()),
+        ("Pretendard-SemiBold", SEMIBOLD, semibold()),
+        ("Pretendard-SemiBold", SEMIBOLD, display()),
+        ("Pretendard", REGULAR, FontFamily::Monospace),
+        ("Pretendard-Medium", MEDIUM, mono()),
+        ("Pretendard-SemiBold", SEMIBOLD, mono_bold()),
     ];
-    for (name, bytes, coords, family) in faces {
-        let tweak = FontTweak { coords: VariationCoords::new(coords.iter().copied()), ..Default::default() };
-        fonts.font_data.insert(name.to_owned(), Arc::new(FontData::from_static(bytes).tweak(tweak)));
-        let mut stack = vec![name.to_owned()];
+    for (name, bytes, family) in faces {
+        fonts.font_data.entry(name.to_owned()).or_insert_with(|| Arc::new(FontData::from_static(bytes)));
+        let mut stack = vec![name.to_owned(), "WantedSans".to_owned()];
         stack.extend(fallback.iter().cloned());
         fonts.families.insert(family, stack);
     }

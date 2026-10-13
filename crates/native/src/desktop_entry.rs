@@ -2,7 +2,7 @@
 //!
 //! An AppImage installs nothing by itself, so without an entry the app is missing from the
 //! desktop's menu and, on Wayland, the dock can't match the window's app id to an icon. The
-//! launcher writes `<data>/applications/ai.storyteller.<app>.desktop` (the id each app's window
+//! launcher writes `<data>/applications/ai.redrob.<app>.desktop` (the id each app's window
 //! reports) and marks it as its own, so it only ever replaces or removes entries it wrote.
 //!
 //! The text is built by pure functions, tested on every platform; only Linux writes the files.
@@ -11,26 +11,25 @@
 
 use std::path::Path;
 
-use artcraft_launcher_core::CraftApp;
+use redrob_launcher_core::CraftApp;
 
 /// The key that marks an entry as written by the launcher.
-pub const MARKER: &str = "X-ArtCraft-Launcher=true";
+pub const MARKER: &str = "X-Redrob-Launcher=true";
 
 /// The menu categories and the window class each app's own `.desktop` file declares.
 pub fn meta(app: &CraftApp) -> (&'static str, Option<&'static str>) {
     match app.id {
-        "photocraft" => ("Graphics;2DGraphics;RasterGraphics;Photography;", Some("photocraft")),
-        "pdfcraft" => ("Office;Viewer;", Some("pdfcraft")),
-        "lightcraft" => ("Graphics;2DGraphics;RasterGraphics;Photography;", None),
-        "filmcraft" => ("AudioVideo;Video;AudioVideoEditing;", None),
-        "designcraft" => ("Graphics;Publishing;", None),
-        "vectorcraft" => ("Graphics;2DGraphics;VectorGraphics;", None),
-        "effectcraft" => ("AudioVideo;Video;Graphics;2DGraphics;", None),
-        "wordcraft" => ("Office;WordProcessor;", None),
-        "deckcraft" => ("Office;Presentation;", None),
-        "gridcraft" => ("Office;Spreadsheet;", None),
-        "cadcraft" => ("Graphics;Engineering;VectorGraphics;", None),
-        "soundcraft" => ("AudioVideo;Audio;Midi;Mixer;Sequencer;Recorder;", None),
+        "redrob-canvas" => ("Graphics;2DGraphics;RasterGraphics;Photography;", Some("redrob-canvas")),
+        "redrob-office" => ("Office;Viewer;", Some("redrob-office")),
+        "redrob-studio" => ("Graphics;2DGraphics;RasterGraphics;Photography;", None),
+        "redrob-cut" => ("AudioVideo;Video;AudioVideoEditing;", None),
+        "redrob-browser" => ("Graphics;Publishing;", None),
+        "redrob-shape" => ("Graphics;2DGraphics;VectorGraphics;", None),
+        "redrob-code" => ("Office;WordProcessor;", None),
+        "redrob-cowork" => ("Office;Presentation;", None),
+        "redrob-query" => ("Office;Spreadsheet;", None),
+        "redrob-cad" => ("Graphics;Engineering;VectorGraphics;", None),
+        "redrob-recall" => ("AudioVideo;Audio;Midi;Mixer;Sequencer;Recorder;", None),
         _ => ("Graphics;", None),
     }
 }
@@ -141,19 +140,19 @@ mod tests {
 
     #[test]
     fn writes_a_complete_entry() {
-        let text = render(app("photocraft"), Path::new("/home/ana/Applications/photocraft-0.6.0-linux-x86_64.AppImage"), true).unwrap();
+        let text = render(app("redrob-canvas"), Path::new("/home/ana/Applications/redrob-canvas-0.6.0-linux-x86_64.AppImage"), true).unwrap();
         let expected = format!(
-            "[Desktop Entry]\nType=Application\nName=PhotoCraft\nComment={}\n\
-             Exec=\"/home/ana/Applications/photocraft-0.6.0-linux-x86_64.AppImage\" %F\n\
-             Icon=ai.storyteller.photocraft\nTerminal=false\nCategories=Graphics;2DGraphics;RasterGraphics;Photography;\n\
-             StartupWMClass=photocraft\nX-ArtCraft-Launcher=true\n",
-            app("photocraft").tagline
+            "[Desktop Entry]\nType=Application\nName=Redrob Canvas\nComment={}\n\
+             Exec=\"/home/ana/Applications/redrob-canvas-0.6.0-linux-x86_64.AppImage\" %F\n\
+             Icon=ai.redrob.canvas\nTerminal=false\nCategories=Graphics;2DGraphics;RasterGraphics;Photography;\n\
+             StartupWMClass=redrob-canvas\nX-Redrob-Launcher=true\n",
+            app("redrob-canvas").tagline
         );
         assert_eq!(text, expected);
         assert!(is_ours(&text));
-        let no_icon = render(app("wordcraft"), Path::new("/x/w.AppImage"), false).unwrap();
+        let no_icon = render(app("redrob-code"), Path::new("/x/w.AppImage"), false).unwrap();
         assert!(!no_icon.contains("Icon="));
-        assert!(no_icon.contains("StartupWMClass=ai.storyteller.wordcraft\n"));
+        assert!(no_icon.contains("StartupWMClass=ai.redrob.code\n"));
         assert!(no_icon.contains("Categories=Office;WordProcessor;\n"));
     }
 
@@ -163,20 +162,20 @@ mod tests {
         assert_eq!(exec_quote(Path::new("/a/\"q\" $HOME `x`.AppImage")).unwrap(), r#""/a/\\"q\\" \\$HOME \\`x\\`.AppImage""#);
         assert_eq!(exec_quote(Path::new(r"/a\b/100%.AppImage")).unwrap(), r#""/a\\\\b/100%%.AppImage""#);
         assert_eq!(exec_quote(Path::new("/a/line\nbreak.AppImage")), None);
-        assert!(render(app("photocraft"), Path::new("/a/line\nbreak.AppImage"), true).is_none());
+        assert!(render(app("redrob-canvas"), Path::new("/a/line\nbreak.AppImage"), true).is_none());
     }
 
     #[test]
     fn reads_back_the_program_it_wrote_and_the_apps_own_entries() {
         for p in ["/home/ana/My Apps/p.AppImage", "/a/\"q\" $HOME `x`.AppImage", r"/a\b/100%.AppImage", "/plain.AppImage"] {
-            let text = render(app("gridcraft"), Path::new(p), false).unwrap();
+            let text = render(app("redrob-query"), Path::new(p), false).unwrap();
             assert_eq!(exec_program(&text).map(PathBuf::from), Some(PathBuf::from(p)), "{p}");
         }
-        // PhotoCraft's AppRun writes its own entry, unmarked.
-        let theirs = "[Desktop Entry]\nName=PhotoCraft\nExec=\"/home/ana/Applications/photocraft-0.5.0-linux-x86_64.AppImage\" %F\n";
-        assert_eq!(exec_program(theirs).as_deref(), Some("/home/ana/Applications/photocraft-0.5.0-linux-x86_64.AppImage"));
+        // Redrob Canvas's AppRun writes its own entry, unmarked.
+        let theirs = "[Desktop Entry]\nName=Redrob Canvas\nExec=\"/home/ana/Applications/redrob-canvas-0.5.0-linux-x86_64.AppImage\" %F\n";
+        assert_eq!(exec_program(theirs).as_deref(), Some("/home/ana/Applications/redrob-canvas-0.5.0-linux-x86_64.AppImage"));
         assert!(!is_ours(theirs));
-        assert_eq!(exec_program("[Desktop Entry]\nExec=photocraft %F\n").as_deref(), Some("photocraft"));
+        assert_eq!(exec_program("[Desktop Entry]\nExec=redrob-canvas %F\n").as_deref(), Some("redrob-canvas"));
         assert_eq!(exec_program("[Desktop Entry]\nName=x\n"), None);
     }
 }

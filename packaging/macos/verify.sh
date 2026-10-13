@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Check the macOS release artifact exactly as users download it:
 #
-#   $DIST/artcraft-launcher-<version>-macos-<arch>.dmg   signed, notarized, ticket stapled; the
+#   $DIST/redrob-launcher-<version>-macos-<arch>.dmg   signed, notarized, ticket stapled; the
 #                                                       app inside is Developer ID signed with the
 #                                                       hardened runtime and carries every arch
 #
@@ -16,8 +16,8 @@ set -euo pipefail
 # shellcheck source=../env.sh
 . "$(dirname "${BASH_SOURCE[0]}")/../env.sh"
 
-PKG=artcraft-launcher
-APP_NAME="ArtCraft Launcher"
+PKG=redrob-launcher
+APP_NAME="Redrob Launcher"
 
 ARCH=universal
 while [ $# -gt 0 ]; do
@@ -37,7 +37,8 @@ esac
 DMG="$DIST/$PKG-$VERSION-macos-$ARCH.dmg"
 IDENTITY="${MACOS_SIGN_IDENTITY:--}"
 STRICT=0
-if [ "$IDENTITY" != "-" ] && [ -n "${APPLE_ID:-}" ] && [ -n "${APPLE_PASSWORD:-}" ] && [ -n "${APPLE_TEAM_ID:-}" ]; then
+if [ "$IDENTITY" != "-" ] && { { [ -n "${APPLE_NOTARY_API_KEY_P8_BASE64:-}" ] && [ -n "${APPLE_NOTARY_API_KEY_ID:-}" ] && [ -n "${APPLE_NOTARY_API_ISSUER_ID:-}" ]; } ||
+  { [ -n "${APPLE_ID:-}" ] && [ -n "${APPLE_PASSWORD:-}" ] && [ -n "${APPLE_TEAM_ID:-}" ]; }; }; then
   STRICT=1
 fi
 

@@ -1,11 +1,11 @@
 //! The header, toolbar, footer, the grid of cards and the table, laid out like the apps page on
-//! getartcraft.com: hairline cells, mono labels and square controls.
+//! the Redrob design system: hairline cells, quiet labels and square controls.
 
-use artcraft_launcher_core::platform::pick_asset;
-use artcraft_launcher_core::protocol::{Command, JobPhase};
-use artcraft_launcher_core::status::AppStatus;
-use artcraft_launcher_core::{AppGroup, SUITE, time};
 use egui::{Color32, CornerRadius, FontId, Rect, RichText, Sense, Stroke, Ui, vec2};
+use redrob_launcher_core::platform::pick_asset;
+use redrob_launcher_core::protocol::{Command, JobPhase};
+use redrob_launcher_core::status::AppStatus;
+use redrob_launcher_core::{AppGroup, SUITE, time};
 
 use crate::app::{Dialog, LauncherUi, TitleBar};
 use crate::i18n::{current, fmt, t, tn, tr_ctx};
@@ -79,15 +79,15 @@ impl LauncherUi {
             if bar == TitleBar::MacOs {
                 ui.add_space(TRAFFIC_LIGHTS_W);
             }
-            // The ArtCraft wordmark exactly as supplied, in its own cell.
-            let logo = vec2(14.0 * crate::icons::ARTCRAFT_LOGO_ASPECT, 14.0);
+            // The Redrob lockup exactly as supplied (the variant for this ground), in its own cell.
+            let logo = vec2(18.0 * crate::icons::REDROB_LOGO_ASPECT, 18.0);
             let (cell, _) = ui.allocate_exact_size(vec2(logo.x + 40.0, h), Sense::hover());
-            egui::Image::new(crate::icons::artcraft_logo(t.dark)).alt_text(tl!("ArtCraft")).paint_at(ui, Rect::from_center_size(cell.center(), logo));
+            egui::Image::new(crate::icons::redrob_logo(t.dark)).alt_text(tl!("Redrob")).paint_at(ui, Rect::from_center_size(cell.center(), logo));
             widgets::rule(ui, h);
             ui.add_space(16.0);
             widgets::tag(ui, tl!("Launcher"), t.invert_bg, t.invert_fg);
             ui.add_space(12.0);
-            widgets::hud(ui, tl!("Craft App Suite"), t.muted);
+            widgets::hud(ui, tl!("Redrob apps"), t.muted);
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if bar == TitleBar::Custom {
                     widgets::window_buttons(ui, h);
@@ -99,9 +99,8 @@ impl LauncherUi {
                     self.check_now();
                 }
                 ui.add_space(6.0);
-                if widgets::nav_link(ui, tl!("Discord"), tl!("Join the ArtCraft community on Discord"), h, false).clicked() {
-                    ui.ctx().open_url(egui::OpenUrl::new_tab(artcraft_launcher_core::catalog::DISCORD_URL));
-                }
+                self.account_link(ui, h);
+                self.models_link(ui, h);
                 ui.add_space(6.0);
                 widgets::rule(ui, h);
                 ui.add_space(6.0);
@@ -133,7 +132,7 @@ impl LauncherUi {
                         widgets::tag(ui, tl!("Update"), t.accent, Color32::WHITE);
                         ui.add_space(4.0);
                         ui.label(
-                            RichText::new(fmt(tl!("ArtCraft Launcher {version} is available."), &[("version", &r.version_label())]))
+                            RichText::new(fmt(tl!("Redrob Launcher {version} is available."), &[("version", &r.version_label())]))
                                 .family(theme::medium())
                                 .color(t.ink_strong),
                         );
@@ -158,7 +157,7 @@ impl LauncherUi {
                                         .on_hover_text(tl!("Stop waiting; the update can be started again later"))
                                         .clicked()
                                 {
-                                    self.send(Command::Cancel { app: artcraft_launcher_core::catalog::LAUNCHER_ID.to_string() });
+                                    self.send(Command::Cancel { app: redrob_launcher_core::catalog::LAUNCHER_ID.to_string() });
                                 }
                                 widgets::progress(ui, fraction, &caption, t.accent, 220.0);
                                 return;
@@ -190,7 +189,7 @@ impl LauncherUi {
         ui.horizontal(|ui| {
             let updates = self.count(Filter::Updates);
             let filters: Vec<(Filter, Cell<'_>)> = [
-                (Filter::All, tl!("All"), tl!("Every Craft app"), None),
+                (Filter::All, tl!("All"), tl!("Every Redrob app"), None),
                 // The tab names a group ("installed ones"); the status pill says "Installed".
                 (Filter::Installed, tr_ctx(current(), "filter", "Installed"), tl!("Apps on this computer"), None),
                 (Filter::Updates, tl!("Updates"), tl!("Installed apps with a newer version"), Some(t.warn)),
@@ -259,10 +258,10 @@ impl LauncherUi {
         });
     }
 
-    /// News from ArtCraft's release feed (and app renames), until the user dismisses each.
+    /// News from the release feed (and app renames), until the user dismisses each.
     fn announcements(&mut self, ui: &mut Ui) {
         let t = Tokens::get(ui.ctx());
-        let shown: Vec<artcraft_launcher_core::feed::Notice> =
+        let shown: Vec<redrob_launcher_core::feed::Notice> =
             self.announcements.iter().filter(|n| !self.settings.dismissed_notices.contains(&n.id)).take(3).cloned().collect();
         for notice in shown {
             egui::Frame::new().fill(t.sunken).stroke(t.hairline()).inner_margin(egui::Margin::symmetric(14, 10)).show(ui, |ui| {
@@ -316,30 +315,24 @@ impl LauncherUi {
             Some(p) => fmt(tl!("Downloads for {platform}"), &[("platform", &p.label())]),
             None => tl!("No downloads for this system").into(),
         };
-        use artcraft_launcher_core::catalog::{DISCORD_URL, GITHUB_URL, SOCIAL, WEBSITE_URL};
-        let links = [(tl!("Discord"), DISCORD_URL), (tl!("GitHub"), GITHUB_URL), (tl!("Website"), WEBSITE_URL)];
-        let (icon, link_gap) = (13.0, 16.0);
+        use redrob_launcher_core::catalog::{GITHUB_URL, WEBSITE_URL};
+        let links = [(tl!("GitHub"), GITHUB_URL), (tl!("Website"), WEBSITE_URL)];
+        let link_gap = 16.0;
         // The links and icons on the right keep their size; the status on the left gets what is
         // left and is cut short with "…", never drawn under them. A narrow window drops the
         // platform label first, so the status keeps room to be read.
         let spacing = ui.spacing().item_spacing.x;
         let links_w: f32 =
             links.iter().map(|(text, _)| widgets::hud_galley(ui, &format!("{text} ↗"), t.muted).size().x + link_gap).sum::<f32>() - link_gap;
-        let icons_w = SOCIAL.len() as f32 * (icon + 8.0);
         let platform_w = widgets::hud_galley(ui, &platform, t.faint).size().x + 16.0 + spacing;
-        let left_w = ui.available_width() - icons_w - 12.0 - links_w - 16.0 - 3.0 * spacing;
+        let left_w = ui.available_width() - links_w - 16.0 - 3.0 * spacing;
         let show_platform = left_w - platform_w >= FOOTER_MIN_STATUS_W;
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             if show_platform {
                 widgets::hud(ui, &platform, t.faint);
                 ui.add_space(16.0);
             }
-            // Right to left, so this reads: Website · GitHub · Discord, then the social icons.
-            ui.scope(|ui| {
-                ui.spacing_mut().item_spacing.x = 0.0;
-                widgets::social_icons(ui, icon);
-            });
-            ui.add_space(12.0);
+            // Right to left, so this reads: Website · GitHub.
             ui.scope(|ui| {
                 ui.spacing_mut().item_spacing.x = link_gap;
                 for (text, url) in links {
@@ -382,7 +375,7 @@ impl LauncherUi {
         // In suite order, split into the classic apps and the new ones.
         let grouped = self.settings.sort == SortKey::Suite && self.settings.filter == Filter::All && self.search.trim().is_empty();
         let sections: Vec<Section> = if grouped {
-            [(AppGroup::Classic, "01", tl!("Classic apps")), (AppGroup::New, "02", tl!("New apps"))]
+            [(AppGroup::Create, "01", tl!("Create")), (AppGroup::Work, "02", tl!("Work"))]
                 .iter()
                 .map(|(g, index, title)| {
                     let list = ids.iter().copied().filter(|id| self.entry(id).is_some_and(|e| e.app.group == *g)).collect();
@@ -441,7 +434,8 @@ impl LauncherUi {
             let mut strip_ui = ui.new_child(
                 egui::UiBuilder::new().max_rect(strip.shrink2(vec2(CARD_PAD, 0.0))).layout(egui::Layout::left_to_right(egui::Align::Center)),
             );
-            widgets::tag(&mut strip_ui, &number, app_color, Color32::BLACK);
+            // ink-on-brand: white on the mark, as on every Redrob tile.
+            widgets::tag(&mut strip_ui, &number, app_color, Color32::WHITE);
             strip_ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 ui.spacing_mut().item_spacing.x = 16.0;
                 widgets::hud_link(ui, tl!("GitHub"), &app.repo_url());
@@ -478,17 +472,9 @@ impl LauncherUi {
             centered_lines(ui, &[&name, &tagline, &like], GAP, |ui| {
                 // The name's row is as tall as its text, not as a button.
                 ui.spacing_mut().interact_size.y = 0.0;
-                ui.horizontal(|ui| {
-                    widgets::wordmark(ui, app, 22.0);
-                    if app.group == AppGroup::New {
-                        widgets::badge(ui, tl!("New"), t.app_ink(app));
-                    }
-                });
+                widgets::wordmark(ui, app, 22.0);
                 ui.add(egui::Label::new(RichText::new(tr_ctx(current(), app.id, app.tagline)).font(tagline.clone()).color(t.muted)).truncate());
-                ui.add(
-                    egui::Label::new(RichText::new(fmt(tl!("Like {name}"), &[("name", &app.inspired_by())])).font(like.clone()).color(t.faint))
-                        .truncate(),
-                );
+                ui.add(egui::Label::new(RichText::new(crate::i18n::tr(current(), app.like)).font(like.clone()).color(t.faint)).truncate());
             });
         });
         ui.add_space(14.0);
@@ -542,7 +528,7 @@ impl LauncherUi {
                 .header(42.0, |mut header| {
                     for (key, label) in [
                         (Some(SortKey::Name), tl!("App")),
-                        (Some(SortKey::InspiredBy), tl!("Inspired by")),
+                        (Some(SortKey::InspiredBy), tl!("Kind")),
                         (Some(SortKey::Status), tl!("Status")),
                         (Some(SortKey::Installed), tr_ctx(current(), "column", "Installed")),
                         (Some(SortKey::Latest), tr_ctx(current(), "column", "Latest")),
@@ -617,7 +603,9 @@ impl LauncherUi {
                                 });
                             });
                             row.col(|ui| {
-                                ui.add(egui::Label::new(RichText::new(entry.app.inspired_by()).size(13.0).color(t.muted)).truncate());
+                                ui.add(
+                                    egui::Label::new(RichText::new(crate::i18n::tr(current(), entry.app.like)).size(13.0).color(t.muted)).truncate(),
+                                );
                             });
                             row.col(|ui| {
                                 let (text, tone) = model::entry_status_text(&entry, &status, self.caps.manage_apps);
@@ -657,13 +645,6 @@ impl LauncherUi {
                 self.settings.sort_descending = k.starts_descending();
             }
         }
-    }
-
-    /// The trademark notice under the grid and the table.
-    pub(crate) fn trademark_notice(&self, ui: &mut Ui) {
-        let t = Tokens::get(ui.ctx());
-        ui.add_space(8.0);
-        ui.add(egui::Label::new(RichText::new(artcraft_launcher_core::catalog::TRADEMARK_NOTICE).size(11.0).color(t.faint)).wrap());
     }
 
     // ---- actions -------------------------------------------------------------------------
@@ -884,11 +865,8 @@ impl LauncherUi {
                     ui.close();
                 }
             };
-            match entry.app.website() {
-                Some(site) => link(ui, tl!("Website"), site),
-                None => {
-                    ui.add_enabled(false, egui::Button::new(tl!("Website (coming soon)")));
-                }
+            if let Some(site) = entry.app.website() {
+                link(ui, tl!("Website"), site);
             }
             link(ui, tl!("GitHub repository"), entry.app.repo_url());
             link(ui, tl!("All releases"), entry.app.releases_url());
@@ -900,7 +878,7 @@ fn sort_label(k: SortKey) -> &'static str {
     match k {
         SortKey::Suite => tl!("Suite order"),
         SortKey::Name => tl!("Name"),
-        SortKey::InspiredBy => tl!("Inspired by"),
+        SortKey::InspiredBy => tl!("Kind"),
         SortKey::Status => tl!("Status"),
         SortKey::Installed => tl!("Installed version"),
         SortKey::Latest => tl!("Latest version"),
@@ -925,13 +903,13 @@ fn version_line(e: &AppEntry, status: &AppStatus) -> String {
 }
 
 /// The launcher's own download for this platform.
-pub(crate) fn launcher_download(r: &artcraft_launcher_core::Release, p: artcraft_launcher_core::Platform) -> Option<String> {
-    use artcraft_launcher_core::PackageKind;
+pub(crate) fn launcher_download(r: &redrob_launcher_core::Release, p: redrob_launcher_core::Platform) -> Option<String> {
+    use redrob_launcher_core::PackageKind;
     let kinds: &[PackageKind] = match p.os {
-        artcraft_launcher_core::Os::Linux => &[PackageKind::AppImage, PackageKind::Deb],
+        redrob_launcher_core::Os::Linux => &[PackageKind::AppImage, PackageKind::Deb],
         _ => p.default_kinds(),
     };
-    pick_asset(r, &[artcraft_launcher_core::catalog::LAUNCHER_ID], p, kinds).map(|(a, _)| a.url.clone())
+    pick_asset(r, &[redrob_launcher_core::catalog::LAUNCHER_ID], p, kinds).map(|(a, _)| a.url.clone())
 }
 
 /// A column of single-line texts, one per font and `gap` apart, centred across the row it is in.

@@ -1,26 +1,27 @@
-//! The Craft App Suite: the twelve apps the launcher knows about.
+//! The Redrob apps the launcher knows about.
 //!
 //! The list is data so a later version can fetch it from an API; [`SUITE`] is the built-in copy.
 //!
 //! Text here is English, the source the UI translates from: each `tagline` has a catalog row
-//! keyed by the app id (`tr_ctx(app.id, app.tagline)` in `ui-egui`).
+//! keyed by the app id (`tr_ctx(app.id, app.tagline)` in `ui-egui`), and each `like` (the kind
+//! of app) a row of its own.
 
 use serde::{Deserialize, Serialize};
 
-/// Which generation of the suite an app belongs to.
+/// Which shelf an app sits on.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum AppGroup {
-    /// The seven original apps, each with a page on getartcraft.com.
-    Classic,
-    /// The five apps added after them.
-    New,
+    /// Apps that make things: video, 3D, CAD, graphics, design.
+    Create,
+    /// Apps for everyday work: the browser, coding, documents, data, files.
+    Work,
 }
 
 impl AppGroup {
     pub fn label(self) -> &'static str {
         match self {
-            Self::Classic => "Classic",
-            Self::New => "New",
+            Self::Create => "Create",
+            Self::Work => "Work",
         }
     }
 }
@@ -28,36 +29,40 @@ impl AppGroup {
 /// One app in the suite.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CraftApp {
-    /// Machine name: repo, binary, package and asset stem (`photocraft`).
+    /// Machine name: repo, binary, package and asset stem (`redrob-cad`).
     pub id: &'static str,
-    /// Display name (`PhotoCraft`).
+    /// Display name (`Redrob CAD`).
     pub name: &'static str,
-    /// What it's for, in a few words (English; the UI translates it by app id).
+    /// What it does for you, in a few words (English; the UI translates it by app id).
     pub tagline: &'static str,
-    /// The familiar app it reimplements, for orientation.
+    /// What kind of app it is, in one or two words (`CAD`, `Video editing`).
     pub like: &'static str,
     pub group: AppGroup,
-    /// Brand colour (sRGB), for surfaces: getartcraft.com's `--app`.
+    /// The product's mark colour (sRGB) from the design system, for its tile and number tab
+    /// only. Products without a mark of their own carry Redrob Blue.
     pub color: [u8; 3],
-    /// The brand colour for text on a light background (the site's light `--app-ink`).
+    /// Accent text on a light background. Product colour is never text (design system,
+    /// `20-color.md`), so this is Redrob Blue's text role for every app.
     pub ink_light: [u8; 3],
-    /// The brand colour for text on a dark background (the site's dark `--app-ink`).
+    /// Accent text on a dark background (Redrob Blue's dark text role).
     pub ink_dark: [u8; 3],
     /// GitHub `owner/repo`.
     pub repo: &'static str,
-    /// Older names its release assets may carry (PdfCraft shipped as PrintCraft until 0.2.1).
+    /// Reverse-DNS id: macOS bundle id, Flatpak id and Linux desktop-file id.
+    pub bundle: &'static str,
+    /// Older names its release assets may carry.
     pub former_ids: &'static [&'static str],
 }
 
 impl CraftApp {
-    /// The product it's inspired by, with its registered-trademark sign (`Adobe Photoshop®`).
+    /// The kind of app, as shown under its name.
     pub fn inspired_by(&self) -> String {
-        format!("{}®", self.like)
+        self.like.to_string()
     }
 
-    /// `ai.storyteller.<id>`: macOS bundle id, Flatpak id and Linux desktop-file id.
+    /// macOS bundle id, Flatpak id and Linux desktop-file id.
     pub fn bundle_id(&self) -> String {
-        format!("ai.storyteller.{}", self.id)
+        self.bundle.to_string()
     }
 
     pub fn releases_url(&self) -> String {
@@ -68,9 +73,9 @@ impl CraftApp {
         format!("https://github.com/{}", self.repo)
     }
 
-    /// The app's page on getartcraft.com (classic apps only).
+    /// The app's own web page. None yet: every app links to its repository instead.
     pub fn website(&self) -> Option<String> {
-        (self.group == AppGroup::Classic).then(|| format!("https://getartcraft.com/apps/{}", self.id))
+        None
     }
 
     /// Asset stems this app's releases may use, current first.
@@ -83,209 +88,146 @@ impl CraftApp {
     }
 }
 
-const fn app(
-    id: &'static str,
-    name: &'static str,
-    tagline: &'static str,
-    like: &'static str,
-    group: AppGroup,
-    [color, ink_light, ink_dark]: [[u8; 3]; 3],
-    repo: &'static str,
-) -> CraftApp {
-    CraftApp { id, name, tagline, like, group, color, ink_light, ink_dark, repo, former_ids: &[] }
+/// Redrob Blue (`blue-6`): the tile of every product without a mark of its own.
+const BLUE: [u8; 3] = [0x2b, 0x52, 0xff];
+/// Redrob Blue's text roles: `ink-brand` light (`blue-7`) and dark (`blue-4`).
+const INK_LIGHT: [u8; 3] = [0x17, 0x33, 0xd5];
+const INK_DARK: [u8; 3] = [0x8a, 0xaf, 0xff];
+
+/// One app; every app lives at `redrob-labs/<id>`.
+macro_rules! app {
+    ($id:literal, $name:literal, $tagline:literal, $like:literal, $group:expr, $color:expr, $bundle:literal) => {
+        CraftApp {
+            id: $id,
+            name: $name,
+            tagline: $tagline,
+            like: $like,
+            group: $group,
+            color: $color,
+            ink_light: INK_LIGHT,
+            ink_dark: INK_DARK,
+            repo: concat!("redrob-labs/", $id),
+            bundle: $bundle,
+            former_ids: &[],
+        }
+    };
 }
 
-/// The Craft App Suite, in display order: the seven classic apps, then the five new ones.
+/// The Redrob apps, in display order: the ones that make things, then the ones for work.
+///
+/// Mark colours are the design system's `product-*` marks where a product has one (Browser, Code,
+/// Design, Office); the rest carry Redrob Blue until the design system gives them a mark.
 pub const SUITE: [CraftApp; 12] = [
-    app(
-        "photocraft",
-        "PhotoCraft",
-        "Image editing",
-        "Adobe Photoshop",
-        AppGroup::Classic,
-        [[0x2f, 0x7b, 0xf5], [0x1a, 0x5b, 0xc4], [0x7f, 0xb0, 0xff]],
-        "storytold/photocraft",
+    app!("redrob-cut", "Redrob Cut", "Describe the cut and let the agent make it", "Video editing", AppGroup::Create, BLUE, "ai.redrob.cut"),
+    app!("redrob-shape", "Redrob Shape", "Shape and shade 3D models by prompt", "3D", AppGroup::Create, BLUE, "ai.redrob.shape"),
+    app!("redrob-cad", "Redrob CAD", "Design, constrain and iterate on parts with an agent", "CAD", AppGroup::Create, BLUE, "ai.redrob.cad"),
+    app!("redrob-canvas", "Redrob Canvas", "Paint and edit images with an agent", "Graphics", AppGroup::Create, BLUE, "ai.redrob.canvas"),
+    app!(
+        "redrob-design",
+        "Redrob Design",
+        "Open .fig and .pen files and design by prompt",
+        "Design",
+        AppGroup::Create,
+        [0xc1, 0x62, 0xf4],
+        "design.redrob.RedrobDesign"
     ),
-    app(
-        "vectorcraft",
-        "VectorCraft",
-        "Vector illustration",
-        "Adobe Illustrator",
-        AppGroup::Classic,
-        [[0xe8, 0x57, 0x3f], [0xb8, 0x3a, 0x24], [0xff, 0x8a, 0x70]],
-        "storytold/vectorcraft",
+    app!("redrob-studio", "Redrob Studio", "Make images and audio on your own GPU", "Image and audio", AppGroup::Create, BLUE, "ai.redrob.studio"),
+    app!(
+        "redrob-browser",
+        "Redrob Browser",
+        "A browser whose agent reads, acts on and automates the web",
+        "Browser",
+        AppGroup::Work,
+        [0xf1, 0x4a, 0xa8],
+        "ai.redrob.browser"
     ),
-    app(
-        "filmcraft",
-        "FilmCraft",
-        "Video editing, color and sound",
-        "Adobe Premiere Pro",
-        AppGroup::Classic,
-        [[0x8b, 0x5c, 0xf6], [0x6a, 0x3f, 0xd6], [0xb6, 0x9c, 0xff]],
-        "storytold/filmcraft",
+    app!("redrob-code", "Redrob Code", "The AI coding agent for your terminal", "Coding agent", AppGroup::Work, [0x02, 0xa2, 0x52], "ai.redrob.code"),
+    app!("redrob-cowork", "Redrob Cowork", "Work with AI agents on your own files", "Agent workspace", AppGroup::Work, BLUE, "ai.redrob.cowork"),
+    app!(
+        "redrob-office",
+        "Redrob Office",
+        "Docs, Sheets, Slides, PDF and Hangul in one window",
+        "Office suite",
+        AppGroup::Work,
+        [0xfe, 0x4d, 0x3e],
+        "ai.redrob.office"
     ),
-    app(
-        "lightcraft",
-        "LightCraft",
-        "Photo library and raw development",
-        "Adobe Lightroom",
-        AppGroup::Classic,
-        [[0xf2, 0xa5, 0x16], [0x8a, 0x58, 0x00], [0xff, 0xc1, 0x4d]],
-        "storytold/lightcraft",
+    app!(
+        "redrob-query",
+        "Redrob Query",
+        "Query PostgreSQL, MySQL, SQLite and MongoDB with AI",
+        "Database client",
+        AppGroup::Work,
+        BLUE,
+        "ai.redrob.query"
     ),
-    CraftApp {
-        former_ids: &["printcraft"],
-        ..app(
-            "pdfcraft",
-            "PdfCraft",
-            "Reading, organizing and protecting PDFs",
-            "Adobe Acrobat",
-            AppGroup::Classic,
-            [[0x12, 0xa5, 0x8a], [0x0a, 0x75, 0x63], [0x3f, 0xd6, 0xb8]],
-            "storytold/pdfcraft",
-        )
-    },
-    app(
-        "effectcraft",
-        "EffectCraft",
-        "Motion graphics and visual effects",
-        "Adobe After Effects",
-        AppGroup::Classic,
-        [[0xe0, 0x36, 0x8f], [0xb0, 0x20, 0x6c], [0xff, 0x7a, 0xb8]],
-        "storytold/effectcraft",
-    ),
-    app(
-        "designcraft",
-        "DesignCraft",
-        "Page layout and publishing",
-        "Adobe InDesign",
-        AppGroup::Classic,
-        [[0x7b, 0xb5, 0x1c], [0x45, 0x70, 0x08], [0xa6, 0xe0, 0x4a]],
-        "storytold/designcraft",
-    ),
-    app(
-        "wordcraft",
-        "WordCraft",
-        "Writing and document design",
-        "Microsoft Word",
-        AppGroup::New,
-        [[0x3f, 0x5f, 0xe0], [0x2a, 0x44, 0xb8], [0x8e, 0xa2, 0xff]],
-        "storytold/wordcraft",
-    ),
-    app(
-        "deckcraft",
-        "DeckCraft",
-        "Presentations and slide shows",
-        "Microsoft PowerPoint",
-        AppGroup::New,
-        [[0xf0, 0x7a, 0x1e], [0xa8, 0x4f, 0x0a], [0xff, 0xa0, 0x60]],
-        "storytold/deckcraft",
-    ),
-    app(
-        "gridcraft",
-        "GridCraft",
-        "Spreadsheets and data",
-        "Microsoft Excel",
-        AppGroup::New,
-        [[0x1f, 0x9d, 0x55], [0x12, 0x70, 0x3a], [0x4f, 0xd6, 0x8a]],
-        "storytold/gridcraft",
-    ),
-    app(
-        "cadcraft",
-        "CADCraft",
-        "Computer-aided design and drafting",
-        "Autodesk AutoCAD",
-        AppGroup::New,
-        [[0x3e, 0xa6, 0xe8], [0x1a, 0x6f, 0xa8], [0x7c, 0xc8, 0xff]],
-        "storytold/cadcraft",
-    ),
-    app(
-        "soundcraft",
-        "SoundCraft",
-        "Recording, editing and mixing audio",
-        "Avid Pro Tools",
-        AppGroup::New,
-        [[0x1f, 0xa5, 0xc9], [0x0e, 0x72, 0x90], [0x5f, 0xd0, 0xee]],
-        "storytold/soundcraft",
-    ),
+    app!("redrob-recall", "Redrob Recall", "Search your files and ask grounded questions", "File search", AppGroup::Work, BLUE, "ai.redrob.recall"),
 ];
 
-/// Shown wherever the products the apps are inspired by are named.
-pub const TRADEMARK_NOTICE: &str = "Adobe, Photoshop, Illustrator, Premiere Pro, Lightroom, Acrobat, After Effects and InDesign are either \
-registered trademarks or trademarks of Adobe in the United States and/or other countries. Microsoft, Word, PowerPoint and Excel are \
-trademarks of the Microsoft group of companies. Autodesk and AutoCAD are registered trademarks or trademarks of Autodesk, Inc. Avid \
-and Pro Tools are trademarks or registered trademarks of Avid Technology, Inc. All other trademarks are the property of their \
-respective owners. These names are used only to describe what each Craft App is for; the Craft App Suite is independent and is not \
-affiliated with, sponsored by or endorsed by any of these companies.";
+/// Redrob's website.
+pub const WEBSITE_URL: &str = "https://redrob.ai";
+/// Redrob on GitHub: every app's source.
+pub const GITHUB_URL: &str = "https://github.com/redrob-labs";
 
-/// ArtCraft's website.
-pub const WEBSITE_URL: &str = "https://getartcraft.com";
-/// ArtCraft on GitHub: every Craft App's source.
-pub const GITHUB_URL: &str = "https://github.com/storytold";
-/// ArtCraft's social accounts: (service, URL). Shown as small icons, less prominent than Discord.
-pub const SOCIAL: [(&str, &str); 5] = [
-    ("X", "https://x.com/get_artcraft"),
-    ("Instagram", "https://www.instagram.com/officialartcraftstudios"),
-    ("LinkedIn", "https://www.linkedin.com/company/artcraft-ai"),
-    ("YouTube", "https://www.youtube.com/@OfficialArtcraftStudios"),
-    ("TikTok", "https://www.tiktok.com/@artcraft.studios"),
-];
-
-/// The ArtCraft community on Discord.
-pub const DISCORD_URL: &str = "https://discord.gg/artcraft";
-
-/// ArtCraft Launcher itself, described like a Craft App so it can update itself with the same
-/// machinery (asset names `artcraft-launcher-<ver>-…`, bundle id `ai.storyteller.artcraft-launcher`,
-/// `ArtCraft Launcher.app`). Not part of [`SUITE`].
-pub const LAUNCHER: CraftApp = app(
-    "artcraft-launcher",
-    "ArtCraft Launcher",
-    "Installs and updates the Craft App Suite",
-    "",
-    AppGroup::New,
-    [[0x0b, 0x0b, 0x0c], [0x0b, 0x0b, 0x0c], [0xf2, 0xf1, 0xee]],
-    "storytold/craft-launcher",
-);
+/// Redrob Launcher itself, described like an app so it can update itself with the same machinery
+/// (asset names `redrob-launcher-<ver>-…`, bundle id `ai.redrob.launcher`, `Redrob Launcher.app`).
+/// Not part of [`SUITE`].
+pub const LAUNCHER: CraftApp = CraftApp {
+    id: "redrob-launcher",
+    name: "Redrob Launcher",
+    tagline: "Installs, updates and connects every Redrob app",
+    like: "",
+    group: AppGroup::Work,
+    color: BLUE,
+    ink_light: INK_LIGHT,
+    ink_dark: INK_DARK,
+    repo: "redrob-labs/redrob-launcher",
+    bundle: "ai.redrob.launcher",
+    former_ids: &[],
+};
 
 /// The launcher's own repo, checked so it can say when a newer launcher is out.
-pub const LAUNCHER_REPO: &str = "storytold/craft-launcher";
+pub const LAUNCHER_REPO: &str = "redrob-labs/redrob-launcher";
 /// The launcher's own asset stem.
-pub const LAUNCHER_ID: &str = "artcraft-launcher";
+pub const LAUNCHER_ID: &str = "redrob-launcher";
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn suite_has_seven_classic_and_five_new_apps_with_unique_ids() {
-        assert_eq!(SUITE.iter().filter(|a| a.group == AppGroup::Classic).count(), 7);
-        assert_eq!(SUITE.iter().filter(|a| a.group == AppGroup::New).count(), 5);
+    fn suite_ids_are_unique_and_name_their_repo() {
         let mut ids: Vec<_> = SUITE.iter().map(|a| a.id).collect();
         ids.sort_unstable();
         ids.dedup();
         assert_eq!(ids.len(), SUITE.len());
         for a in &SUITE {
-            assert_eq!(a.repo, format!("storytold/{}", a.id));
-            assert_eq!(a.name.to_lowercase(), a.id);
+            assert_eq!(a.repo, format!("redrob-labs/{}", a.id));
+            assert!(a.name.starts_with("Redrob "), "{}", a.name);
+            assert!(!a.like.is_empty() && !a.tagline.is_empty(), "{}", a.id);
+            assert!(a.bundle.contains('.'), "{}", a.id);
         }
+        assert!(SUITE.iter().any(|a| a.group == AppGroup::Create));
+        assert!(SUITE.iter().any(|a| a.group == AppGroup::Work));
     }
 
     #[test]
-    fn every_inspiring_product_is_covered_by_the_trademark_notice() {
+    fn nothing_points_at_the_upstream_project() {
+        for a in SUITE.iter().chain(std::iter::once(&LAUNCHER)) {
+            for s in [a.repo, a.bundle, a.name] {
+                assert!(!s.contains("storytold") && !s.contains("storyteller") && !s.contains("Craft"), "{s}");
+            }
+        }
+        assert_eq!(LAUNCHER.repo, LAUNCHER_REPO);
+        assert_eq!(LAUNCHER.id, LAUNCHER_ID);
+    }
+
+    #[test]
+    fn product_text_is_never_the_product_colour() {
         for a in &SUITE {
-            assert!(a.inspired_by().ends_with('®'));
-            // The company and the product name both appear in the notice.
-            let (company, product) = a.like.split_once(' ').unwrap();
-            assert!(TRADEMARK_NOTICE.contains(company), "{company}");
-            assert!(TRADEMARK_NOTICE.contains(product), "{product}");
+            assert_eq!((a.ink_light, a.ink_dark), (INK_LIGHT, INK_DARK), "{}", a.id);
         }
-    }
-
-    #[test]
-    fn pdfcraft_also_answers_to_printcraft() {
-        let pdf = CraftApp::by_id("pdfcraft").unwrap();
-        assert_eq!(pdf.stems().collect::<Vec<_>>(), ["pdfcraft", "printcraft"]);
-        assert_eq!(pdf.website().as_deref(), Some("https://getartcraft.com/apps/pdfcraft"));
-        assert_eq!(CraftApp::by_id("wordcraft").unwrap().website(), None);
+        assert_eq!(CraftApp::by_id("redrob-cad").unwrap().bundle_id(), "ai.redrob.cad");
+        assert_eq!(CraftApp::by_id("redrob-cad").unwrap().website(), None);
     }
 }

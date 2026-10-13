@@ -41,7 +41,7 @@ pub enum Command {
     Cancel {
         app: String,
     },
-    /// Download the newer ArtCraft Launcher, put it in place and restart into it.
+    /// Download the newer Redrob Launcher, put it in place and restart into it.
     UpdateLauncher,
     /// Change how the backend behaves.
     Configure(BackendOptions),
@@ -105,8 +105,8 @@ pub const INSTALL_CANCELLED: &str = "install cancelled";
 /// Which service an app's release information came from (the footer names them).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Origin {
-    /// ArtCraft's release feed (storyteller-web), which polls GitHub for everyone.
-    ArtCraftApi,
+    /// The Redrob release feed, which polls GitHub for everyone (not served yet: see `feed::FEED_URL`).
+    RedrobApi,
     /// GitHub directly: the fallback.
     GitHub,
 }
@@ -114,7 +114,7 @@ pub enum Origin {
 impl Origin {
     pub fn label(self) -> &'static str {
         match self {
-            Self::ArtCraftApi => "ArtCraft API",
+            Self::RedrobApi => "Redrob API",
             Self::GitHub => "GitHub",
         }
     }
@@ -123,7 +123,7 @@ impl Origin {
 /// Where release information came from.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Source {
-    /// ArtCraft's release feed (storyteller-web), which polls GitHub for everyone.
+    /// The Redrob release feed, which polls GitHub for everyone (not served yet: see `feed::FEED_URL`).
     Feed,
     /// The GitHub REST API.
     GitHubApi,
@@ -136,7 +136,7 @@ pub enum Source {
 impl Source {
     pub fn label(self) -> &'static str {
         match self {
-            Self::Feed => "ArtCraft",
+            Self::Feed => "Redrob",
             Self::GitHubApi => "GitHub",
             Self::GitHubPages => "GitHub (release pages)",
             Self::Cache => "saved results",
@@ -153,11 +153,11 @@ pub enum Event {
         /// The service this answer came from.
         from: Origin,
     },
-    /// The latest ArtCraft Launcher release, when it's newer than this one.
+    /// The latest Redrob Launcher release, when it's newer than this one.
     LauncherUpdate(Release),
     /// The new launcher is in place (or will be, once this one exits): quit now so it can start.
     LauncherRestarting,
-    /// News and alerts from ArtCraft's release feed (replaces any earlier set).
+    /// News and alerts from the release feed (replaces any earlier set).
     Notices {
         announcements: Vec<crate::feed::Notice>,
         alerts: Vec<crate::feed::Notice>,
@@ -219,4 +219,12 @@ pub trait Backend {
     fn platform(&self) -> Option<Platform>;
     /// Unix seconds now.
     fn now(&self) -> i64;
+    /// Signing this computer in to a Redrob workspace, where the backend can (desktop only).
+    fn account(&mut self) -> Option<&mut dyn crate::account::AccountBackend> {
+        None
+    }
+    /// Downloading the apps' models, where the backend can (desktop only).
+    fn models(&mut self) -> Option<&mut dyn crate::models::ModelBackend> {
+        None
+    }
 }

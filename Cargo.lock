@@ -275,86 +275,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d3fb67a6e08acf24fdeccbac2cb6ac4305825bd1f117462e0e6f2f193345ad56"
 
 [[package]]
-name = "artcraft-launcher"
-version = "0.3.2"
-dependencies = [
- "artcraft-launcher-core",
- "artcraft-launcher-native",
- "artcraft-launcher-ui-egui",
- "eframe",
- "egui",
- "env_logger",
- "image",
- "log",
- "notify-rust",
- "objc2 0.6.5",
- "objc2-app-kit 0.3.2",
- "objc2-foundation 0.3.2",
- "ron",
- "serde",
- "tray-icon",
- "winresource",
-]
-
-[[package]]
-name = "artcraft-launcher-core"
-version = "0.3.2"
-dependencies = [
- "semver",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "artcraft-launcher-native"
-version = "0.3.2"
-dependencies = [
- "artcraft-launcher-core",
- "dirs 6.0.0",
- "flate2",
- "log",
- "plist",
- "serde",
- "serde_json",
- "sha2",
- "tar",
- "tempfile",
- "ureq",
- "winreg",
-]
-
-[[package]]
-name = "artcraft-launcher-ui-egui"
-version = "0.3.2"
-dependencies = [
- "artcraft-launcher-core",
- "egui",
- "egui_extras",
- "egui_kittest",
- "image",
- "log",
- "serde",
- "serde_json",
- "skrifa",
- "sys-locale",
-]
-
-[[package]]
-name = "artcraft-launcher-web"
-version = "0.3.2"
-dependencies = [
- "artcraft-launcher-core",
- "artcraft-launcher-ui-egui",
- "eframe",
- "egui",
- "js-sys",
- "log",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
-]
-
-[[package]]
 name = "as-raw-xcb-connection"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3755,6 +3675,86 @@ dependencies = [
 ]
 
 [[package]]
+name = "redrob-launcher"
+version = "0.1.0"
+dependencies = [
+ "eframe",
+ "egui",
+ "env_logger",
+ "image",
+ "log",
+ "notify-rust",
+ "objc2 0.6.5",
+ "objc2-app-kit 0.3.2",
+ "objc2-foundation 0.3.2",
+ "redrob-launcher-core",
+ "redrob-launcher-native",
+ "redrob-launcher-ui-egui",
+ "ron",
+ "serde",
+ "tray-icon",
+ "winresource",
+]
+
+[[package]]
+name = "redrob-launcher-core"
+version = "0.1.0"
+dependencies = [
+ "semver",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "redrob-launcher-native"
+version = "0.1.0"
+dependencies = [
+ "dirs 6.0.0",
+ "flate2",
+ "log",
+ "plist",
+ "redrob-launcher-core",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tar",
+ "tempfile",
+ "ureq",
+ "winreg",
+]
+
+[[package]]
+name = "redrob-launcher-ui-egui"
+version = "0.1.0"
+dependencies = [
+ "egui",
+ "egui_extras",
+ "egui_kittest",
+ "image",
+ "log",
+ "redrob-launcher-core",
+ "serde",
+ "serde_json",
+ "skrifa",
+ "sys-locale",
+]
+
+[[package]]
+name = "redrob-launcher-web"
+version = "0.1.0"
+dependencies = [
+ "eframe",
+ "egui",
+ "js-sys",
+ "log",
+ "redrob-launcher-core",
+ "redrob-launcher-ui-egui",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+]
+
+[[package]]
 name = "regex"
 version = "1.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5799,7 +5799,7 @@ checksum = "ec7a2a501ed189703dba8b08142f057e887dfc4b2cc4db2d343ac6376ba3e0b9"
 
 [[package]]
 name = "xtask"
-version = "0.3.2"
+version = "0.1.0"
 
 [[package]]
 name = "yoke"

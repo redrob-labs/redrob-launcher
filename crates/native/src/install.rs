@@ -1,4 +1,4 @@
-//! Installing, updating, removing and starting Craft Apps.
+//! Installing, updating, removing and starting Redrob apps.
 //!
 //! Apps go where their platform keeps applications, installed the platform's own way:
 //!
@@ -9,7 +9,9 @@
 //!   system's polkit password prompt; otherwise a Flatpak, otherwise an AppImage in
 //!   `~/Applications` (the AppImage convention), with a menu entry and icon in
 //!   `~/.local/share` so it shows up like any other app. A Flatpak or AppImage launcher prefers
-//!   its own format.
+//!   its own format. A release with neither (Redrob apps ship a `.deb` and a `.tar.gz`) is
+//!   unpacked whole into `~/.local/share/redrob-launcher/apps/<app>`, so its bundled libraries
+//!   stay beside it, with the same menu entry.
 //! - FreeBSD: the release's `/usr/local` tree, with a polkit prompt (or `~/.local` without one).
 //!
 //! Every download is checked against its published SHA-256 before anything is unpacked, a
@@ -17,9 +19,9 @@
 
 use std::path::{Path, PathBuf};
 
-use artcraft_launcher_core::protocol::{CANCELLED, INSTALL_CANCELLED, JobPhase};
-use artcraft_launcher_core::release::{self, Asset, Release};
-use artcraft_launcher_core::{CraftApp, InstallSource, Installed, PackageKind};
+use redrob_launcher_core::protocol::{CANCELLED, INSTALL_CANCELLED, JobPhase};
+use redrob_launcher_core::release::{self, Asset, Release};
+use redrob_launcher_core::{CraftApp, InstallSource, Installed, PackageKind};
 
 use crate::http::{Http, Stop, Transfer, Verified};
 use crate::manifest::Record;
@@ -72,6 +74,8 @@ pub fn install(
             let files = linux::integrate(app, &path, &replaced, previous);
             Some(record(&version, kind, path, files, false))
         }),
+        #[cfg(target_os = "linux")]
+        PackageKind::TarGz => linux::install_tree(app, &file, previous).map(|(bin, files)| Some(record(&version, kind, bin, files, false))),
         #[cfg(target_os = "freebsd")]
         PackageKind::TarGz => freebsd::install_tree(app, &file, job.paths).map(|(bin, files, root)| Some(record(&version, kind, bin, files, root))),
         other => Err(format!("{} isn't supported on this system", other.label())),
@@ -233,6 +237,8 @@ pub fn uninstall(app: &CraftApp, installed: &Installed, record: Option<&Record>,
             None => Err("the launcher has no record of these files".into()),
         },
         #[cfg(target_os = "linux")]
+        InstallSource::Launcher if record.is_some_and(|r| r.kind == PackageKind::TarGz) => linux::remove_tree(app, &path, record),
+        #[cfg(target_os = "linux")]
         InstallSource::AppImage | InstallSource::Launcher => remove_appimage(app, &path, record),
         other => Err(format!("{} can't be removed from here", other.label())),
     }
@@ -368,7 +374,7 @@ fn turn<'a>(phase: &'a mut dyn FnMut(JobPhase), working: JobPhase) -> impl FnMut
 /// For [`INSTALLER`]: whether the user cancelled the job while it waits.
 #[cfg(any(target_os = "linux", windows))]
 fn cancelled(stop: &Stop) -> impl Fn() -> bool + '_ {
-    || stop.check().is_err_and(|e| e == artcraft_launcher_core::protocol::CANCELLED)
+    || stop.check().is_err_and(|e| e == redrob_launcher_core::protocol::CANCELLED)
 }
 
 #[cfg(target_os = "linux")]
@@ -376,8 +382,8 @@ pub(crate) mod linux {
     use std::ffi::{OsStr, OsString};
     use std::os::unix::fs::PermissionsExt;
 
-    use artcraft_launcher_core::distro;
-    use artcraft_launcher_core::protocol::CANCELLED;
+    use redrob_launcher_core::distro;
+    use redrob_launcher_core::protocol::CANCELLED;
 
     use super::*;
 
@@ -478,7 +484,51 @@ pub(crate) mod linux {
         if !kinds.contains(&PackageKind::AppImage) {
             kinds.push(PackageKind::AppImage);
         }
+        // Last: the release tarball, unpacked into the launcher's own folder (`install_tree`).
+        kinds.push(PackageKind::TarGz);
         kinds
+    }
+
+    /// Where the launcher unpacks release tarballs: `<data>/redrob-launcher/apps`.
+    pub fn tree_dir() -> Option<PathBuf> {
+        host_data_dir().map(|d| d.join("redrob-launcher").join("apps"))
+    }
+
+    /// Unpacks a release tarball whole into `tree_dir()/<app>` (its `bin/<app>` beside the
+    /// `lib/`, `plugins/` and `qml/` it bundles, which it finds relative to itself) and writes the
+    /// menu entry and icon. Returns the binary and the files written outside that folder.
+    pub fn install_tree(app: &CraftApp, file: &Path, previous: Option<&Record>) -> Result<(PathBuf, Vec<PathBuf>), String> {
+        install_tree_into(&tree_dir().ok_or("no home folder")?, app, file).map(|bin| {
+            let files = integrate(app, &bin, &[], previous);
+            (bin, files)
+        })
+    }
+
+    /// [`install_tree`]'s unpacking into `apps`: staged beside the old copy, swapped in whole.
+    pub(crate) fn install_tree_into(apps: &Path, app: &CraftApp, file: &Path) -> Result<PathBuf, String> {
+        std::fs::create_dir_all(apps).map_err(|e| format!("couldn't create {} ({e})", apps.display()))?;
+        let dest = apps.join(app.id);
+        let staging = apps.join(format!("{}.new", app.id));
+        let result = tree::unpack(app, file, &staging).and_then(|top| swap_into_place(&top, &dest));
+        let _ = std::fs::remove_dir_all(&staging);
+        result?;
+        Ok(dest.join("bin").join(app.id))
+    }
+
+    /// Removes a tarball install: its folder under `tree_dir()` and the menu entry and icon.
+    pub fn remove_tree(app: &CraftApp, bin: &Path, record: Option<&Record>) -> Result<(), String> {
+        remove_tree_from(&tree_dir().ok_or("no home folder")?, app, bin)?;
+        unintegrate(app, bin, record);
+        Ok(())
+    }
+
+    /// [`remove_tree`]'s deletion: only `apps/<app>`, and only when `bin` is its `bin/<app>`.
+    pub(crate) fn remove_tree_from(apps: &Path, app: &CraftApp, bin: &Path) -> Result<(), String> {
+        let dir = apps.join(app.id);
+        if bin != dir.join("bin").join(app.id) {
+            return Err(format!("{} wasn't installed by the launcher. Remove it the way it was added.", bin.display()));
+        }
+        std::fs::remove_dir_all(&dir).map_err(|e| format!("couldn't remove {} ({e})", dir.display()))
     }
 
     /// Installs (or upgrades) a downloaded package with the system's own tools.
@@ -536,7 +586,7 @@ pub(crate) mod linux {
                     remove(&["rpm", "-e"], app.id)
                 }
             }
-            // The package detected (photocraft, photocraft-bin or photocraft-git).
+            // The package detected (redrob-canvas, redrob-canvas-bin or redrob-canvas-git).
             InstallSource::Pacman => remove(&["pacman", "-R", "--noconfirm"], installed.package.as_deref().unwrap_or(app.id)),
             InstallSource::Flatpak => {
                 let id = app.bundle_id();
@@ -601,18 +651,18 @@ pub(crate) mod linux {
     /// The app's 128 px icon, as bundled in `assets/app-icons`.
     fn icon_png(app: &CraftApp) -> Option<&'static [u8]> {
         Some(match app.id {
-            "photocraft" => include_bytes!("../../../assets/app-icons/photocraft.png"),
-            "vectorcraft" => include_bytes!("../../../assets/app-icons/vectorcraft.png"),
-            "filmcraft" => include_bytes!("../../../assets/app-icons/filmcraft.png"),
-            "lightcraft" => include_bytes!("../../../assets/app-icons/lightcraft.png"),
-            "pdfcraft" => include_bytes!("../../../assets/app-icons/pdfcraft.png"),
-            "effectcraft" => include_bytes!("../../../assets/app-icons/effectcraft.png"),
-            "designcraft" => include_bytes!("../../../assets/app-icons/designcraft.png"),
-            "wordcraft" => include_bytes!("../../../assets/app-icons/wordcraft.png"),
-            "deckcraft" => include_bytes!("../../../assets/app-icons/deckcraft.png"),
-            "gridcraft" => include_bytes!("../../../assets/app-icons/gridcraft.png"),
-            "cadcraft" => include_bytes!("../../../assets/app-icons/cadcraft.png"),
-            "soundcraft" => include_bytes!("../../../assets/app-icons/soundcraft.png"),
+            "redrob-cut" => include_bytes!("../../../assets/app-icons/redrob-cut.png"),
+            "redrob-shape" => include_bytes!("../../../assets/app-icons/redrob-shape.png"),
+            "redrob-cad" => include_bytes!("../../../assets/app-icons/redrob-cad.png"),
+            "redrob-canvas" => include_bytes!("../../../assets/app-icons/redrob-canvas.png"),
+            "redrob-design" => include_bytes!("../../../assets/app-icons/redrob-design.png"),
+            "redrob-studio" => include_bytes!("../../../assets/app-icons/redrob-studio.png"),
+            "redrob-browser" => include_bytes!("../../../assets/app-icons/redrob-browser.png"),
+            "redrob-code" => include_bytes!("../../../assets/app-icons/redrob-code.png"),
+            "redrob-cowork" => include_bytes!("../../../assets/app-icons/redrob-cowork.png"),
+            "redrob-office" => include_bytes!("../../../assets/app-icons/redrob-office.png"),
+            "redrob-query" => include_bytes!("../../../assets/app-icons/redrob-query.png"),
+            "redrob-recall" => include_bytes!("../../../assets/app-icons/redrob-recall.png"),
             _ => return None,
         })
     }
@@ -710,7 +760,7 @@ pub(crate) mod linux {
 pub mod macos {
     use std::time::Duration;
 
-    use artcraft_launcher_core::version::Version;
+    use redrob_launcher_core::version::Version;
 
     use super::*;
 
@@ -722,7 +772,7 @@ pub mod macos {
             return Ok(parent);
         }
         let system = PathBuf::from("/Applications");
-        let probe = system.join(".artcraft-launcher-write-test");
+        let probe = system.join(".redrob-launcher-write-test");
         if std::fs::write(&probe, b"").is_ok() {
             let _ = std::fs::remove_file(&probe);
             return Ok(system);
@@ -732,9 +782,9 @@ pub mod macos {
         Ok(user)
     }
 
-    /// The Apple Developer team that signs every Craft App and ArtCraft Launcher (Learning
-    /// Machines LLC): the macOS side of the Windows publisher check.
-    pub const TEAM_ID: &str = "DJ6XS33FX8";
+    /// The Apple Developer team that signs every Redrob app and Redrob Launcher (McKinley Rice,
+    /// Inc., Redrob's company): the macOS side of the Windows publisher check.
+    pub const TEAM_ID: &str = "96AHW59UNX";
 
     /// What a new copy must prove before it replaces anything. The checksum shows the download is
     /// the file the release lists; these show the app inside is the one the release promises.
@@ -1023,7 +1073,7 @@ mod freebsd {
 
 #[cfg(windows)]
 pub mod windows {
-    use artcraft_launcher_core::protocol::CANCELLED;
+    use redrob_launcher_core::protocol::CANCELLED;
 
     use super::*;
 
@@ -1115,10 +1165,10 @@ mod tests {
     #[test]
     fn a_failed_install_keeps_the_download_for_the_next_try() {
         use crate::http::tests::{Reply, body, serve};
-        let app = CraftApp::by_id("wordcraft").unwrap();
+        let app = CraftApp::by_id("redrob-code").unwrap();
         let (body, sha) = body();
         let (url, requests) = serve(body.clone(), vec![Reply::Full, Reply::Full]);
-        let asset = Asset { name: "wordcraft-0.3.0-test.pkg".into(), size: body.len() as u64, url, sha256: Some(sha) };
+        let asset = Asset { name: "redrob-code-0.3.0-test.pkg".into(), size: body.len() as u64, url, sha256: Some(sha) };
         let release = Release { assets: vec![asset.clone()], ..Release::default() };
         let dir = tempfile::tempdir().unwrap();
         let paths = Paths::under(dir.path());
@@ -1137,7 +1187,7 @@ mod tests {
         assert_eq!(phases.iter().filter(|p| **p == JobPhase::Installing).count(), 2);
 
         // Checked by size only: not kept.
-        let unchecked = Asset { name: "wordcraft-0.3.1-test.pkg".into(), sha256: None, ..asset };
+        let unchecked = Asset { name: "redrob-code-0.3.1-test.pkg".into(), sha256: None, ..asset };
         let mut phase = |_: JobPhase| {};
         let mut job = Job { http: &http, paths: &paths, stop: &Stop::default(), phase: &mut phase };
         install(app, &release, &unchecked, kind, None, None, &mut job).unwrap_err();
@@ -1162,29 +1212,29 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn lays_out_both_freebsd_tarball_styles_like_usr_local() {
-        let app = CraftApp::by_id("wordcraft").unwrap();
+        let app = CraftApp::by_id("redrob-code").unwrap();
         let dir = tempfile::tempdir().unwrap();
         let tree_style = dir.path().join("tree.tar.gz");
         tarball(
             &tree_style,
-            &["wordcraft-0.3.0-freebsd-x86_64/bin/wordcraft", "wordcraft-0.3.0-freebsd-x86_64/share/applications/ai.storyteller.wordcraft.desktop"],
+            &["redrob-code-0.3.0-freebsd-x86_64/bin/redrob-code", "redrob-code-0.3.0-freebsd-x86_64/share/applications/ai.redrob.code.desktop"],
         );
         let flat_style = dir.path().join("flat.tar.gz");
         tarball(
             &flat_style,
             &[
-                "wordcraft-0.3.0-freebsd-x86_64/wordcraft",
-                "wordcraft-0.3.0-freebsd-x86_64/wordcraft-cli",
-                "wordcraft-0.3.0-freebsd-x86_64/README.md",
-                "wordcraft-0.3.0-freebsd-x86_64/ai.storyteller.wordcraft.desktop",
-                "wordcraft-0.3.0-freebsd-x86_64/ai.storyteller.wordcraft.png",
+                "redrob-code-0.3.0-freebsd-x86_64/redrob-code",
+                "redrob-code-0.3.0-freebsd-x86_64/redrob-code-cli",
+                "redrob-code-0.3.0-freebsd-x86_64/README.md",
+                "redrob-code-0.3.0-freebsd-x86_64/ai.redrob.code.desktop",
+                "redrob-code-0.3.0-freebsd-x86_64/ai.redrob.code.png",
             ],
         );
         for file in [tree_style, flat_style] {
             let root = tree::unpack(app, &file, &dir.path().join("staging")).unwrap();
             let files = tree::files(&root);
-            assert!(files.contains(&PathBuf::from("bin/wordcraft")), "{files:?}");
-            assert!(files.contains(&PathBuf::from("share/applications/ai.storyteller.wordcraft.desktop")), "{files:?}");
+            assert!(files.contains(&PathBuf::from("bin/redrob-code")), "{files:?}");
+            assert!(files.contains(&PathBuf::from("share/applications/ai.redrob.code.desktop")), "{files:?}");
             assert!(!files.iter().any(|f| f.ends_with("README.md")), "{files:?}");
         }
         let bad = dir.path().join("bad.tar.gz");
@@ -1297,13 +1347,13 @@ mod tests {
     #[cfg(target_os = "linux")]
     #[test]
     fn adds_and_removes_only_its_own_menu_entry_and_icon() {
-        let app = CraftApp::by_id("wordcraft").unwrap();
+        let app = CraftApp::by_id("redrob-code").unwrap();
         let root = tempfile::tempdir().unwrap();
         let data = root.path().join("share");
-        let desktop = data.join("applications/ai.storyteller.wordcraft.desktop");
-        let icon = data.join("icons/hicolor/128x128/apps/ai.storyteller.wordcraft.png");
-        let old = root.path().join("My Apps/wordcraft-0.2.0-linux-x86_64.AppImage");
-        let new = root.path().join("My Apps/wordcraft-0.3.0-linux-x86_64.AppImage");
+        let desktop = data.join("applications/ai.redrob.code.desktop");
+        let icon = data.join("icons/hicolor/128x128/apps/ai.redrob.code.png");
+        let old = root.path().join("My Apps/redrob-code-0.2.0-linux-x86_64.AppImage");
+        let new = root.path().join("My Apps/redrob-code-0.3.0-linux-x86_64.AppImage");
         std::fs::create_dir_all(new.parent().unwrap()).unwrap();
         std::fs::write(&new, b"").unwrap();
 
@@ -1311,8 +1361,8 @@ mod tests {
         let files = linux::integrate_into(&data, app, &new, &[], None);
         assert_eq!(files, [icon.clone(), desktop.clone()]);
         let text = std::fs::read_to_string(&desktop).unwrap();
-        assert!(text.contains("Exec=\"") && text.contains("My Apps/wordcraft-0.3.0-linux-x86_64.AppImage\" %F\n"), "{text}");
-        assert!(text.contains("Icon=ai.storyteller.wordcraft\n"));
+        assert!(text.contains("Exec=\"") && text.contains("My Apps/redrob-code-0.3.0-linux-x86_64.AppImage\" %F\n"), "{text}");
+        assert!(text.contains("Icon=ai.redrob.code\n"));
         assert!(std::fs::read(&icon).unwrap().starts_with(b"\x89PNG"));
         let rec = record("0.3.0", PackageKind::AppImage, new.clone(), files, false);
 
@@ -1320,7 +1370,7 @@ mod tests {
         assert_eq!(linux::integrate_into(&data, app, &new, &[], Some(&rec)).len(), 2);
 
         // Someone else's entry and icon are left alone (and not recorded).
-        std::fs::write(&desktop, "[Desktop Entry]\nExec=/usr/bin/wordcraft\n").unwrap();
+        std::fs::write(&desktop, "[Desktop Entry]\nExec=/usr/bin/redrob-code\n").unwrap();
         std::fs::write(&icon, b"theirs").unwrap();
         assert!(linux::integrate_into(&data, app, &new, &[], None).is_empty());
         assert_eq!(std::fs::read(&icon).unwrap(), b"theirs");
@@ -1343,7 +1393,7 @@ mod tests {
         linux::unintegrate_from(&data, app, &new, Some(&rec));
         assert!(!desktop.exists() && !icon.exists());
         // Someone else's entry survives an uninstall.
-        std::fs::write(&desktop, "[Desktop Entry]\nExec=/usr/bin/wordcraft\n").unwrap();
+        std::fs::write(&desktop, "[Desktop Entry]\nExec=/usr/bin/redrob-code\n").unwrap();
         linux::unintegrate_from(&data, app, &new, Some(&rec));
         assert!(desktop.exists());
     }
@@ -1397,46 +1447,87 @@ mod tests {
         let kinds = order_available_kinds(false, false, true, false, false);
         assert_eq!(kinds.first(), Some(&PackageKind::Flatpak));
         assert_eq!(kinds.get(1), Some(&PackageKind::AppImage));
+
+        // The release tarball is always the last resort.
+        for kinds in [order_available_kinds(false, false, false, false, false), order_available_kinds(true, false, true, true, false)] {
+            assert_eq!(kinds.last(), Some(&PackageKind::TarGz));
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn a_release_tarball_is_unpacked_whole_into_its_own_folder_and_removed_the_same_way() {
+        let dir = tempfile::tempdir().unwrap();
+        let app = CraftApp::by_id("redrob-canvas").unwrap();
+        let tarball = |marker: &str| {
+            let file = dir.path().join(format!("canvas-{marker}.tar.gz"));
+            let mut tar = tar::Builder::new(flate2::write::GzEncoder::new(std::fs::File::create(&file).unwrap(), flate2::Compression::fast()));
+            for (path, body, mode) in
+                [("bin/redrob-canvas", marker, 0o755), ("lib/libQt6Core.so.6", "lib", 0o644), ("qml/QtCore/qmldir", "qml", 0o644)]
+            {
+                let mut h = tar::Header::new_gnu();
+                h.set_size(body.len() as u64);
+                h.set_mode(mode);
+                h.set_cksum();
+                tar.append_data(&mut h, format!("./{path}"), body.as_bytes()).unwrap();
+            }
+            tar.into_inner().unwrap().finish().unwrap();
+            file
+        };
+        let apps = dir.path().join("apps");
+        let bin = linux::install_tree_into(&apps, app, &tarball("v1")).unwrap();
+        assert_eq!(bin, apps.join("redrob-canvas/bin/redrob-canvas"));
+        assert!(apps.join("redrob-canvas/lib/libQt6Core.so.6").is_file() && apps.join("redrob-canvas/qml/QtCore/qmldir").is_file());
+        assert_ne!(std::os::unix::fs::PermissionsExt::mode(&std::fs::metadata(&bin).unwrap().permissions()) & 0o111, 0);
+        // An update replaces the folder whole and leaves no staging behind.
+        linux::install_tree_into(&apps, app, &tarball("v2")).unwrap();
+        assert_eq!(std::fs::read_to_string(&bin).unwrap(), "v2");
+        let names: Vec<_> = std::fs::read_dir(&apps).unwrap().flatten().map(|e| e.file_name()).collect();
+        assert_eq!(names, vec![std::ffi::OsString::from("redrob-canvas")]);
+        // Removal takes only the launcher's own folder.
+        assert!(linux::remove_tree_from(&apps, app, Path::new("/usr/bin/redrob-canvas")).is_err());
+        linux::remove_tree_from(&apps, app, &bin).unwrap();
+        assert!(!apps.join("redrob-canvas").exists());
     }
 
     #[cfg(target_os = "macos")]
     mod macos_checks {
-        use artcraft_launcher_core::{SUITE, version};
+        use redrob_launcher_core::{SUITE, version};
 
         use super::macos::{Expect, TEAM_ID, install_dmg, signed_by};
         use super::*;
 
-        fn photocraft() -> &'static CraftApp {
-            SUITE.iter().find(|a| a.id == "photocraft").unwrap()
+        fn canvas() -> &'static CraftApp {
+            SUITE.iter().find(|a| a.id == "redrob-canvas").unwrap()
         }
 
-        /// A minimal `PhotoCraft.app` at `dir`, reporting `version`.
+        /// A minimal `Redrob Canvas.app` at `dir`, reporting `version`.
         fn bundle(dir: &Path, version: &str) -> PathBuf {
-            let app = dir.join("PhotoCraft.app");
+            let app = dir.join("Redrob Canvas.app");
             let contents = app.join("Contents");
             std::fs::create_dir_all(contents.join("MacOS")).unwrap();
             std::fs::write(
                 contents.join("Info.plist"),
                 format!(
                     "<?xml version=\"1.0\" encoding=\"UTF-8\"?><plist version=\"1.0\"><dict>\
-                     <key>CFBundleIdentifier</key><string>ai.storyteller.photocraft</string>\
-                     <key>CFBundleExecutable</key><string>PhotoCraft</string>\
+                     <key>CFBundleIdentifier</key><string>ai.redrob.canvas</string>\
+                     <key>CFBundleExecutable</key><string>Redrob Canvas</string>\
                      <key>CFBundleShortVersionString</key><string>{version}</string></dict></plist>"
                 ),
             )
             .unwrap();
-            std::fs::write(contents.join("MacOS/PhotoCraft"), version).unwrap();
+            std::fs::write(contents.join("MacOS/Redrob Canvas"), version).unwrap();
             app
         }
 
-        /// A release-style disk image holding a `PhotoCraft.app` that reports `version`.
+        /// A release-style disk image holding a `Redrob Canvas.app` that reports `version`.
         fn dmg(dir: &Path, version: &str) -> PathBuf {
             let src = dir.join(format!("src-{version}"));
             bundle(&src, version);
-            let dmg = dir.join(format!("photocraft-{version}-macos-universal.dmg"));
+            let dmg = dir.join(format!("redrob-canvas-{version}-macos-universal.dmg"));
             let _one_at_a_time = super::macos::DISK_IMAGES.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
             let ok = std::process::Command::new("hdiutil")
-                .args(["create", "-quiet", "-format", "UDZO", "-volname", "PhotoCraft", "-srcfolder"])
+                .args(["create", "-quiet", "-format", "UDZO", "-volname", "Redrob Canvas", "-srcfolder"])
                 .arg(&src)
                 .arg(&dmg)
                 .status()
@@ -1472,24 +1563,24 @@ mod tests {
             let image = dmg(dir.path(), "0.6.0");
 
             for (release, ok) in [("0.6.0", true), ("0.7.0", false), ("0.6.0-rc.1", true), ("0.5.0", false)] {
-                std::fs::write(current.join("Contents/MacOS/PhotoCraft"), "0.5.0").unwrap();
+                std::fs::write(current.join("Contents/MacOS/Redrob Canvas"), "0.5.0").unwrap();
                 let want = version::parse(release).unwrap();
                 let expect = Expect { team: None, version: Some(&want) };
-                let result = install_dmg(photocraft(), &image, Some(&existing), &paths, &expect);
+                let result = install_dmg(canvas(), &image, Some(&existing), &paths, &expect);
                 assert_eq!(result.is_ok(), ok, "release {release}: {result:?}");
-                let now = std::fs::read_to_string(current.join("Contents/MacOS/PhotoCraft")).unwrap();
+                let now = std::fs::read_to_string(current.join("Contents/MacOS/Redrob Canvas")).unwrap();
                 assert_eq!(now, if ok { "0.6.0" } else { "0.5.0" }, "release {release}");
                 if !ok {
                     assert_eq!(result, Err(format!("the app inside isn't version {release}, so it wasn't installed")));
                 }
-                assert!(!apps.join(".PhotoCraft.app.partial").exists());
+                assert!(!apps.join(".Redrob Canvas.app.partial").exists());
             }
 
             // A bundle that names a pre-release must name the release's.
             let rc = dmg(dir.path(), "0.8.0-rc.2");
             let want = version::parse("0.8.0-rc.1").unwrap();
             let expect = Expect { team: None, version: Some(&want) };
-            assert!(install_dmg(photocraft(), &rc, Some(&existing), &paths, &expect).is_err());
+            assert!(install_dmg(canvas(), &rc, Some(&existing), &paths, &expect).is_err());
         }
 
         #[test]
@@ -1501,18 +1592,18 @@ mod tests {
             let image = dmg(dir.path(), "0.6.0");
             let release = Release { tag: "v0.6.0".into(), version: version::parse("0.6.0"), ..Release::default() };
 
-            let result = install_dmg(photocraft(), &image, Some(&existing), &Paths::under(dir.path()), &Expect::release(&release));
+            let result = install_dmg(canvas(), &image, Some(&existing), &Paths::under(dir.path()), &Expect::release(&release));
             assert_eq!(result, Err("the app isn't signed by its developer, so it wasn't installed".into()));
-            assert_eq!(std::fs::read_to_string(current.join("Contents/MacOS/PhotoCraft")).unwrap(), "0.5.0");
-            assert!(!apps.join(".PhotoCraft.app.partial").exists());
+            assert_eq!(std::fs::read_to_string(current.join("Contents/MacOS/Redrob Canvas")).unwrap(), "0.5.0");
+            assert!(!apps.join(".Redrob Canvas.app.partial").exists());
         }
 
-        /// A real release passes. Run with `CRAFT_APP=/path/to/PhotoCraft.app cargo test -p
-        /// artcraft-launcher-native -- --ignored a_real_craft_app`.
+        /// A real release passes. Run with `CRAFT_APP=/path/to/Redrob Canvas.app cargo test -p
+        /// redrob-launcher-native -- --ignored a_real_craft_app`.
         #[test]
-        #[ignore = "needs a Craft App from a real release"]
+        #[ignore = "needs a Redrob app from a real release"]
         fn a_real_craft_app_carries_the_teams_signature() {
-            let app = std::env::var("CRAFT_APP").expect("set CRAFT_APP to a Craft App bundle");
+            let app = std::env::var("CRAFT_APP").expect("set CRAFT_APP to a Redrob app bundle");
             assert!(signed_by(Path::new(&app), TEAM_ID), "{app} isn't signed by {TEAM_ID}");
         }
     }
