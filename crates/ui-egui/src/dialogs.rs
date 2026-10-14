@@ -228,15 +228,8 @@ impl LauncherUi {
 
         if self.caps.manage_apps && self.platform.is_some_and(|p| p.os == Os::Linux) {
             section(ui, tl!("Installing on Linux"));
-            let is_flatpak = crate::settings::is_flatpak_sandbox();
             let is_appimage = crate::settings::is_appimage();
-            let default_kind = if is_flatpak {
-                Some(PackageKind::Flatpak)
-            } else if is_appimage {
-                Some(PackageKind::AppImage)
-            } else {
-                None
-            };
+            let default_kind = if is_appimage { Some(PackageKind::AppImage) } else { None };
             let mut choice = self.settings.preferred_kinds.first().copied().or(default_kind);
             row(ui, tl!("Install new apps as"), &mut |ui| {
                 let default_label = match default_kind {
@@ -245,10 +238,10 @@ impl LauncherUi {
                 };
                 let label = choice.map_or(default_label, |k| crate::i18n::t(k.label()));
                 egui::ComboBox::from_id_salt("kind").selected_text(label).width(210.0).show_ui(ui, |ui| {
-                    if !is_flatpak && !is_appimage {
+                    if !is_appimage {
                         ui.selectable_value(&mut choice, None, tl!("System package (recommended)"));
                     }
-                    for k in [PackageKind::Deb, PackageKind::Rpm, PackageKind::Flatpak, PackageKind::AppImage] {
+                    for k in [PackageKind::Deb, PackageKind::Rpm, PackageKind::AppImage] {
                         ui.selectable_value(&mut choice, Some(k), crate::i18n::t(k.label()));
                     }
                 });

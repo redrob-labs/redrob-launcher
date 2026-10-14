@@ -205,8 +205,6 @@ fn visitor_platform() -> Option<Platform> {
         Os::Windows
     } else if ua.contains("mac os") || ua.contains("macintosh") {
         Os::MacOs
-    } else if ua.contains("freebsd") {
-        Os::FreeBsd
     } else if ua.contains("linux") && !ua.contains("android") {
         Os::Linux
     } else {

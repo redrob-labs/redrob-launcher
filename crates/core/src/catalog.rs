@@ -48,7 +48,7 @@ pub struct CraftApp {
     pub ink_dark: [u8; 3],
     /// GitHub `owner/repo`.
     pub repo: &'static str,
-    /// Reverse-DNS id: macOS bundle id, Flatpak id and Linux desktop-file id.
+    /// Reverse-DNS id: macOS bundle id and Linux desktop-file id.
     pub bundle: &'static str,
     /// Older names its release assets may carry.
     pub former_ids: &'static [&'static str],
@@ -60,7 +60,7 @@ impl CraftApp {
         self.like.to_string()
     }
 
-    /// macOS bundle id, Flatpak id and Linux desktop-file id.
+    /// macOS bundle id and Linux desktop-file id.
     pub fn bundle_id(&self) -> String {
         self.bundle.to_string()
     }

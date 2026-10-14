@@ -205,7 +205,7 @@ pub struct Capabilities {
     /// What "show in file manager" is called here (`Show in Finder`).
     pub reveal_label: &'static str,
     /// The launcher can update itself in place and restart (an installed build, not a dev build or
-    /// a Flatpak). Without it the UI offers the download instead.
+    /// a package-manager install). Without it the UI offers the download instead.
     pub self_update: bool,
 }
 

@@ -50,7 +50,7 @@ impl Paths {
         self.data.join("installed.json")
     }
 
-    /// Where tarball installs (FreeBSD, Linux without AppImage) are unpacked: `<data>/apps/<app>`.
+    /// Where tarball installs (Linux without AppImage) are unpacked: `<data>/apps/<app>`.
     pub fn apps(&self) -> PathBuf {
         self.data.join("apps")
     }

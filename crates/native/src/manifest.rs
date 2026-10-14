@@ -15,7 +15,7 @@ pub struct Record {
     pub path: PathBuf,
     /// Unix seconds.
     pub installed_at: i64,
-    /// Every file installed, for tree installs (FreeBSD), so removal takes exactly those.
+    /// Every file installed, for tree installs, so removal takes exactly those.
     #[serde(default)]
     pub files: Vec<PathBuf>,
     /// The files are in a system prefix and removing them needs root.
