@@ -154,9 +154,14 @@ jobs:
         run: |
           dotnet tool install --global wix --version 5.0.2
           wix extension add -g WixToolset.UI.wixext/5.0.2 WixToolset.Util.wixext/5.0.2
+      - name: Build
+        shell: pwsh
+        run: ./packaging/windows/package.ps1 -Arch ${{ matrix.arch }} -BuildOnly
       # Azure Artifact Signing, authenticated with OpenID Connect: the job's GitHub token is exchanged
       # for an Azure token against the organization's app registration, whose federated credential
-      # accepts `repo:redrob-labs/*:environment:release`. No client secret exists anywhere.
+      # accepts `repo:redrob-labs@<org id>/*:environment:release`. No client secret exists anywhere.
+      # The login comes AFTER the build: GitHub's OIDC token lives minutes, and a login done before
+      # a 12-minute build left signtool without a usable credential (it then waited on a browser).
       # The secrets below are redrob-labs organization secrets; do not recreate them as repository
       # secrets (a same-named repository secret would override them). All three are plain IDs.
       - name: Log in to Azure (OIDC)
@@ -166,14 +171,14 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      - name: Build, sign, package
+      - name: Sign and package
         shell: pwsh
         env:
           # sign.ps1 reads these three; the credential comes from the `az login` above.
           ARTIFACT_SIGNING_ENDPOINT: ${{ secrets.ARTIFACT_SIGNING_ENDPOINT }}
           ARTIFACT_SIGNING_ACCOUNT: ${{ secrets.ARTIFACT_SIGNING_ACCOUNT }}
           ARTIFACT_SIGNING_CERT_PROFILE: ${{ secrets.ARTIFACT_SIGNING_CERT_PROFILE }}
-        run: ./packaging/windows/package.ps1 -Arch ${{ matrix.arch }}
+        run: ./packaging/windows/package.ps1 -Arch ${{ matrix.arch }} -SkipBuild
       - name: Check the packages
         shell: pwsh
         run: |
