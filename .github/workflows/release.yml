@@ -4,7 +4,8 @@
 # The tag must equal the Cargo.toml version; the version job fails otherwise. The jobs that sign
 # (macOS, Windows) and the one that drafts the GitHub Release run in the `release` environment.
 # Signing secrets are the redrob-labs organization's (Apple Developer ID certificate + App Store
-# Connect API key for notarization). Every secret is optional: missing ones produce unsigned
+# Connect API key for notarization; Azure Artifact Signing account IDs, reached over OpenID Connect,
+# for Windows). Every secret is optional: missing ones produce unsigned
 # artifacts and a warning, never a failed build. A manual dispatch is a dry run: it builds every
 # job and drafts nothing.
 name: Release
@@ -119,6 +120,10 @@ jobs:
     needs: version
     runs-on: windows-latest
     environment: release
+    permissions:
+      contents: read
+      # The OIDC token `azure/login` exchanges for the Artifact Signing credential.
+      id-token: write
     strategy:
       fail-fast: false
       matrix:
@@ -130,6 +135,8 @@ jobs:
     env:
       REDROB_LAUNCHER_VERSION: ${{ needs.version.outputs.version }}
       REDROB_LAUNCHER_BUILD_DATE: ${{ needs.version.outputs.date }}
+      # Plain IDs (not credentials); here so the login step can be skipped when signing is not set up.
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -147,20 +154,25 @@ jobs:
         run: |
           dotnet tool install --global wix --version 5.0.2
           wix extension add -g WixToolset.UI.wixext/5.0.2 WixToolset.Util.wixext/5.0.2
+      # Azure Artifact Signing, authenticated with OpenID Connect: the job's GitHub token is exchanged
+      # for an Azure token against the organization's app registration, whose federated credential
+      # accepts `repo:redrob-labs/*:environment:release`. No client secret exists anywhere.
+      # The secrets below are redrob-labs organization secrets; do not recreate them as repository
+      # secrets (a same-named repository secret would override them). All three are plain IDs.
+      - name: Log in to Azure (OIDC)
+        if: env.AZURE_CLIENT_ID != ''
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       - name: Build, sign, package
         shell: pwsh
         env:
-          # The redrob-labs organization secrets, shared with every desktop app that ships a Windows
-          # installer (redrob-office reads the same two): a base64 .pfx and its password. Do not
-          # recreate them as repository secrets; a same-named repository secret would override them.
-          WINDOWS_CERTIFICATE: ${{ secrets.WIN_CSC_LINK }}
-          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
-          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-          AZURE_SIGNING_ENDPOINT: ${{ secrets.AZURE_SIGNING_ENDPOINT }}
-          AZURE_SIGNING_ACCOUNT: ${{ secrets.AZURE_SIGNING_ACCOUNT }}
-          AZURE_CERT_PROFILE: ${{ secrets.AZURE_CERT_PROFILE }}
+          # sign.ps1 reads these three; the credential comes from the `az login` above.
+          ARTIFACT_SIGNING_ENDPOINT: ${{ secrets.ARTIFACT_SIGNING_ENDPOINT }}
+          ARTIFACT_SIGNING_ACCOUNT: ${{ secrets.ARTIFACT_SIGNING_ACCOUNT }}
+          ARTIFACT_SIGNING_CERT_PROFILE: ${{ secrets.ARTIFACT_SIGNING_CERT_PROFILE }}
         run: ./packaging/windows/package.ps1 -Arch ${{ matrix.arch }}
       - name: Check the packages
         shell: pwsh
