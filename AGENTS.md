@@ -28,7 +28,7 @@ apps/
   redrob-launcher                     desktop shell (eframe): window, tray icon, notifications
   redrob-launcher-web                 the same UI in the browser (trunk; catalog and downloads only)
 xtask/                                  cargo xtask ci | wasm | version | ico
-packaging/                              macOS, Windows, Linux, FreeBSD and web packaging scripts
+packaging/                              macOS, Windows, Linux and web packaging scripts
 assets/brand/                           the design system's files, pinned by SHA256SUMS
 assets/app-icon/                        the launcher's own icon and header lockup, derived from assets/brand/
 assets/app-icons/                       each app's 128 px icon, derived from assets/brand/
@@ -120,8 +120,7 @@ Release assets (keep these names exact; the launcher's own self-update and the R
 |---|---|
 | Windows | `redrob-launcher-<ver>-windows-{x64,x86,arm64}.msi`, `…-windows-{x64,x86,arm64}-portable.zip` |
 | macOS | `redrob-launcher-<ver>-macos-universal.dmg` |
-| Linux | `redrob-launcher-<ver>-linux-{x86_64,aarch64}.{AppImage,AppImage.zsync,deb,rpm,tar.gz,flatpak}`, `redrob-launcher-<ver>-linux-riscv64.{deb,rpm,tar.gz}` |
-| FreeBSD | `redrob-launcher-<ver>-freebsd-x86_64.tar.gz` |
+| Linux | `redrob-launcher-<ver>-linux-{x86_64,aarch64}.{AppImage,AppImage.zsync,deb,rpm,tar.gz}`, `redrob-launcher-<ver>-linux-riscv64.{deb,rpm,tar.gz}` |
 | Web | `redrob-launcher-web-<ver>.zip` |
 
 Packaging facts the code relies on:

@@ -18,7 +18,7 @@ Redrob Launcher is one place to install, update, sign in and connect every Redro
   .deb, .rpm and more), checks it against the release's SHA-256 checksums and installs it.
 - Shows which apps you have and which version, tells you when an update is out, and updates them.
 - Sits in the tray or menu bar. Native Rust and egui: no Electron, no web view.
-- macOS, Windows, Linux and FreeBSD, plus a web build that lists the apps with download links.
+- macOS, Windows and Linux, plus a web build that lists the apps with download links.
 - English and Korean.
 
 - Signs the computer in to a Redrob workspace once (the console's device flow), keeps the key where
