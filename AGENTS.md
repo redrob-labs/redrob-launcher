@@ -111,8 +111,14 @@ packaging/linux/AppRun` and `actionlint`.
 The version lives only in `[workspace.package] version` in the root `Cargo.toml`
 (`cargo xtask version`, `cargo xtask version set X.Y.Z[-pre]`). Upstream's release workflow was
 removed (it used upstream's signing secrets, see `UPSTREAM.md`); ours follows the organisation's
-gitflow (`release/x.y.z` from `develop`, a pull request to `main`, tag `vX.Y.Z`) and must publish
-the draft GitHub Release **Redrob Launcher v<version>** with `SHA256SUMS.txt`.
+gitflow (`release/x.y.z` from `develop`, a pull request to `main`, tag `vX.Y.Z`; the shared gitflow
+workflow opens the back-merge pull request `main` -> `develop`). The tag runs
+`.github/workflows/release.yml`, which builds every platform, signs Windows executables and MSIs with
+the shared `redrob-labs/.github/actions/sign-windows` action (Azure Artifact Signing over the job's
+OpenID Connect login; `packaging/windows/package.ps1` itself never signs), and publishes the GitHub
+Release **Redrob Launcher v<version>** with `SHA256SUMS.txt` through the shared
+`redrob-labs/.github` release-publish workflow (no `redrob-launcher.json`: this repository is the
+launcher). A manual dispatch is a dry run that builds and signs but publishes nothing.
 
 Release assets (keep these names exact; the launcher's own self-update and the README rely on them):
 
