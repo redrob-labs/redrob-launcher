@@ -18,12 +18,15 @@
 .EXAMPLE
   pwsh packaging/windows/package.ps1 -Arch x64
   pwsh packaging/windows/package.ps1 -Arch x86 -SkipBuild
+  pwsh packaging/windows/package.ps1 -Arch x64 -BuildOnly  # CI: build first, log in to Azure, then -SkipBuild
   pwsh packaging/windows/package.ps1 -Arch arm64     # cross-compiled; needs the MSVC ARM64 build tools
 #>
 param(
   [ValidateSet('x64', 'x86', 'arm64')] [string] $Arch = 'x64',
-  [switch] $SkipBuild
+  [switch] $SkipBuild,
+  [switch] $BuildOnly
 )
+if ($SkipBuild -and $BuildOnly) { throw '-SkipBuild and -BuildOnly exclude each other' }
 $ErrorActionPreference = 'Stop'
 $Root = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 
@@ -69,6 +72,9 @@ if (-not $SkipBuild) {
   $env:REDROB_LAUNCHER_REQUIRE_WINRES = '1'
   Invoke-Native "cargo build ($Target)" { cargo build --release --locked -p $Pkg --target $Target }
 }
+# The release workflow builds first and signs in a second invocation, so the short-lived OpenID
+# Connect login happens right before signing instead of expiring during a 12-minute build.
+if ($BuildOnly) { exit 0 }
 
 $Bin = Join-Path $TargetDir "$Target\release"
 $Exe = "$Pkg.exe"
