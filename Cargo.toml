@@ -20,7 +20,7 @@ todo = "warn"
 redrob-launcher-core = { path = "crates/core" }
 redrob-launcher-ui-egui = { path = "crates/ui-egui" }
 redrob-launcher-native = { path = "crates/native" }
-redrob-engine-client = { path = "crates/engine-client" }
+redrob-engine-client = { git = "https://github.com/redrob-labs/redrob-code", tag = "v0.6.3" }
 egui = "0.36"
 eframe = { version = "0.36", default-features = false }
 egui_extras = { version = "0.36", default-features = false }

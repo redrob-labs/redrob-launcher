@@ -34,7 +34,10 @@ auth boundary: the file is per-user, and nothing in the launcher logs or display
 
 ## `redrob-engine-client`
 
-`crates/engine-client` is the Rust half of that contract, for every Rust Redrob app (Shape, Canvas,
+The crate lives in the engine's repository, at `crates/engine-client` of
+[redrob-code](https://github.com/redrob-labs/redrob-code), and is pinned here by engine tag
+(`tag = "v0.6.3"` in the workspace `Cargo.toml`) so the launcher and the engine it drives agree on
+the record format. It is the Rust half of that contract, for every Rust Redrob app (Shape, Canvas,
 Query, Recall) as well as this launcher:
 
 - `read_record()`, `current()` (the record, if its daemon answers `/api/health`)

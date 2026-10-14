@@ -26,8 +26,8 @@ Redrob Launcher is one place to install, update, sign in and connect every Redro
   ([docs/shared-account.md](docs/shared-account.md)).
 
 - Shows the Redrob Code engine every app runs its AI through: whether it is up, which apps are
-  attached, and Start / Stop / Restart. Ships `redrob-engine-client`, the Rust crate the apps use
-  to reach that one daemon ([docs/engine.md](docs/engine.md)).
+  attached, and Start / Stop / Restart. Uses `redrob-engine-client`, the Rust crate the apps use
+  to reach that one daemon, pinned to the engine release it ships with ([docs/engine.md](docs/engine.md)).
 
 - Downloads the models the apps use (today Redrob Cut's Whisper speech models and natural voices)
   straight into the folder each app reads them from: resumable, pausable, every file checked
