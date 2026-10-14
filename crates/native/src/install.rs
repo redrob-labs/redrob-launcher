@@ -6,13 +6,12 @@
 //! - Windows: the release MSI (Windows Installer) into `C:\Program Files\<App>`.
 //! - Linux: the distro's own package (`.deb` through apt on the Debian family, `.rpm` through
 //!   dnf/zypper/rpm on the Fedora, Red Hat and SUSE families, read from `os-release`) with the
-//!   system's polkit password prompt; otherwise a Flatpak, otherwise an AppImage in
+//!   system's polkit password prompt; otherwise an AppImage in
 //!   `~/Applications` (the AppImage convention), with a menu entry and icon in
-//!   `~/.local/share` so it shows up like any other app. A Flatpak or AppImage launcher prefers
+//!   `~/.local/share` so it shows up like any other app. An AppImage launcher prefers
 //!   its own format. A release with neither (Redrob apps ship a `.deb` and a `.tar.gz`) is
 //!   unpacked whole into `~/.local/share/redrob-launcher/apps/<app>`, so its bundled libraries
 //!   stay beside it, with the same menu entry.
-//! - FreeBSD: the release's `/usr/local` tree, with a polkit prompt (or `~/.local` without one).
 //!
 //! Every download is checked against its published SHA-256 before anything is unpacked, a
 //! running app is never replaced, and a new copy is fully in place before the old one goes.
@@ -82,7 +81,7 @@ pub fn install(
         #[cfg(windows)]
         PackageKind::Msi => windows::run_msi(&file, job.stop, &mut *job.phase).map(|_| None),
         #[cfg(target_os = "linux")]
-        PackageKind::Deb | PackageKind::Rpm | PackageKind::Flatpak => linux::install_package(kind, &file, job.stop, &mut *job.phase).map(|_| None),
+        PackageKind::Deb | PackageKind::Rpm => linux::install_package(kind, &file, job.stop, &mut *job.phase).map(|_| None),
         #[cfg(target_os = "linux")]
         PackageKind::AppImage => linux::install_appimage(app, &file, &asset.name, existing).map(|(path, replaced)| {
             let files = linux::integrate(app, &path, &replaced, previous);
@@ -103,8 +102,6 @@ pub fn install(
             }
             Some(record(&version, kind, bin, files, false))
         }),
-        #[cfg(target_os = "freebsd")]
-        PackageKind::TarGz => freebsd::install_tree(app, &file, job.paths).map(|(bin, files, root)| Some(record(&version, kind, bin, files, root))),
         other => Err(format!("{} isn't supported on this system", other.label())),
     };
     match &result {
@@ -155,7 +152,6 @@ pub fn choose_kinds(existing: Option<&Installed>, record: Option<&Record>, prefe
             // Arch/AUR installs are owned by pacman and updated by the user's AUR helper (see
             // `managed_elsewhere`); the launcher opens and removes them but never replaces them.
             InstallSource::Pacman => None,
-            InstallSource::Flatpak => Some(PackageKind::Flatpak),
             InstallSource::AppImage => Some(PackageKind::AppImage),
             InstallSource::Binary => Some(PackageKind::TarGz),
         };
@@ -180,8 +176,6 @@ pub fn available_kinds() -> Vec<PackageKind> {
     return vec![PackageKind::Msi];
     #[cfg(target_os = "linux")]
     return linux::available_kinds();
-    #[cfg(target_os = "freebsd")]
-    return vec![PackageKind::TarGz];
     #[allow(unreachable_code)]
     Vec::new()
 }
@@ -267,14 +261,7 @@ pub fn uninstall(app: &CraftApp, installed: &Installed, record: Option<&Record>,
             macos::move_to_trash(&path)
         }
         #[cfg(target_os = "linux")]
-        InstallSource::Deb | InstallSource::Rpm | InstallSource::Pacman | InstallSource::Flatpak => {
-            linux::remove_package(app, installed, stop, phase)
-        }
-        #[cfg(target_os = "freebsd")]
-        InstallSource::Launcher => match record {
-            Some(r) => freebsd::remove_files(&r.files, r.needs_root),
-            None => Err("the launcher has no record of these files".into()),
-        },
+        InstallSource::Deb | InstallSource::Rpm | InstallSource::Pacman => linux::remove_package(app, installed, stop, phase),
         #[cfg(target_os = "linux")]
         InstallSource::Launcher if record.is_some_and(|r| r.kind == PackageKind::TarGz) => {
             if app.id == ENGINE_ID
@@ -313,11 +300,6 @@ fn remove_appimage(app: &CraftApp, path: &Path, record: Option<&Record>) -> Resu
 pub fn launch(app: &CraftApp, installed: &Installed) -> Result<(), String> {
     let path = Path::new(&installed.location);
     match installed.source {
-        InstallSource::Flatpak => {
-            let mut cmd = process::flatpak_command();
-            cmd.args(["run", &app.bundle_id()]);
-            process::spawn_detached(cmd)
-        }
         InstallSource::MacApp => process::open(path.as_os_str()),
         _ if cfg!(target_os = "macos") && path.extension().is_some_and(|e| e == "app") => process::open(path.as_os_str()),
         _ => {
@@ -378,7 +360,7 @@ fn which(name: &str) -> Option<PathBuf> {
 }
 
 /// Runs a command as root through polkit (`pkexec`), which shows the desktop's password prompt.
-#[cfg(any(target_os = "linux", target_os = "freebsd"))]
+#[cfg(target_os = "linux")]
 fn run_as_root(args: &[&std::ffi::OsStr]) -> Result<(), String> {
     let pkexec = which("pkexec").ok_or("installing system-wide needs polkit (pkexec), which isn't installed")?;
     let status = process::command(pkexec).args(args).status().map_err(|e| format!("couldn't ask for permission ({e})"))?;
@@ -386,7 +368,7 @@ fn run_as_root(args: &[&std::ffi::OsStr]) -> Result<(), String> {
 }
 
 /// What `pkexec`'s exit code says about the command it ran.
-#[cfg(any(target_os = "linux", target_os = "freebsd"))]
+#[cfg(target_os = "linux")]
 fn root_outcome(code: Option<i32>) -> Result<(), String> {
     match code {
         Some(0) => Ok(()),
@@ -486,34 +468,23 @@ pub(crate) mod linux {
     /// What this system can install, ordered with the best default first.
     ///
     /// The default package format aligns with how the user installed the launcher itself:
-    /// - Running as a Flatpak: prefers Flatpak (per-user, desktop integration).
     /// - Running as an AppImage: prefers AppImage.
     /// - Otherwise (system install): prefers the distro's own package format (`.deb` on the
     ///   Debian family, `.rpm` on the Fedora, Red Hat and SUSE families, read from `os-release`
-    ///   rather than from whichever tools are on `PATH`), then Flatpak if available, then AppImage.
+    ///   rather than from whichever tools are on `PATH`), then AppImage.
     pub fn available_kinds() -> Vec<PackageKind> {
-        let flatpak = process::is_flatpak_available();
-        let is_flatpak = process::in_sandbox();
         let is_appimage = std::env::var_os("APPIMAGE").is_some();
         let root = which("pkexec").is_some();
         let os = ["/etc/os-release", "/usr/lib/os-release"].iter().find_map(|p| std::fs::read_to_string(p).ok()).unwrap_or_default();
         let native = distro::native_package(&distro::parse_os_release(&os));
         let can_deb = root && native == Some(PackageKind::Deb) && which("apt-get").is_some() && which("dpkg").is_some();
         let can_rpm = root && native == Some(PackageKind::Rpm) && which("rpm").is_some();
-        order_available_kinds(is_flatpak, is_appimage, flatpak, can_deb, can_rpm)
+        order_available_kinds(is_appimage, can_deb, can_rpm)
     }
 
-    pub(crate) fn order_available_kinds(
-        is_flatpak: bool,
-        is_appimage: bool,
-        flatpak_available: bool,
-        can_deb: bool,
-        can_rpm: bool,
-    ) -> Vec<PackageKind> {
+    pub(crate) fn order_available_kinds(is_appimage: bool, can_deb: bool, can_rpm: bool) -> Vec<PackageKind> {
         let mut kinds = Vec::new();
-        if is_flatpak && flatpak_available {
-            kinds.push(PackageKind::Flatpak);
-        } else if is_appimage {
+        if is_appimage {
             kinds.push(PackageKind::AppImage);
         }
 
@@ -524,9 +495,6 @@ pub(crate) mod linux {
             kinds.push(PackageKind::Rpm);
         }
 
-        if flatpak_available && !kinds.contains(&PackageKind::Flatpak) {
-            kinds.push(PackageKind::Flatpak);
-        }
         if !kinds.contains(&PackageKind::AppImage) {
             kinds.push(PackageKind::AppImage);
         }
@@ -590,34 +558,7 @@ pub(crate) mod linux {
         if let Some(command) = install_command(kind) {
             return as_root(root, command, f, stop, phase, JobPhase::Installing);
         }
-        match kind {
-            PackageKind::Flatpak => {
-                let install_one = || {
-                    log::info!("executing flatpak install --reinstall --bundle for {}", file.display());
-                    let output = process::flatpak_command()
-                        .args(["install", "--user", "-y", "--noninteractive", "--reinstall", "--bundle"])
-                        .arg(f)
-                        .output()
-                        .map_err(|e| format!("couldn't start Flatpak ({e})"))?;
-                    if output.status.success() {
-                        log::info!("flatpak install succeeded for {}", file.display());
-                        Ok(())
-                    } else {
-                        let stderr = String::from_utf8_lossy(&output.stderr);
-                        let err = stderr.trim();
-                        let err = if err.is_empty() { String::from_utf8_lossy(&output.stdout).trim().to_string() } else { err.to_string() };
-                        if err.is_empty() {
-                            Err("Flatpak couldn't install the bundle (it needs the Flathub remote for its runtime)".into())
-                        } else {
-                            let clean_err = err.strip_prefix("error: ").or_else(|| err.strip_prefix("Error: ")).unwrap_or(&err);
-                            Err(format!("Flatpak couldn't install the bundle: {clean_err}"))
-                        }
-                    }
-                };
-                root.queue.alone(&cancelled(stop), &mut turn(phase, JobPhase::Installing), install_one).unwrap_or(Err(CANCELLED.into()))
-            }
-            other => Err(format!("{} isn't a system package", other.label())),
-        }
+        Err(format!("{} isn't a system package", kind.label()))
     }
 
     pub fn remove_package(app: &CraftApp, installed: &Installed, stop: &Stop, phase: &mut dyn FnMut(JobPhase)) -> Result<(), String> {
@@ -634,21 +575,6 @@ pub(crate) mod linux {
             }
             // The package detected (redrob-canvas, redrob-canvas-bin or redrob-canvas-git).
             InstallSource::Pacman => remove(&["pacman", "-R", "--noconfirm"], installed.package.as_deref().unwrap_or(app.id)),
-            InstallSource::Flatpak => {
-                let id = app.bundle_id();
-                let user = process::flatpak_command().args(["uninstall", "--user", "-y", "--noninteractive", &id]).status();
-                if user.is_ok_and(|s| s.success()) {
-                    return Ok(());
-                }
-                if process::in_sandbox() {
-                    let system = process::flatpak_command().args(["uninstall", "--system", "-y", "--noninteractive", &id]).status();
-                    if system.is_ok_and(|s| s.success()) {
-                        return Ok(());
-                    }
-                    return Err(format!("couldn't uninstall {id}"));
-                }
-                remove(&["flatpak", "uninstall", "--system", "-y", "--noninteractive"], &id)
-            }
             other => Err(format!("{} isn't a system package", other.label())),
         }
     }
@@ -682,15 +608,8 @@ pub(crate) mod linux {
         Ok((dest, removed))
     }
 
-    /// Where menu entries and icons go: `$XDG_DATA_HOME`, else `~/.local/share`. Inside the
-    /// launcher's own Flatpak that variable points into the sandbox, so the host's is used.
+    /// Where menu entries and icons go: `$XDG_DATA_HOME`, else `~/.local/share`.
     pub fn host_data_dir() -> Option<PathBuf> {
-        if Path::new("/.flatpak-info").exists() {
-            if let Some(dir) = std::env::var_os("HOST_XDG_DATA_HOME").map(PathBuf::from).filter(|p| p.is_absolute()) {
-                return Some(dir);
-            }
-            return dirs::home_dir().map(|h| h.join(".local").join("share"));
-        }
         dirs::data_dir()
     }
 
@@ -985,9 +904,8 @@ pub mod macos {
     }
 }
 
-/// FreeBSD: the release tarball holds a `/usr/local`-style tree (`bin/<app>`,
-/// `share/applications`, icons). Older releases had the files flat in one folder; those are laid
-/// out the same way first.
+/// The release tarball holds a `/usr/local`-style tree (`bin/<app>`, `share/applications`,
+/// icons). Older releases had the files flat in one folder; those are laid out the same way first.
 #[cfg(unix)]
 #[allow(dead_code)]
 mod tree {
@@ -1044,75 +962,6 @@ mod tree {
         }
         out.sort();
         out
-    }
-}
-
-#[cfg(target_os = "freebsd")]
-mod freebsd {
-    use std::ffi::OsStr;
-
-    use super::*;
-
-    /// Copies the release's tree into `/usr/local` (asking for permission through polkit), or
-    /// into `~/.local` when polkit isn't installed. Returns the binary, every file installed,
-    /// and whether removing them needs root.
-    pub fn install_tree(app: &CraftApp, file: &Path, paths: &Paths) -> Result<(PathBuf, Vec<PathBuf>, bool), String> {
-        let staging = paths.cache.join(format!("{}.new", app.id));
-        let result = install_from(app, file, &staging);
-        let _ = std::fs::remove_dir_all(&staging);
-        result
-    }
-
-    fn install_from(app: &CraftApp, file: &Path, staging: &Path) -> Result<(PathBuf, Vec<PathBuf>, bool), String> {
-        let tree = tree::unpack(app, file, staging)?;
-        let rel = tree::files(&tree);
-        let mut source = tree.into_os_string();
-        source.push("/.");
-        if which("pkexec").is_some() {
-            let prefix = PathBuf::from("/usr/local");
-            run_as_root(&[OsStr::new("/bin/cp"), OsStr::new("-R"), &source, prefix.as_os_str()])?;
-            return Ok((prefix.join("bin").join(app.id), rel.iter().map(|r| prefix.join(r)).collect(), true));
-        }
-        let prefix = dirs::home_dir().ok_or("no home folder")?.join(".local");
-        std::fs::create_dir_all(&prefix).map_err(|e| e.to_string())?;
-        let status = process::command("/bin/cp").arg("-R").arg(&source).arg(&prefix).status().map_err(|e| e.to_string())?;
-        if !status.success() {
-            return Err("couldn't copy the app into ~/.local".into());
-        }
-        // ~/.local/bin is often not on PATH for the desktop: point the menu entry at the binary.
-        let bin = prefix.join("bin").join(app.id);
-        let desktop = prefix.join("share/applications").join(format!("{}.desktop", app.bundle_id()));
-        if let Ok(text) = std::fs::read_to_string(&desktop) {
-            let exec = format!("Exec=\"{}\"", bin.display());
-            let fixed: String = text
-                .lines()
-                .map(|l| {
-                    if let Some(rest) = l.strip_prefix("Exec=").and_then(|r| r.strip_prefix(app.id)) {
-                        format!("{exec}{rest}\n")
-                    } else {
-                        format!("{l}\n")
-                    }
-                })
-                .collect();
-            let _ = std::fs::write(&desktop, fixed);
-        }
-        Ok((bin, rel.iter().map(|r| prefix.join(r)).collect(), false))
-    }
-
-    /// Removes the files a tree install put down.
-    pub fn remove_files(files: &[PathBuf], needs_root: bool) -> Result<(), String> {
-        if files.is_empty() {
-            return Err("the launcher has no record of these files".into());
-        }
-        if needs_root {
-            let mut args: Vec<&OsStr> = vec![OsStr::new("/bin/rm"), OsStr::new("-f"), OsStr::new("--")];
-            args.extend(files.iter().map(|f| f.as_os_str()));
-            return run_as_root(&args);
-        }
-        for f in files {
-            let _ = std::fs::remove_file(f);
-        }
-        Ok(())
     }
 }
 
@@ -1256,23 +1105,23 @@ mod tests {
 
     #[cfg(unix)]
     #[test]
-    fn lays_out_both_freebsd_tarball_styles_like_usr_local() {
+    fn lays_out_both_tarball_styles_like_usr_local() {
         let app = CraftApp::by_id("redrob-code").unwrap();
         let dir = tempfile::tempdir().unwrap();
         let tree_style = dir.path().join("tree.tar.gz");
         tarball(
             &tree_style,
-            &["redrob-code-0.3.0-freebsd-x86_64/bin/redrob-code", "redrob-code-0.3.0-freebsd-x86_64/share/applications/ai.redrob.code.desktop"],
+            &["redrob-code-0.3.0-linux-x86_64/bin/redrob-code", "redrob-code-0.3.0-linux-x86_64/share/applications/ai.redrob.code.desktop"],
         );
         let flat_style = dir.path().join("flat.tar.gz");
         tarball(
             &flat_style,
             &[
-                "redrob-code-0.3.0-freebsd-x86_64/redrob-code",
-                "redrob-code-0.3.0-freebsd-x86_64/redrob-code-cli",
-                "redrob-code-0.3.0-freebsd-x86_64/README.md",
-                "redrob-code-0.3.0-freebsd-x86_64/ai.redrob.code.desktop",
-                "redrob-code-0.3.0-freebsd-x86_64/ai.redrob.code.png",
+                "redrob-code-0.3.0-linux-x86_64/redrob-code",
+                "redrob-code-0.3.0-linux-x86_64/redrob-code-cli",
+                "redrob-code-0.3.0-linux-x86_64/README.md",
+                "redrob-code-0.3.0-linux-x86_64/ai.redrob.code.desktop",
+                "redrob-code-0.3.0-linux-x86_64/ai.redrob.code.png",
             ],
         );
         for file in [tree_style, flat_style] {
@@ -1295,7 +1144,7 @@ mod tests {
             linux::install_command(PackageKind::Deb),
             Some(&["apt-get", "-o", "DPkg::Lock::Timeout=60", "install", "-y", "--allow-downgrades"][..])
         );
-        assert_eq!(linux::install_command(PackageKind::Flatpak), None);
+        assert_eq!(linux::install_command(PackageKind::TarGz), None);
         let failed = || Err("the system installer stopped with error 100".to_string());
         assert_eq!(linux::shared_outcome(Ok(()), 3), Ok(()));
         assert_eq!(linux::shared_outcome(failed(), 1), failed());
@@ -1373,20 +1222,6 @@ mod tests {
         assert_eq!(ran.len(), 1, "{ran:?}");
         let error = "the system installer stopped with error 100 while handling 2 apps together. Try them one at a time.";
         assert_eq!(results, vec![Err(error.to_string()); 2]);
-    }
-
-    #[cfg(target_os = "linux")]
-    #[test]
-    fn flatpak_bundle_install_failure_reports_clean_error() {
-        if !crate::process::is_flatpak_available() {
-            return;
-        }
-        let queue = crate::queue::Queue::new();
-        let root = linux::Root { queue: &queue, run: &|_| Ok(()) };
-        let result = linux::install_package_via(&root, PackageKind::Flatpak, Path::new("/nonexistent/file.flatpak"), &Stop::default(), &mut |_| ());
-        assert!(result.is_err());
-        let err = result.unwrap_err();
-        assert!(err.starts_with("Flatpak couldn't install the bundle: "), "unexpected error: {err}");
     }
 
     #[cfg(target_os = "linux")]
@@ -1469,32 +1304,24 @@ mod tests {
     fn package_kinds_order_matches_launcher_format() {
         use super::linux::order_available_kinds;
 
-        // Flatpak launcher defaults to Flatpak if available
-        let kinds = order_available_kinds(true, false, true, true, false);
-        assert_eq!(kinds.first(), Some(&PackageKind::Flatpak));
-        assert!(kinds.contains(&PackageKind::Deb));
-        assert!(kinds.contains(&PackageKind::AppImage));
-
         // AppImage launcher defaults to AppImage
-        let kinds = order_available_kinds(false, true, true, true, false);
+        let kinds = order_available_kinds(true, true, false);
         assert_eq!(kinds.first(), Some(&PackageKind::AppImage));
         assert!(kinds.contains(&PackageKind::Deb));
-        assert!(kinds.contains(&PackageKind::Flatpak));
 
         // Base Linux launcher defaults to native package format (deb or rpm) if available
-        let kinds = order_available_kinds(false, false, true, true, false);
+        let kinds = order_available_kinds(false, true, false);
         assert_eq!(kinds.first(), Some(&PackageKind::Deb));
 
-        let kinds = order_available_kinds(false, false, true, false, true);
+        let kinds = order_available_kinds(false, false, true);
         assert_eq!(kinds.first(), Some(&PackageKind::Rpm));
 
-        // Base Linux launcher without root/distro packaging falls back to Flatpak then AppImage
-        let kinds = order_available_kinds(false, false, true, false, false);
-        assert_eq!(kinds.first(), Some(&PackageKind::Flatpak));
-        assert_eq!(kinds.get(1), Some(&PackageKind::AppImage));
+        // Base Linux launcher without root/distro packaging falls back to AppImage
+        let kinds = order_available_kinds(false, false, false);
+        assert_eq!(kinds.first(), Some(&PackageKind::AppImage));
 
         // The release tarball is always the last resort.
-        for kinds in [order_available_kinds(false, false, false, false, false), order_available_kinds(true, false, true, true, false)] {
+        for kinds in [order_available_kinds(false, false, false), order_available_kinds(true, true, false)] {
             assert_eq!(kinds.last(), Some(&PackageKind::TarGz));
         }
     }

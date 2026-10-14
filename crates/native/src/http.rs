@@ -821,7 +821,7 @@ pub(crate) mod tests {
         let release = redrob_launcher_core::release::parse_github_release(&text, "redrob-labs/redrob-code").unwrap();
         let sums_url = &release.sums_asset().unwrap().url;
         let sums = redrob_launcher_core::release::parse_sha256sums(&http.get_text(sums_url).unwrap().unwrap());
-        let asset = release.assets.iter().find(|a| a.name.ends_with("freebsd-x86_64.tar.gz")).unwrap();
+        let asset = release.assets.iter().find(|a| a.name.ends_with("linux-x86_64.tar.gz")).unwrap();
         let sha = asset.sha256.clone().or_else(|| sums.iter().find(|(_, n)| *n == asset.name).map(|(h, _)| h.clone())).unwrap();
         let dir = tempfile::tempdir().unwrap();
         let dest = dir.path().join(&asset.name);

@@ -14,7 +14,7 @@
 //! | Linux AppImage | rename the new AppImage over this one (fine while running), start it |
 //! | Linux `.deb` / `.rpm` | the system package manager, with the password prompt; then restart |
 //!
-//! Anything else (a Flatpak, FreeBSD, a development build) gets the download link instead.
+//! Anything else (a development build) gets the download link instead.
 
 use std::path::{Path, PathBuf};
 
@@ -127,9 +127,6 @@ fn msi_install_dir() -> Option<PathBuf> {
 
 #[cfg(target_os = "linux")]
 fn detect(exe: &Path) -> Option<Install> {
-    if process::in_sandbox() {
-        return None;
-    }
     if let Some(appimage) = std::env::var_os("APPIMAGE") {
         return Some(Install::AppImage(PathBuf::from(appimage)));
     }
