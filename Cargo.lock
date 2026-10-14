@@ -3676,14 +3676,14 @@ dependencies = [
 
 [[package]]
 name = "redrob-engine-client"
-version = "0.1.1"
+version = "0.1.0"
+source = "git+https://github.com/redrob-labs/redrob-code?tag=v0.6.3#ef3e511afb1107fd0066fa95cb29256b7d020d3c"
 dependencies = [
  "base64 0.22.1",
  "dirs 6.0.0",
  "log",
  "serde",
  "serde_json",
- "tempfile",
  "ureq",
 ]
 

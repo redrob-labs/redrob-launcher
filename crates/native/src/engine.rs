@@ -188,6 +188,9 @@ mod tests {
         fn start(&self) -> Result<engine::Record, String> {
             self.starts.fetch_add(1, Ordering::SeqCst);
             if self.fail_start {
+                // Stay busy for a moment: the test presses twice and the second press must find
+                // the first still running, on a fast runner too.
+                std::thread::sleep(Duration::from_millis(50));
                 return Err("could not run redrob".into());
             }
             let r = record(42);

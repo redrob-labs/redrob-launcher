@@ -25,7 +25,7 @@ English: [README.md](./README.md)
   두고, 자기 키를 따로 두는 앱에는 그 키를 넣어 줍니다([docs/shared-account.ko.md](docs/shared-account.ko.md)).
 
 - 모든 앱이 AI를 돌리는 Redrob Code 엔진을 보여 줍니다: 실행 중인지, 어느 앱이 붙어 있는지, 시작·중지·다시 시작.
-  앱들이 그 데몬 하나에 닿는 데 쓰는 Rust 크레이트 `redrob-engine-client`를 함께 담습니다
+  앱들이 그 데몬 하나에 닿는 데 쓰는 Rust 크레이트 `redrob-engine-client`를 엔진 릴리즈 태그에 고정해 사용합니다
   ([docs/engine.md](docs/engine.md)).
 
 - 앱이 쓰는 모델(지금은 레드롭 컷의 Whisper 음성 인식 모델과 내레이션 목소리)을 각 앱이 읽는 폴더에 바로
