@@ -11,7 +11,6 @@ pub fn app(id: &str) -> Option<ImageSource<'static>> {
         "redrob-cad" => egui::include_image!("../../../assets/app-icons/redrob-cad.png"),
         "redrob-canvas" => egui::include_image!("../../../assets/app-icons/redrob-canvas.png"),
         "redrob-design" => egui::include_image!("../../../assets/app-icons/redrob-design.png"),
-        "redrob-studio" => egui::include_image!("../../../assets/app-icons/redrob-studio.png"),
         "redrob-browser" => egui::include_image!("../../../assets/app-icons/redrob-browser.png"),
         "redrob-code" => egui::include_image!("../../../assets/app-icons/redrob-code.png"),
         "redrob-cowork" => egui::include_image!("../../../assets/app-icons/redrob-cowork.png"),

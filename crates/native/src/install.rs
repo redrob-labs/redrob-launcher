@@ -64,7 +64,21 @@ pub fn install(
     let version = release.version_label();
     let result = match kind {
         #[cfg(target_os = "macos")]
-        PackageKind::Dmg => macos::install_dmg(app, &file, existing, job.paths, &macos::Expect::release(release)).map(|_| None),
+        PackageKind::Dmg => macos::install_dmg(app, &file, existing, job.paths, &macos::Expect::release(release)).map(|bundle| {
+            // Redrob Code's bundle is a shell around the engine binary: point ~/.redrob/bin/redrob
+            // at it, where every app (and the engine's own installer) looks.
+            if app.id == ENGINE_ID {
+                match crate::engine_link::engine_in_bundle(&bundle).zip(crate::engine_link::engine_path()) {
+                    Some((engine, link)) => {
+                        if let Err(e) = crate::engine_link::expose(&link, &engine) {
+                            log::warn!("{}: installed, but {e}", app.name);
+                        }
+                    }
+                    None => log::warn!("{}: the bundle has no Contents/MacOS/redrob to link", app.name),
+                }
+            }
+            None
+        }),
         #[cfg(windows)]
         PackageKind::Msi => windows::run_msi(&file, job.stop, &mut *job.phase).map(|_| None),
         #[cfg(target_os = "linux")]
@@ -117,9 +131,9 @@ pub fn download_path(paths: &Paths, asset: &Asset) -> PathBuf {
     paths.downloads().join(&asset.name)
 }
 
-/// The suite id of Redrob Code, the shared engine (`~/.redrob/bin/redrob`). Only tree installs
-/// (Linux) link it today; the other platforms' arms never read it.
-#[cfg(target_os = "linux")]
+/// The suite id of Redrob Code, the shared engine (`~/.redrob/bin/redrob`). Linux tree installs and
+/// macOS bundles link it; on Windows the MSI's folder is one the engine client looks in by itself.
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 const ENGINE_ID: &str = "redrob-code";
 
 #[allow(dead_code)]
@@ -244,7 +258,14 @@ pub fn uninstall(app: &CraftApp, installed: &Installed, record: Option<&Record>,
         #[cfg(windows)]
         InstallSource::Msi => windows::uninstall_msi(app, stop, phase),
         #[cfg(target_os = "macos")]
-        InstallSource::MacApp | InstallSource::Launcher => macos::move_to_trash(&path),
+        InstallSource::MacApp | InstallSource::Launcher => {
+            if app.id == ENGINE_ID
+                && let Some(link) = crate::engine_link::engine_path()
+            {
+                crate::engine_link::withdraw(&link, &path);
+            }
+            macos::move_to_trash(&path)
+        }
         #[cfg(target_os = "linux")]
         InstallSource::Deb | InstallSource::Rpm | InstallSource::Pacman | InstallSource::Flatpak => {
             linux::remove_package(app, installed, stop, phase)
@@ -681,7 +702,6 @@ pub(crate) mod linux {
             "redrob-cad" => include_bytes!("../../../assets/app-icons/redrob-cad.png"),
             "redrob-canvas" => include_bytes!("../../../assets/app-icons/redrob-canvas.png"),
             "redrob-design" => include_bytes!("../../../assets/app-icons/redrob-design.png"),
-            "redrob-studio" => include_bytes!("../../../assets/app-icons/redrob-studio.png"),
             "redrob-browser" => include_bytes!("../../../assets/app-icons/redrob-browser.png"),
             "redrob-code" => include_bytes!("../../../assets/app-icons/redrob-code.png"),
             "redrob-cowork" => include_bytes!("../../../assets/app-icons/redrob-cowork.png"),

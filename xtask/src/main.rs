@@ -6,6 +6,7 @@
 mod icns;
 mod ico;
 mod local;
+mod tokens;
 mod version;
 
 use std::path::{Path, PathBuf};
@@ -15,8 +16,11 @@ const USAGE: &str = "\
 usage: cargo xtask <command>
 
 commands:
-  ci              fmt --check, clippy -D warnings, test, wasm (stops at first failure)
+  ci              fmt --check, tokens --check, clippy -D warnings, test, wasm (stops at first failure)
   wasm            cargo check --target wasm32-unknown-unknown for the wasm-safe crates
+  tokens [--check] [--version X.Y.Z]
+                  write crates/ui-egui/src/theme/generated.rs from @redrob-labs/ui tokens.json
+                  (--check: fail when the committed file is stale)
   version [set X.Y.Z[-pre]]
                   print the workspace version, or set it (Cargo.toml + Cargo.lock)
   ico <out.ico> <in.png>...
@@ -39,6 +43,7 @@ fn main() -> ExitCode {
         Some("ci") => cmd_ci(),
         Some("wasm") => cmd_wasm(),
         Some("version") => version::run(&root(), &rest),
+        Some("tokens") => tokens::run(&root(), &rest),
         Some("ico") => ico::run(&rest),
         Some("icns") => icns::run(&rest),
         Some("local") => local::run(&rest),
@@ -99,6 +104,7 @@ fn cmd_ci() -> Result<(), String> {
     type Step = (&'static str, Box<dyn Fn() -> Result<(), String>>);
     let steps: Vec<Step> = vec![
         ("fmt", Box::new(|| cargo_step(&["fmt", "--all", "--", "--check"]))),
+        ("tokens", Box::new(|| tokens::run(&root(), &["--check"]))),
         ("clippy", Box::new(|| cargo_step(&["clippy", "--workspace", "--all-targets", "--", "-D", "warnings"]))),
         ("test", Box::new(|| cargo_step(&["test", "--workspace"]))),
         ("wasm", Box::new(cmd_wasm)),

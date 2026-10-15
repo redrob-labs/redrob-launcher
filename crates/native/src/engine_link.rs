@@ -25,6 +25,13 @@ pub fn engine_in_tree(app_bin: &Path) -> Option<PathBuf> {
     bin.is_file().then_some(bin)
 }
 
+/// The engine binary inside the macOS bundle the engine's DMG ships (`Redrob Code.app`):
+/// `Contents/MacOS/redrob`, as `installer/macos/make-dmg.sh` in the engine lays it out.
+pub fn engine_in_bundle(bundle: &Path) -> Option<PathBuf> {
+    let bin = bundle.join("Contents").join("MacOS").join(ENGINE_BINARY);
+    bin.is_file().then_some(bin)
+}
+
 /// Points `link` (normally [`engine_path`]) at `target`, replacing whatever was there. A regular
 /// file from the engine's own installer is replaced too: once the launcher installs the engine,
 /// the launcher keeps it current. Returns the link written, for the install record.
@@ -89,6 +96,16 @@ mod tests {
         assert!(link.exists(), "a link into another tree is not ours");
         withdraw(&link, &tree2);
         assert!(!link.exists());
+    }
+
+    #[test]
+    fn the_bundle_layout_the_engine_dmg_ships_is_found() {
+        let dir = tempfile::tempdir().unwrap();
+        let bundle = dir.path().join("Redrob Code.app");
+        std::fs::create_dir_all(bundle.join("Contents/MacOS")).unwrap();
+        assert_eq!(engine_in_bundle(&bundle), None);
+        std::fs::write(bundle.join("Contents/MacOS/redrob"), "engine").unwrap();
+        assert_eq!(engine_in_bundle(&bundle), Some(bundle.join("Contents/MacOS/redrob")));
     }
 
     #[test]

@@ -1,4 +1,5 @@
-//! Colours, type and shapes from the Redrob design system: its colour roles (`tokens.css`),
+//! Colours, type and shapes from the Redrob design system: its colour roles (`@redrob-labs/ui`
+//! `tokens.json`, generated into `generated.rs` by `cargo xtask tokens`),
 //! Pretendard for Latin and Wanted Sans for Korean, hairline rules. Widgets read
 //! [`Tokens::get`]; nothing hard-codes a colour.
 
@@ -68,45 +69,41 @@ const fn hex(rgb: u32) -> Color32 {
     Color32::from_rgb(r, g, b)
 }
 
-impl Tokens {
-    // Values are the Redrob design system's (`tokens.css`), by role; the comment names the token.
-    pub const DARK: Self = Self {
-        dark: true,
-        bg: hex(0x0a0b0c),          // surface-base: redrob-black
-        sunken: hex(0x000000),      // surface-sunken
-        ink: hex(0xf8f9fb),         // ink-primary: gray-1
-        ink_strong: hex(0xffffff),  // redrob-white
-        muted: hex(0xaab0bb),       // ink-secondary: gray-5
-        faint: hex(0x7c8390),       // ink-muted: gray-6
-        line: hex(0x292e37),        // border-subtle: gray-8
-        line_strong: hex(0x7c8390), // border-strong: gray-6
-        accent: hex(0x2b52ff),      // action-primary: blue-6 (Redrob Blue)
-        accent_ink: hex(0x8aafff),  // ink-brand: blue-4
-        invert_bg: hex(0xffffff),   // the white pill on dark grounds
-        invert_fg: hex(0x0a0b0c),
-        good: hex(0x29e474), // status-success: accent-green-3
-        warn: hex(0xff9c1b), // status-warning: accent-orange-3
-        bad: hex(0xff4b4b),  // status-danger: accent-red-3
-    };
+/// The colour values, generated from the design-system package by `cargo xtask tokens`.
+pub mod generated;
 
-    pub const LIGHT: Self = Self {
-        dark: false,
-        bg: hex(0xffffff),     // surface-base: redrob-white
-        sunken: hex(0xeff1f4), // surface-sunken: gray-2
-        ink: hex(0x0a0b0c),    // ink-primary: redrob-black
-        ink_strong: hex(0x000000),
-        muted: hex(0x576071),       // ink-secondary: gray-7
-        faint: hex(0x7c8390),       // ink-muted: gray-6
-        line: hex(0xdfe2e8),        // border-subtle: gray-3
-        line_strong: hex(0x7c8390), // border-strong: gray-6
-        accent: hex(0x2b52ff),      // action-primary: blue-6 (Redrob Blue)
-        accent_ink: hex(0x1733d5),  // ink-brand: blue-7
-        invert_bg: hex(0x0a0b0c),
-        invert_fg: hex(0xffffff),
-        good: hex(0x00864a), // status-success: accent-green-4
-        warn: hex(0xae5100), // status-warning: accent-orange-4
-        bad: hex(0xa31310),  // status-danger: accent-red-4
+/// The design-system package release the colours come from (`@redrob-labs/ui x.y.z`).
+pub const TOKENS_SOURCE: &str = generated::SOURCE;
+
+macro_rules! from_generated {
+    ($m:ident, $dark:expr) => {
+        Self {
+            dark: $dark,
+            bg: hex(generated::$m::BG),
+            sunken: hex(generated::$m::SUNKEN),
+            ink: hex(generated::$m::INK),
+            ink_strong: hex(generated::$m::INK_STRONG),
+            muted: hex(generated::$m::MUTED),
+            faint: hex(generated::$m::FAINT),
+            line: hex(generated::$m::LINE),
+            line_strong: hex(generated::$m::LINE_STRONG),
+            accent: hex(generated::$m::ACCENT),
+            accent_ink: hex(generated::$m::ACCENT_INK),
+            invert_bg: hex(generated::$m::INVERT_BG),
+            invert_fg: hex(generated::$m::INVERT_FG),
+            good: hex(generated::$m::GOOD),
+            warn: hex(generated::$m::WARN),
+            bad: hex(generated::$m::BAD),
+        }
     };
+}
+
+impl Tokens {
+    // The values are the Redrob design system's (`@redrob-labs/ui`, `tokens.json`), bound to these
+    // roles by xtask/src/tokens.rs and written to `generated.rs`. Nothing here is typed by hand.
+    pub const DARK: Self = from_generated!(dark, true);
+
+    pub const LIGHT: Self = from_generated!(light, false);
 
     pub fn get(ctx: &egui::Context) -> Self {
         if ctx.theme() == egui::Theme::Dark { Self::DARK } else { Self::LIGHT }

@@ -121,7 +121,6 @@ fn signing_in_shows_the_code_then_the_workspace_and_connects_apps() {
             ("redrob-shape", AppLink::Shared),
             ("redrob-office", AppLink::SharedSoon),
             ("redrob-query", AppLink::SharedAfterUpdate),
-            ("redrob-studio", AppLink::NoKey),
         ],
         ..State::default()
     }));

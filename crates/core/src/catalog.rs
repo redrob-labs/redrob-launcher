@@ -131,7 +131,6 @@ pub const SUITE: [CraftApp; 12] = [
         [0xc1, 0x62, 0xf4],
         "design.redrob.RedrobDesign"
     ),
-    app!("redrob-studio", "Redrob Studio", "Make images and audio on your own GPU", "Image and audio", AppGroup::Create, BLUE, "ai.redrob.studio"),
     app!(
         "redrob-browser",
         "Redrob Browser",
