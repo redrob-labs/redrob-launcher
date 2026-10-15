@@ -12,7 +12,7 @@ Redrob Launcher is one place to install, update, sign in and connect every Redro
 
 ## What it does
 
-- Lists every Redrob app: Cut, Shape, CAD, Canvas, Design, Studio, Browser, Code, Cowork,
+- Lists every Redrob app: Cut, Shape, CAD, Canvas, Design, Browser, Code, Cowork,
   Office, Query and Recall.
 - Reads each app's GitHub releases, picks the right build for your OS and CPU (DMG, MSI, AppImage,
   .deb, .rpm and more), checks it against the release's SHA-256 checksums and installs it.
