@@ -80,7 +80,7 @@ impl LauncherUi {
                 EngineState::NotInstalled => {
                     widgets::badge(ui, tl!("Not installed"), widgets::tone_color(&t, Tone::Warn));
                     ui.add_space(6.0);
-                    ui.add(egui::Label::new(RichText::new(tl!("Redrob Code is the engine Cowork, Office, Design, Browser, Cut and CAD run their AI through. Install it once and they share it.")).size(12.5).color(t.muted)).wrap());
+                    ui.add(egui::Label::new(RichText::new(tl!("Redrob Code is the engine Cowork, Office, Design, Browser, Film and CAD run their AI through. Install it once and they share it.")).size(12.5).color(t.muted)).wrap());
                     ui.add_space(8.0);
                     if widgets::button(ui, tl!("Install Redrob Code"), Kind::Primary, 0.0).clicked() {
                         ask = Some(Ask::Install);

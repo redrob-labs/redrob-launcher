@@ -36,7 +36,7 @@ portable setups).
 }
 ```
 
-The shape is the one Redrob CAD and Redrob Cut already use for their own `account.json`, so an app
+The shape is the one Redrob CAD and Redrob Film already use for their own `account.json`, so an app
 can read either file with the same code. Only `apiKey` is secret. `apiBaseUrl` is where the key is
 spent; an app sends it as a bearer token there.
 
@@ -66,7 +66,7 @@ writes the same key into the app's own file. It knows these:
 | App | File | Format |
 |---|---|---|
 | Redrob CAD | `account.json` in `%APPDATA%\Redrob CAD`, `~/Library/Application Support/ai.redrob.cad`, `~/.config/redrob-cad` (`REDROB_CAD_CONFIG_DIR`) | as above |
-| Redrob Cut | `account.json` in `%APPDATA%\Redrob Cut`, `~/Library/Application Support/ai.redrob.cut`, `~/.config/redrob-cut` (`REDROB_CUT_CONFIG_DIR`) | as above |
+| Redrob Film | `account.json` in `%APPDATA%\Redrob Film`, `~/Library/Application Support/ai.redrob.film`, `~/.config/redrob-film` (`REDROB_CUT_CONFIG_DIR`) | as above |
 | Redrob Code | `$XDG_DATA_HOME/redrob/auth.json` (`~/.local/share/redrob/auth.json`) on every platform | `"redrob": {"type": "api", "key": "rk_…"}`; the file's other providers are kept |
 
 Every other app shows **Not supported yet** until it reads the shared file or the launcher learns its

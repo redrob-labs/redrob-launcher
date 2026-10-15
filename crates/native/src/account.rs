@@ -5,7 +5,7 @@
 //! launcher polls until the console hands back a workspace API key. The key goes into the shared
 //! account file (`docs/shared-account.md`), which every Redrob app on this computer may read.
 //!
-//! Apps that keep a key file of their own today (Redrob CAD, Redrob Cut, Redrob Code) can be handed
+//! Apps that keep a key file of their own today (Redrob CAD, Redrob Film, Redrob Code) can be handed
 //! the same key: [`Connector`] knows each one's path and format. The device code never leaves this
 //! module and is never logged or stored; a pending sign-in lives in memory only. Every file holding
 //! a key is written readable by this user alone (0600 on Unix), through a temporary file renamed
@@ -103,7 +103,7 @@ impl std::fmt::Debug for Stored {
 }
 
 impl Stored {
-    /// The shared file's and Redrob CAD's / Redrob Cut's format.
+    /// The shared file's and Redrob CAD's / Redrob Film's format.
     fn to_json(&self) -> Value {
         json!({"apiKey": self.api_key, "apiKeyName": self.api_key_name, "accountName": self.account_name, "apiBaseUrl": self.api_base_url})
     }
@@ -198,7 +198,7 @@ pub fn save(path: &Path, s: &Stored) -> std::io::Result<()> {
 /// How an app that keeps its own key file today stores it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Format {
-    /// `account.json`: the same shape as the shared file (Redrob CAD, Redrob Cut).
+    /// `account.json`: the same shape as the shared file (Redrob CAD, Redrob Film).
     Account,
     /// Redrob Code's `auth.json`: one entry per provider; ours is `"redrob": {"type": "api", "key"}`.
     /// The other entries are the person's own and are kept as they are.
@@ -239,7 +239,9 @@ fn redrob_code_data() -> Option<PathBuf> {
 pub fn connector(app: &str) -> Option<Connector> {
     let (path, format) = match app {
         "redrob-cad" => (account_dir("REDROB_CAD_CONFIG_DIR", "Redrob CAD", "ai.redrob.cad", "redrob-cad")?.join("account.json"), Format::Account),
-        "redrob-cut" => (account_dir("REDROB_CUT_CONFIG_DIR", "Redrob Cut", "ai.redrob.cut", "redrob-cut")?.join("account.json"), Format::Account),
+        "redrob-film" => {
+            (account_dir("REDROB_CUT_CONFIG_DIR", "Redrob Film", "ai.redrob.film", "redrob-film")?.join("account.json"), Format::Account)
+        }
         "redrob-code" => (redrob_code_data()?.join("auth.json"), Format::RedrobCodeAuth),
         _ => return None,
     };
@@ -247,7 +249,7 @@ pub fn connector(app: &str) -> Option<Connector> {
 }
 
 /// The apps [`connector`] knows.
-pub const CONNECTOR_IDS: [&str; 3] = ["redrob-cad", "redrob-cut", "redrob-code"];
+pub const CONNECTOR_IDS: [&str; 3] = ["redrob-cad", "redrob-film", "redrob-code"];
 
 /// The key an app's file holds now, and its name when the format records one.
 pub fn read_app_key(c: &Connector) -> Option<(String, String)> {
@@ -690,7 +692,7 @@ mod tests {
         assert_eq!(read_app_key(&c), None);
         write_app_key(&c, &key("rk_1")).unwrap();
         assert_eq!(read_app_key(&c), Some(("rk_1".into(), "Redrob Launcher".into())));
-        // Exactly the file Redrob CAD and Redrob Cut read.
+        // Exactly the file Redrob CAD and Redrob Film read.
         let v = read_json(&c.path).unwrap();
         assert_eq!(v["apiKey"], "rk_1");
         assert_eq!(v["apiBaseUrl"], "https://c");

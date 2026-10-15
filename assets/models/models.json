@@ -1,10 +1,10 @@
 {
-  "$comment": "Models the Redrob Launcher can download for each Redrob app, into the folder that app reads them from. Every file is pinned to a commit or release tag and its SHA-256; URLs never point at a moving branch. app \"redrob\" means shared by every app. \"serve\" is only present for llama-server runtimes. File names are flat: a repo sub-path is flattened with a double underscore (speech_tokenizer/config.json -> speech_tokenizer__config.json), except the Kokoro voices which keep their bare names. Keep in step with each app's own catalogue (Redrob Cut: crates/speech/src/models.rs and crates/tts/src/catalog.rs).",
+  "$comment": "Models the Redrob Launcher can download for each Redrob app, into the folder that app reads them from. Every file is pinned to a commit or release tag and its SHA-256; URLs never point at a moving branch. app \"redrob\" means shared by every app. \"serve\" is only present for llama-server runtimes. File names are flat: a repo sub-path is flattened with a double underscore (speech_tokenizer/config.json -> speech_tokenizer__config.json), except the Kokoro voices which keep their bare names. Keep in step with each app's own catalogue (Redrob Film: crates/speech/src/models.rs and crates/tts/src/catalog.rs).",
   "version": 2,
   "models": [
     {
       "id": "whisper-tiny",
-      "app": "redrob-cut",
+      "app": "redrob-film",
       "name": "Whisper tiny (multilingual)",
       "description": "39 M parameters. Fastest; fine for clear speech, rough on noisy audio.",
       "license": "MIT (OpenAI Whisper weights); Hugging Face conversion: Apache-2.0",
@@ -49,7 +49,7 @@
     },
     {
       "id": "whisper-base",
-      "app": "redrob-cut",
+      "app": "redrob-film",
       "name": "Whisper base (multilingual)",
       "description": "74 M parameters. The default: a good balance of speed and accuracy.",
       "license": "MIT (OpenAI Whisper weights); Hugging Face conversion: Apache-2.0",
@@ -94,7 +94,7 @@
     },
     {
       "id": "whisper-small",
-      "app": "redrob-cut",
+      "app": "redrob-film",
       "name": "Whisper small (multilingual)",
       "description": "244 M parameters. Most accurate here; about 4× slower than base.",
       "license": "MIT (OpenAI Whisper weights); Hugging Face conversion: Apache-2.0",
@@ -139,7 +139,7 @@
     },
     {
       "id": "kokoro-82m",
-      "app": "redrob-cut",
+      "app": "redrob-film",
       "name": "Natural voices (Kokoro-82M)",
       "description": "Nine US English narration voices and the CMUdict pronunciation dictionary.",
       "license": "Apache-2.0 (Kokoro-82M by hexgrad); CMUdict: BSD-style (Carnegie Mellon University)",
@@ -583,7 +583,7 @@
     },
     {
       "id": "qwen3-tts-1.7b",
-      "app": "redrob-cut",
+      "app": "redrob-film",
       "name": "Qwen3-TTS 1.7B CustomVoice",
       "description": "Multilingual text-to-speech model with preset speakers; speech_tokenizer files are flattened with a double underscore.",
       "license": "Apache-2.0",
@@ -669,7 +669,7 @@
     },
     {
       "id": "qwen3-asr-1.7b-ko",
-      "app": "redrob-cut",
+      "app": "redrob-film",
       "name": "Qwen3-ASR 1.7B Korean (TeamUNIVA)",
       "description": "Korean-tuned Qwen3-ASR 1.7B speech recognition model.",
       "license": "Apache-2.0",
@@ -756,7 +756,7 @@
     },
     {
       "id": "silero-vad",
-      "app": "redrob-cut",
+      "app": "redrob-film",
       "name": "Silero VAD",
       "description": "Voice activity detection ONNX model from snakers4/silero-vad v6.2.3.",
       "license": "MIT",
@@ -783,7 +783,7 @@
     },
     {
       "id": "demucs-htdemucs",
-      "app": "redrob-cut",
+      "app": "redrob-film",
       "name": "Demucs htdemucs (stem separation)",
       "description": "Hybrid Transformer Demucs checkpoint for separating drums, bass, vocals and other stems.",
       "license": "MIT (facebookresearch/demucs)",

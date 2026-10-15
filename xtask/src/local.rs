@@ -19,7 +19,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Every Redrob app: (id = folder name, display name). Keep in step with `catalog::SUITE`.
 const APPS: &[(&str, &str)] = &[
-    ("redrob-cut", "Redrob Cut"),
+    ("redrob-film", "Redrob Film"),
     ("redrob-shape", "Redrob Shape"),
     ("redrob-cad", "Redrob CAD"),
     ("redrob-canvas", "Redrob Canvas"),

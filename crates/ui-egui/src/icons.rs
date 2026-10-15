@@ -6,7 +6,7 @@ use egui::ImageSource;
 /// The 128 px icon of a Redrob app.
 pub fn app(id: &str) -> Option<ImageSource<'static>> {
     Some(match id {
-        "redrob-cut" => egui::include_image!("../../../assets/app-icons/redrob-cut.png"),
+        "redrob-film" => egui::include_image!("../../../assets/app-icons/redrob-film.png"),
         "redrob-shape" => egui::include_image!("../../../assets/app-icons/redrob-shape.png"),
         "redrob-cad" => egui::include_image!("../../../assets/app-icons/redrob-cad.png"),
         "redrob-canvas" => egui::include_image!("../../../assets/app-icons/redrob-canvas.png"),

@@ -73,7 +73,7 @@ fn events() -> Vec<Event> {
     let versions = [
         ("redrob-canvas", "0.5.0"),
         ("redrob-shape", "0.7.0"),
-        ("redrob-cut", "0.4.0"),
+        ("redrob-film", "0.4.0"),
         ("redrob-office", "0.4.0"),
         ("redrob-browser", "0.6.0"),
         ("redrob-code", "0.3.0"),
@@ -99,7 +99,7 @@ fn events() -> Vec<Event> {
         });
         ev.push(Event::Detected { app: app.id.into(), installed: inst });
     }
-    ev.push(Event::Progress { app: "redrob-cut".into(), phase: JobPhase::Downloading { done: 48 << 20, total: 131 << 20 } });
+    ev.push(Event::Progress { app: "redrob-film".into(), phase: JobPhase::Downloading { done: 48 << 20, total: 131 << 20 } });
     ev.push(Event::Paused { app: "redrob-cowork".into(), download: Some(PausedDownload { done: 30 << 20, total: 120 << 20 }) });
     ev.push(Event::Progress { app: "redrob-query".into(), phase: JobPhase::Reconnecting { done: 10 << 20, total: 90 << 20 } });
     ev.push(Event::ReadyToInstall { app: "redrob-cad".into(), ready: true });
@@ -346,15 +346,15 @@ fn each_cancellation_says_what_it_called_off() {
     let finished = |app: &str, why: &str| Event::JobFinished { app: app.into(), result: Err(why.into()) };
     let mut ev = events();
     // An uninstall called off while it waited for the installer.
-    ev.push(Event::Progress { app: "redrob-cut".into(), phase: JobPhase::Removing });
-    ev.push(Event::Progress { app: "redrob-cut".into(), phase: JobPhase::Waiting });
-    ev.push(finished("redrob-cut", CANCELLED));
+    ev.push(Event::Progress { app: "redrob-film".into(), phase: JobPhase::Removing });
+    ev.push(Event::Progress { app: "redrob-film".into(), phase: JobPhase::Waiting });
+    ev.push(finished("redrob-film", CANCELLED));
     // The launcher's own update, cancelled while it waited.
     ev.push(Event::LauncherUpdate(release("redrob-launcher", "0.2.0", NOW)));
     ev.push(Event::Progress { app: "redrob-launcher".into(), phase: JobPhase::Waiting });
     ev.push(finished("redrob-launcher", CANCELLED));
     // A download cancelled mid-way.
-    ev.push(finished("redrob-cut", CANCELLED));
+    ev.push(finished("redrob-film", CANCELLED));
     let (mut h, _) = harness_with(ev, ViewMode::Grid, egui::Theme::Dark, true, 1.0);
     h.run_steps(6);
     for toast in ["Uninstall cancelled", "Update cancelled", "Download cancelled"] {

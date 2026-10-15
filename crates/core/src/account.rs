@@ -63,7 +63,7 @@ pub enum AppLink {
 /// copy cannot read the file. The source of each is in `docs/app-integration.md`.
 pub const SHARED_READERS: [(&str, Option<&str>); 10] = [
     ("redrob-cad", Some("0.0.3")),
-    ("redrob-cut", Some("0.0.1")),
+    ("redrob-film", Some("0.1.0")),
     ("redrob-shape", None),
     ("redrob-browser", None),
     ("redrob-cowork", None),

@@ -13,7 +13,7 @@ SHA-256 and byte size for every file:
 | Field | Meaning |
 | --- | --- |
 | `id` | the model's folder name (`qwen3.8-27b-q4`) |
-| `app` | the app that reads it (`redrob-cut`), or `redrob` for a model every app may use |
+| `app` | the app that reads it (`redrob-film`), or `redrob` for a model every app may use |
 | `task` | what it does: `chat`, `code`, `vision`, `embedding`, `text-to-image`, `image-edit`, `inpaint`, `background-removal`, `upscale`, `segmentation`, `vectorize`, `stt`, `tts`, `vad`, `stem-separation`, `image-to-3d`, `ocr` |
 | `runtime` | `files` (the app loads the files itself), `llama-server` (the launcher serves it), `llama-server-prism` (served by PrismML's llama.cpp fork; shown only when the person turns that setting on) |
 | `requires` | `memory_gb` and `backends` (`cuda`, `metal`, `vulkan`, `cpu`): what the computer needs |
@@ -31,7 +31,7 @@ run here**, or **Not measured**. The verdict never blocks a download.
 
 | `app` | Folder |
 | --- | --- |
-| `redrob-cut` | Redrob Cut's own models folder (`<data dir>/models`), as before |
+| `redrob-film` | Redrob Film's own models folder (`<data dir>/models`), as before |
 | `redrob`, `redrob-canvas`, `redrob-shape`, `redrob-recall`, `redrob-code` | `~/.redrob/models/<id>/` (`REDROB_MODELS_DIR` overrides the folder) |
 
 A file is in place only once its SHA-256 matched; a half-downloaded file has a `.part` suffix

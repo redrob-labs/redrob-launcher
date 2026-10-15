@@ -1369,13 +1369,13 @@ mod tests {
         let error = claim_restart(&jobs, &restarting, &Stop::default(), Duration::from_millis(300), &mut || {}).unwrap_err();
         assert!(error.contains("Redrob Canvas was still installing") && error.contains("cancel it"), "{error}");
         assert!(!restarting.load(Ordering::SeqCst));
-        assert!(restart_blocked(vec!["Redrob Code", "Redrob Cut"]).contains("Redrob Code, Redrob Cut were still installing"));
+        assert!(restart_blocked(vec!["Redrob Code", "Redrob Film"]).contains("Redrob Code, Redrob Film were still installing"));
     }
 
     #[test]
     fn the_launcher_restarts_only_once_every_other_job_has_ended() {
         let jobs = Mutex::new(HashMap::new());
-        for id in [LAUNCHER_ID, "redrob-canvas", "redrob-cut"] {
+        for id in [LAUNCHER_ID, "redrob-canvas", "redrob-film"] {
             jobs.lock().unwrap().insert(id.to_string(), Arc::new(Stop::default()));
         }
         let restarting = AtomicBool::new(false);
@@ -1389,7 +1389,7 @@ mod tests {
             jobs.lock().unwrap().remove("redrob-canvas");
             std::thread::sleep(Duration::from_millis(250));
             assert!(!claim.is_finished() && !restarting.load(Ordering::SeqCst));
-            jobs.lock().unwrap().remove("redrob-cut");
+            jobs.lock().unwrap().remove("redrob-film");
             assert_eq!(claim.join().unwrap(), Ok(()));
         });
         assert!(restarting.load(Ordering::SeqCst));
