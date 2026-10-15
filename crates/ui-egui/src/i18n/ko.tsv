@@ -216,7 +216,7 @@ column	Installed	설치됨
 column	Latest	최신
 column	Released	출시일
 filter	Installed	설치됨
-redrob-cut	Describe the cut and let the agent make it	원하는 컷을 말하면 에이전트가 편집해요
+redrob-film	Describe the edit and the motion graphics and let the agent make them	원하는 편집과 모션 그래픽을 말하면 에이전트가 만들어요
 redrob-shape	Shape and shade 3D models by prompt	프롬프트로 3D 모델을 만들고 질감을 입혀요
 redrob-cad	Design, constrain and iterate on parts with an agent	에이전트와 함께 부품을 설계하고 다듬어요
 redrob-canvas	Paint and edit images with an agent	에이전트와 함께 그림을 그리고 이미지를 편집해요
@@ -365,7 +365,7 @@ month	Dec	12월
 	Install Redrob Code, the engine every app runs its AI through	모든 앱이 AI를 돌리는 엔진, Redrob Code를 설치하세요
 	Redrob Code engine	Redrob Code 엔진
 	One engine on this computer; every Redrob app runs its AI through it	이 컴퓨터에 엔진 하나. 모든 Redrob 앱이 그것으로 AI를 돌려요
-	Redrob Code is the engine Cowork, Office, Design, Browser, Cut and CAD run their AI through. Install it once and they share it.	Redrob Code는 Cowork, Office, Design, Browser, Cut, CAD가 AI를 돌리는 엔진이에요. 한 번 설치하면 함께 써요.
+	Redrob Code is the engine Cowork, Office, Design, Browser, Film and CAD run their AI through. Install it once and they share it.	Redrob Code는 Cowork, Office, Design, Browser, Film, CAD가 AI를 돌리는 엔진이에요. 한 번 설치하면 함께 써요.
 	Install Redrob Code	Redrob Code 설치
 	Not running	실행 중 아님
 	The first app that needs the engine starts it, and it stops on its own when no app has used it for a while. You can also start it here.	엔진이 필요한 첫 앱이 시작하고, 한동안 쓰는 앱이 없으면 스스로 멈춰요. 여기서 직접 시작할 수도 있어요.

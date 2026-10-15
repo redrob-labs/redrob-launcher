@@ -36,7 +36,7 @@ printf '{ "schema": 1, "sharedAccount": true }\n' > dist/release/redrob-launcher
   오래됐으면 **업데이트하면 이 로그인을 씁니다**.
 - 파일이 있고 `sharedAccount: false`: 런처 내장 표가 뭐라 해도 공용 파일을 안 읽는 앱으로 봅니다.
 - 파일 없음(이 규약 전 릴리스): 내장 표(`crates/core/src/account.rs`의 `SHARED_READERS`)로 돌아갑니다.
-  표에는 읽는 것이 확인된 릴리스(Redrob CAD 0.0.3, Redrob Cut 0.0.1)가 있고, 머지만 되고 릴리스 안 된
+  표에는 읽는 것이 확인된 릴리스(Redrob CAD 0.0.3, Redrob Film 0.0.1)가 있고, 머지만 되고 릴리스 안 된
   앱은 **다음 버전부터 이 로그인을 씁니다**로 보입니다.
 - 파일이 있든 없든 앱 자신의 키가 런처 키보다 우선합니다.
 

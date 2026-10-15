@@ -92,7 +92,7 @@ fn view(m: &Model, state: ModelState) -> ModelView {
     ModelView {
         model: m.clone(),
         state,
-        folder: Some(format!("/home/u/.local/share/redrob-cut/models/{}", m.id)),
+        folder: Some(format!("/home/u/.local/share/redrob-film/models/{}", m.id)),
         fit: Fit::Runs,
         serving: Serving::No,
     }
@@ -156,11 +156,11 @@ fn every_download_state_offers_the_right_action() {
     assert_eq!(
         state.borrow().asked,
         [
-            "pause redrob-cut/whisper-base",
-            "download redrob-cut/whisper-small",
-            "download redrob-cut/kokoro-82m",
+            "pause redrob-film/whisper-base",
+            "download redrob-film/whisper-small",
+            "download redrob-film/kokoro-82m",
             "remeasure",
-            "delete redrob-cut/whisper-small"
+            "delete redrob-film/whisper-small"
         ]
     );
 }

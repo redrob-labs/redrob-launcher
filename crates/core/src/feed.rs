@@ -465,7 +465,7 @@ mod tests {
             }},
             "redrob-recall": {{ "name": "Redrob Recall", "repo": "redrob-labs/redrob-recall", "latest_release": null,
                              "app_last_fetched": "2026-10-09T13:00:00Z" }},
-            "redrob-cut": {{ "name": "Redrob Cut", "repo": "redrob-labs/redrob-cut", "latest_release": null, "app_last_fetched": null }},
+            "redrob-film": {{ "name": "Redrob Film", "repo": "redrob-labs/redrob-film", "latest_release": null, "app_last_fetched": null }},
             "redrob-shape": {{ "repo": "redrob-labs/redrob-shape", "app_last_fetched": "2026-10-01T00:00:00Z",
                               "latest_release": {{ "tag": "v0.7.0" }} }},
             "brandnewcraft": {{ "repo": "storytold/brandnewcraft", "app_last_fetched": "2026-10-09T13:00:00Z" }}
@@ -496,7 +496,7 @@ mod tests {
         // Fresh, and no release yet.
         assert_eq!(feed.answer(app("redrob-recall"), NOW), FeedAnswer::Fresh(None));
         // Never fetched, more than a day old, or not listed: ask GitHub.
-        assert_eq!(feed.answer(app("redrob-cut"), NOW), FeedAnswer::AskGitHub);
+        assert_eq!(feed.answer(app("redrob-film"), NOW), FeedAnswer::AskGitHub);
         assert_eq!(feed.answer(app("redrob-shape"), NOW), FeedAnswer::AskGitHub);
         assert_eq!(feed.answer(app("redrob-code"), NOW), FeedAnswer::AskGitHub);
         assert_eq!(feed.answer(&LAUNCHER, NOW), FeedAnswer::AskGitHub);

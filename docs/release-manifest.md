@@ -40,7 +40,7 @@ reads the sums file to learn the asset names) sees it too.
   file, whatever the launcher's built-in table says.
 - No file (releases made before this contract): the launcher falls back to its built-in table
   (`SHARED_READERS` in `crates/core/src/account.rs`), which records the releases known to read the
-  file -- Redrob CAD 0.0.3 and Redrob Cut 0.0.1 -- and shows **Next release uses this sign-in** for
+  file -- Redrob CAD 0.0.3 and Redrob Film 0.0.1 -- and shows **Next release uses this sign-in** for
   apps whose change is merged but not released.
 - The app's own key always wins over the launcher's, with or without the file.
 

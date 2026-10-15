@@ -697,7 +697,7 @@ pub(crate) mod linux {
     /// The app's 128 px icon, as bundled in `assets/app-icons`.
     fn icon_png(app: &CraftApp) -> Option<&'static [u8]> {
         Some(match app.id {
-            "redrob-cut" => include_bytes!("../../../assets/app-icons/redrob-cut.png"),
+            "redrob-film" => include_bytes!("../../../assets/app-icons/redrob-film.png"),
             "redrob-shape" => include_bytes!("../../../assets/app-icons/redrob-shape.png"),
             "redrob-cad" => include_bytes!("../../../assets/app-icons/redrob-cad.png"),
             "redrob-canvas" => include_bytes!("../../../assets/app-icons/redrob-canvas.png"),

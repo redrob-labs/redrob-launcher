@@ -117,7 +117,7 @@ fn signing_in_shows_the_code_then_the_workspace_and_connects_apps() {
         links: vec![
             ("redrob-cad", AppLink::NotConnected),
             ("redrob-code", AppLink::Connected { same_key: false, key_name: String::new() }),
-            ("redrob-cut", AppLink::Connected { same_key: true, key_name: "Redrob Launcher".into() }),
+            ("redrob-film", AppLink::Connected { same_key: true, key_name: "Redrob Launcher".into() }),
             ("redrob-shape", AppLink::Shared),
             ("redrob-office", AppLink::SharedSoon),
             ("redrob-query", AppLink::SharedAfterUpdate),
