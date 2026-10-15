@@ -75,7 +75,20 @@ pub fn install(
             Some(record(&version, kind, path, files, false))
         }),
         #[cfg(target_os = "linux")]
-        PackageKind::TarGz => linux::install_tree(app, &file, previous).map(|(bin, files)| Some(record(&version, kind, bin, files, false))),
+        PackageKind::TarGz => linux::install_tree(app, &file, previous).map(|(bin, mut files)| {
+            // Redrob Code is the engine every app finds at ~/.redrob/bin/redrob: point that at the
+            // copy just installed, or the daemon keeps starting whatever was there before.
+            if app.id == ENGINE_ID {
+                match crate::engine_link::engine_in_tree(&bin).zip(crate::engine_link::engine_path()) {
+                    Some((engine, link)) => match crate::engine_link::expose(&link, &engine) {
+                        Ok(written) => files.push(written),
+                        Err(e) => log::warn!("{}: installed, but {e}", app.name),
+                    },
+                    None => log::warn!("{}: the release tree has no bin/redrob to link", app.name),
+                }
+            }
+            Some(record(&version, kind, bin, files, false))
+        }),
         #[cfg(target_os = "freebsd")]
         PackageKind::TarGz => freebsd::install_tree(app, &file, job.paths).map(|(bin, files, root)| Some(record(&version, kind, bin, files, root))),
         other => Err(format!("{} isn't supported on this system", other.label())),
@@ -105,6 +118,9 @@ pub fn download_path(paths: &Paths, asset: &Asset) -> PathBuf {
 }
 
 #[allow(dead_code)]
+/// The suite id of Redrob Code, the shared engine (`~/.redrob/bin/redrob`).
+const ENGINE_ID: &str = "redrob-code";
+
 fn record(version: &str, kind: PackageKind, path: PathBuf, files: Vec<PathBuf>, needs_root: bool) -> Record {
     Record { version: version.to_string(), kind, path, installed_at: crate::now(), files, needs_root }
 }
@@ -237,7 +253,14 @@ pub fn uninstall(app: &CraftApp, installed: &Installed, record: Option<&Record>,
             None => Err("the launcher has no record of these files".into()),
         },
         #[cfg(target_os = "linux")]
-        InstallSource::Launcher if record.is_some_and(|r| r.kind == PackageKind::TarGz) => linux::remove_tree(app, &path, record),
+        InstallSource::Launcher if record.is_some_and(|r| r.kind == PackageKind::TarGz) => {
+            if app.id == ENGINE_ID
+                && let (Some(link), Some(tree)) = (crate::engine_link::engine_path(), path.parent().and_then(Path::parent))
+            {
+                crate::engine_link::withdraw(&link, tree);
+            }
+            linux::remove_tree(app, &path, record)
+        }
         #[cfg(target_os = "linux")]
         InstallSource::AppImage | InstallSource::Launcher => remove_appimage(app, &path, record),
         other => Err(format!("{} can't be removed from here", other.label())),

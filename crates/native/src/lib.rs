@@ -12,6 +12,7 @@ pub mod backend;
 pub mod desktop_entry;
 pub mod detect;
 pub mod engine;
+pub mod engine_link;
 pub mod feed_throttle;
 pub mod http;
 pub mod install;
