@@ -340,9 +340,7 @@ month	Dec	12월
 
 # Model downloads (models.rs) and the manifest's descriptions (assets/models/models.json).
 	Delete	삭제
-	Download the models the apps use	앱이 쓰는 모델 내려받기
 	Downloaded	내려받음
-	Downloaded into the folder each app reads them from	각 앱이 읽는 폴더에 바로 내려받아요
 	Every file is checked against its published SHA-256 before an app can use it.	앱이 쓰기 전에 모든 파일을 공개된 SHA-256과 대조해요.
 	Licence and source	라이선스와 출처
 	Models	모델
@@ -389,3 +387,52 @@ month	Dec	12월
 	It updates on its own when no app is using it. You can also update it now.	쓰는 앱이 없을 때 스스로 업데이트돼요. 지금 바로 할 수도 있어요.
 	Waiting until no app is using it. Using it now: {apps}. Update now stops the engine; apps reconnect on their own.	쓰는 앱이 없을 때까지 기다려요. 지금 쓰는 앱: {apps}. 지금 업데이트하면 엔진이 멈추고, 앱은 스스로 다시 연결돼요.
 	Keep the Redrob Code engine up to date on its own (when no app is using it)	Redrob Code 엔진을 스스로 최신으로 유지 (쓰는 앱이 없을 때)
+	Backend: {backend}	백엔드: {backend}
+	Background removal	배경 제거
+	Chat	대화
+	Chat and vision	대화와 이미지 이해
+	Coding	코딩
+	Every app	모든 앱
+	GPU memory	GPU 메모리
+	GPU not measured yet	GPU를 아직 측정하지 않았어요
+	Image editing	이미지 편집
+	Image to 3D	이미지에서 3D
+	Inpainting	인페인팅
+	Installing {runtime}: {done} of {total}	{runtime} 설치 중: {total} 중 {done}
+	Installing {runtime}…	{runtime} 설치 중…
+	Local models for every Redrob app. Nothing here is required: an app with no local model uses the Redrob Console.	모든 Redrob 앱이 쓰는 로컬 모델이에요. 필수는 아니에요. 로컬 모델이 없는 앱은 Redrob Console을 써요.
+	Local models: what runs on this computer	로컬 모델: 이 컴퓨터에서 돌아가는 것
+	Measure again	다시 측정
+	NPU: {name}	NPU: {name}
+	Needs about {gb} GB of {kind}	{kind} 약 {gb} GB가 필요해요
+	No GPU found; models run on the CPU	GPU가 없어요. 모델은 CPU에서 돌아가요
+	No {runtime} build for this computer	이 컴퓨터용 {runtime} 빌드가 없어요
+	Not measured	측정 안 됨
+	Offer models that need PrismML's llama.cpp fork (Bonsai 2)	PrismML의 llama.cpp 포크가 필요한 모델도 보이기 (Bonsai 2)
+	RAM	RAM
+	Runs here	여기서 됨
+	Runs models up to about {gb} GB	약 {gb} GB까지의 모델이 돌아가요
+	Runs slowly	느리게 됨
+	Search embeddings	검색 임베딩
+	Selection	선택 영역
+	Serving at {url}	{url} 에서 서빙 중
+	Speech to text	음성을 글로
+	Starting…	시작하는 중…
+	Stem separation	음원 분리
+	Text recognition	글자 인식
+	Text to image	글로 이미지 생성
+	Text to speech	글을 음성으로
+	This computer	이 컴퓨터
+	Upscaling	업스케일
+	Vectorizing	벡터화
+	Voice detection	음성 구간 감지
+	Won't run here	여기서 안 됨
+	{free} free for models	모델용 여유 공간 {free}
+	{gb} GB RAM	RAM {gb} GB
+	{name} (memory not measured)	{name} (메모리 측정 안 됨)
+	{name}, {gb} GB	{name}, {gb} GB
+	{name}, {gb} GB unified memory	{name}, 통합 메모리 {gb} GB
+	{n} cores	{n}코어
+	{runtime} is installed on first start	{runtime}은 처음 시작할 때 설치돼요
+	{runtime} ready	{runtime} 준비됨
+	{runtime}: {e}	{runtime}: {e}
