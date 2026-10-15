@@ -223,6 +223,9 @@ impl LauncherUi {
         {
             self.trigger_auto_updates();
         }
+        if self.caps.manage_apps {
+            ui.checkbox(&mut self.settings.engine_auto_update, tl!("Keep the Redrob Code engine up to date on its own (when no app is using it)"));
+        }
         ui.checkbox(&mut self.settings.notify, tl!("Notify me when an installed app has an update"));
         ui.checkbox(&mut self.settings.prereleases, tl!("Include pre-releases (betas and release candidates)"));
 

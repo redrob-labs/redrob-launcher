@@ -384,3 +384,9 @@ month	Dec	12월
 	Restart	다시 시작
 	Apps reconnect on their own after a stop or restart.	멈추거나 다시 시작해도 앱은 스스로 다시 연결돼요.
 	The engine holds the Redrob key, picks the model provider and masks personal details, once, for every app.	엔진이 Redrob 키를 들고, 모델 제공자를 고르고, 개인 정보를 가려요. 모든 앱을 위해 한 번만요.
+	Update now	지금 업데이트
+	Updating the engine…	엔진을 업데이트하는 중…
+	{installed} → {latest}	{installed} → {latest}
+	It updates on its own when no app is using it. You can also update it now.	쓰는 앱이 없을 때 스스로 업데이트돼요. 지금 바로 할 수도 있어요.
+	Waiting until no app is using it. Using it now: {apps}. Update now stops the engine; apps reconnect on their own.	쓰는 앱이 없을 때까지 기다려요. 지금 쓰는 앱: {apps}. 지금 업데이트하면 엔진이 멈추고, 앱은 스스로 다시 연결돼요.
+	Keep the Redrob Code engine up to date on its own (when no app is using it)	Redrob Code 엔진을 스스로 최신으로 유지 (쓰는 앱이 없을 때)

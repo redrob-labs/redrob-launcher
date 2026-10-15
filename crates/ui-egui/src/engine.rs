@@ -20,6 +20,8 @@ enum Ask {
     Stop,
     Restart,
     Install,
+    /// Update the engine now, even while apps are attached (they reconnect on their own).
+    UpdateNow,
 }
 
 fn minutes(secs: u64) -> String {
@@ -58,6 +60,15 @@ impl LauncherUi {
             tl!("Redrob Code engine"),
             tl!("One engine on this computer; every Redrob app runs its AI through it"),
         );
+        // The newer engine, when there is one, and what holds its install back.
+        let newer: Option<(String, String)> = self.entry(ENGINE_APP).and_then(|e| {
+            (e.status(self.platform, true) == redrob_launcher_core::AppStatus::UpdateAvailable)
+                .then(|| Some((e.installed_label()?, e.latest_label()?)))
+                .flatten()
+        });
+        let engine_job = self.entry(ENGINE_APP).is_some_and(|e| e.job.is_some());
+        let updating = engine_job || self.engine_update.step != crate::engine_update::Step::Idle;
+        let waiting_on = self.engine_update.waiting_on.clone();
         let Some(engine) = self.backend.engine() else { return true };
         let state = engine.state();
         let error = engine.last_error();
@@ -140,6 +151,46 @@ impl LauncherUi {
                 ui.add_space(8.0);
                 ui.add(egui::Label::new(RichText::new(msg(e)).size(12.5).color(widgets::tone_color(&t, Tone::Warn))).wrap());
             }
+            if let Some((installed, latest)) = &newer {
+                ui.add_space(10.0);
+                ui.separator();
+                ui.add_space(6.0);
+                ui.horizontal(|ui| {
+                    widgets::badge(ui, tl!("Update available"), widgets::tone_color(&t, Tone::Info));
+                    ui.add_space(8.0);
+                    widgets::hud(ui, &fmt(tl!("{installed} → {latest}"), &[("installed", installed), ("latest", latest)]), t.faint);
+                });
+                ui.add_space(6.0);
+                if updating {
+                    ui.horizontal(|ui| {
+                        ui.spinner();
+                        ui.label(RichText::new(tl!("Updating the engine…")).size(12.5).color(t.muted));
+                    });
+                    ui.ctx().request_repaint_after(std::time::Duration::from_millis(250));
+                } else if !waiting_on.is_empty() {
+                    ui.add(
+                        egui::Label::new(
+                            RichText::new(fmt(
+                                tl!("Waiting until no app is using it. Using it now: {apps}. Update now stops the engine; apps reconnect on their own."),
+                                &[("apps", &waiting_on.join(", "))],
+                            ))
+                            .size(12.5)
+                            .color(t.muted),
+                        )
+                        .wrap(),
+                    );
+                    ui.add_space(6.0);
+                    if widgets::button(ui, tl!("Update now"), Kind::Primary, 0.0).clicked() {
+                        ask = Some(Ask::UpdateNow);
+                    }
+                } else {
+                    ui.add(egui::Label::new(RichText::new(tl!("It updates on its own when no app is using it. You can also update it now.")).size(12.5).color(t.muted)).wrap());
+                    ui.add_space(6.0);
+                    if widgets::button(ui, tl!("Update now"), Kind::Primary, 0.0).clicked() {
+                        ask = Some(Ask::UpdateNow);
+                    }
+                }
+            }
         });
 
         if let Some(what) = ask {
@@ -159,6 +210,10 @@ impl LauncherUi {
                     if let Some(engine) = self.backend.engine() {
                         engine.restart();
                     }
+                }
+                Ask::UpdateNow => {
+                    self.engine_update.forced = true;
+                    self.engine_update_tick();
                 }
             }
         }
