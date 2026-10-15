@@ -100,6 +100,11 @@ pub struct Settings {
     /// Automatically download and install updates when found.
     #[serde(default)]
     pub auto_update: bool,
+    /// Keep the shared Redrob Code engine on its newest release by itself (when no app is using
+    /// it; "Update now" in the engine dialog overrides). On by default: the engine is shared
+    /// infrastructure, and a fix there is a fix for every app.
+    #[serde(default = "default_true")]
+    pub engine_auto_update: bool,
     /// Show a system notification when an installed app has an update.
     pub notify: bool,
     pub prereleases: bool,
@@ -152,8 +157,12 @@ pub fn is_appimage() -> bool {
     false
 }
 
+fn default_true() -> bool {
+    true
+}
+
 /// Default package kinds preferred on Linux based on how the launcher itself was installed.
-pub fn default_preferred_kinds() -> Vec<PackageKind> {
+fn default_preferred_kinds() -> Vec<PackageKind> {
     if is_flatpak_sandbox() {
         vec![PackageKind::Flatpak]
     } else if is_appimage() {
@@ -176,6 +185,7 @@ impl Default for Settings {
             show_on_current_desktop: true,
             check_every: CheckEvery::Hour,
             auto_update: false,
+            engine_auto_update: true,
             notify: true,
             prereleases: false,
             preferred_kinds: default_preferred_kinds(),

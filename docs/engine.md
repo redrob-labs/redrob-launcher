@@ -21,6 +21,25 @@ Start, stop and restart go through the engine's own `redrob service start --json
 service stop`; the launcher never signals a pid itself. Apps reconnect on their own after a stop or
 restart: each re-reads the daemon's record when a request fails.
 
+## Keeping it current
+
+The engine is updated by the launcher, not by the apps: each app only bundles a fallback sidecar
+for a machine with no engine at all, and the launcher owns the installed copy every app shares.
+The release check that finds a newer Redrob Code release drives `ui-egui/src/engine_update.rs`:
+
+| Daemon | What happens |
+| --- | --- |
+| not running | the new version is installed right away |
+| running, nobody attached | `service stop`, install, `service start` -- the daemon comes back on the new binary |
+| running, apps attached | nothing yet; the dialog shows **Update available**, which apps hold it back, and **Update now** |
+
+**Update now** stops the daemon even with apps attached (they reconnect on their own, as after
+any restart). A version that failed to install is not retried on its own; **Update now** retries
+it. The setting *Keep the Redrob Code engine up to date on its own* (on by default) turns the
+automatic part off; the dialog's **Update now** still works with it off. Swapping the binary under
+a running daemon is never done: on Windows the running exe is locked, and on every platform the
+daemon would keep serving the old version until something restarted it.
+
 ## The record
 
 `$HOME/.redrob/run/server.json` (mode 0600; `REDROB_RUN_DIR` overrides the folder):
