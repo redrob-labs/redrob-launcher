@@ -21,7 +21,6 @@ pub fn meta(app: &CraftApp) -> (&'static str, Option<&'static str>) {
     match app.id {
         "redrob-canvas" => ("Graphics;2DGraphics;RasterGraphics;Photography;", Some("redrob-canvas")),
         "redrob-office" => ("Office;Viewer;", Some("redrob-office")),
-        "redrob-studio" => ("Graphics;2DGraphics;RasterGraphics;Photography;", None),
         "redrob-cut" => ("AudioVideo;Video;AudioVideoEditing;", None),
         "redrob-browser" => ("Graphics;Publishing;", None),
         "redrob-shape" => ("Graphics;2DGraphics;VectorGraphics;", None),

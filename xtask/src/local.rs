@@ -24,7 +24,6 @@ const APPS: &[(&str, &str)] = &[
     ("redrob-cad", "Redrob CAD"),
     ("redrob-canvas", "Redrob Canvas"),
     ("redrob-design", "Redrob Design"),
-    ("redrob-studio", "Redrob Studio"),
     ("redrob-browser", "Redrob Browser"),
     ("redrob-code", "Redrob Code"),
     ("redrob-cowork", "Redrob Cowork"),

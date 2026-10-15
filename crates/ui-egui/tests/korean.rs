@@ -71,7 +71,6 @@ fn events() -> Vec<Event> {
         ("redrob-canvas", "0.5.0"),
         ("redrob-shape", "0.7.0"),
         ("redrob-cut", "0.4.0"),
-        ("redrob-studio", "0.4.0"),
         ("redrob-office", "0.4.0"),
         ("redrob-browser", "0.6.0"),
         ("redrob-code", "0.3.0"),
@@ -88,7 +87,7 @@ fn events() -> Vec<Event> {
         });
     }
     ev.push(Event::Latest { app: "redrob-recall".into(), latest: LatestRelease::None, from: Origin::RedrobApi });
-    let installed = [("redrob-canvas", "0.4.1"), ("redrob-studio", "0.4.0"), ("redrob-code", "0.3.0"), ("redrob-browser", "0.5.0")];
+    let installed = [("redrob-canvas", "0.4.1"), ("redrob-code", "0.3.0"), ("redrob-browser", "0.5.0")];
     for app in &SUITE {
         let inst = installed.iter().find(|(id, _)| *id == app.id).map(|(_, v)| Installed {
             version: version::parse(v),
