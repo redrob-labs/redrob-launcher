@@ -460,8 +460,18 @@ impl LauncherUi {
             return;
         }
         let Some(entry) = self.entry(ENGINE_APP) else { return };
-        let newer = (entry.status(self.platform, true) == AppStatus::UpdateAvailable).then(|| entry.latest_label()).flatten();
+        let status = entry.status(self.platform, true);
+        let newer = (status == AppStatus::UpdateAvailable).then(|| entry.latest_label()).flatten();
         let job_running = entry.job.is_some();
+        if self.engine_update.last_seen.as_ref() != Some(&(status.clone(), newer.clone())) {
+            log::info!(
+                "engine update: status {status:?}, installed {:?}, latest {:?}, step {:?}",
+                entry.installed_label(),
+                entry.latest_label(),
+                self.engine_update.step
+            );
+            self.engine_update.last_seen = Some((status, newer.clone()));
+        }
         if newer.is_none() {
             self.engine_update.settled();
         }
@@ -478,8 +488,18 @@ impl LauncherUi {
             engine: engine.state(),
             forced: self.engine_update.forced,
         };
+        let before = self.engine_update.waiting_on.clone();
         match self.engine_update.tick(&facts) {
-            Action::None | Action::Wait { .. } => {}
+            Action::None => {}
+            Action::Wait { apps } => {
+                if apps != before {
+                    log::info!(
+                        "engine update: {} is newer, waiting until no app is attached (now: {})",
+                        facts.newer.as_deref().unwrap_or("?"),
+                        apps.join(", ")
+                    );
+                }
+            }
             Action::Stop => {
                 log::info!("engine update: stopping the daemon before installing {}", facts.newer.as_deref().unwrap_or("?"));
                 if let Some(engine) = self.backend.engine() {
