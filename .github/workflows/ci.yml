@@ -48,6 +48,12 @@ jobs:
         if: runner.os == 'Linux'
         run: cargo fmt --all -- --check
 
+      # The colours are the design system's: theme/generated.rs must match the newest
+      # @redrob-labs/ui release (cargo xtask tokens writes it).
+      - name: Design-system tokens are current
+        if: runner.os == 'Linux'
+        run: cargo xtask tokens --check
+
       - name: Clippy
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
 

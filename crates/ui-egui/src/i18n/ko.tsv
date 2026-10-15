@@ -221,7 +221,6 @@ redrob-shape	Shape and shade 3D models by prompt	프롬프트로 3D 모델을 �
 redrob-cad	Design, constrain and iterate on parts with an agent	에이전트와 함께 부품을 설계하고 다듬어요
 redrob-canvas	Paint and edit images with an agent	에이전트와 함께 그림을 그리고 이미지를 편집해요
 redrob-design	Open .fig and .pen files and design by prompt	.fig·.pen 파일을 열고 프롬프트로 디자인해요
-redrob-studio	Make images and audio on your own GPU	내 GPU에서 이미지와 오디오를 만들어요
 redrob-browser	A browser whose agent reads, acts on and automates the web	에이전트가 웹을 읽고, 움직이고, 자동화하는 브라우저
 redrob-code	The AI coding agent for your terminal	터미널에서 쓰는 AI 코딩 에이전트
 redrob-cowork	Work with AI agents on your own files	내 파일로 AI 에이전트와 함께 일해요

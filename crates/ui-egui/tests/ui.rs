@@ -74,7 +74,6 @@ fn events() -> Vec<Event> {
         ("redrob-canvas", "0.5.0"),
         ("redrob-shape", "0.7.0"),
         ("redrob-cut", "0.4.0"),
-        ("redrob-studio", "0.4.0"),
         ("redrob-office", "0.4.0"),
         ("redrob-browser", "0.6.0"),
         ("redrob-code", "0.3.0"),
@@ -90,7 +89,7 @@ fn events() -> Vec<Event> {
         });
     }
     ev.push(Event::Latest { app: "redrob-recall".into(), latest: LatestRelease::None, from: Origin::RedrobApi });
-    let installed = [("redrob-canvas", "0.4.1"), ("redrob-studio", "0.4.0"), ("redrob-code", "0.3.0"), ("redrob-browser", "0.5.0")];
+    let installed = [("redrob-canvas", "0.4.1"), ("redrob-code", "0.3.0"), ("redrob-browser", "0.5.0")];
     for app in &SUITE {
         let inst = installed.iter().find(|(id, _)| *id == app.id).map(|(_, v)| Installed {
             version: version::parse(v),
@@ -197,7 +196,7 @@ fn grid_shows_every_status_and_installs_on_click() {
     snapshot(&mut h, "grid-dark");
     // Statuses the user asked for: available, installed and up to date, update with version.
     assert!(h.query_all_by_label("Available to install").count() >= 3);
-    assert!(h.query_all_by_label("Installed · up to date").count() >= 2);
+    assert!(h.query_all_by_label("Installed · up to date").count() >= 1);
     h.get_by_label("Update to 0.5.0");
     h.get_by_label("Update to 0.6.0");
     h.get_by_label_contains("0.4.1 installed → 0.5.0 released");
@@ -347,9 +346,9 @@ fn each_cancellation_says_what_it_called_off() {
     let finished = |app: &str, why: &str| Event::JobFinished { app: app.into(), result: Err(why.into()) };
     let mut ev = events();
     // An uninstall called off while it waited for the installer.
-    ev.push(Event::Progress { app: "redrob-studio".into(), phase: JobPhase::Removing });
-    ev.push(Event::Progress { app: "redrob-studio".into(), phase: JobPhase::Waiting });
-    ev.push(finished("redrob-studio", CANCELLED));
+    ev.push(Event::Progress { app: "redrob-cut".into(), phase: JobPhase::Removing });
+    ev.push(Event::Progress { app: "redrob-cut".into(), phase: JobPhase::Waiting });
+    ev.push(finished("redrob-cut", CANCELLED));
     // The launcher's own update, cancelled while it waited.
     ev.push(Event::LauncherUpdate(release("redrob-launcher", "0.2.0", NOW)));
     ev.push(Event::Progress { app: "redrob-launcher".into(), phase: JobPhase::Waiting });
@@ -447,12 +446,12 @@ fn every_table_column_sorts_both_ways() {
     h.get_by_label("Installed").click();
     h.run_steps(3);
     let o = order(&h);
-    assert_eq!(&o[..4], ["Redrob Browser", "Redrob Canvas", "Redrob Studio", "Redrob Code"], "{o:?}");
+    assert_eq!(&o[..3], ["Redrob Browser", "Redrob Canvas", "Redrob Code"], "{o:?}");
     // Reversed: lowest first, the empty cells still last.
     h.get_by_label("Installed").click();
     h.run_steps(3);
     let o = order(&h);
-    assert_eq!(&o[..4], ["Redrob Code", "Redrob Studio", "Redrob Canvas", "Redrob Browser"], "{o:?}");
+    assert_eq!(&o[..3], ["Redrob Code", "Redrob Canvas", "Redrob Browser"], "{o:?}");
     // Kind: A to Z.
     h.get_by_label("Kind").click();
     h.run_steps(3);
@@ -470,7 +469,7 @@ fn every_table_column_sorts_both_ways() {
     h.get_by_label("App").click();
     h.run_steps(3);
     let o = order(&h);
-    assert_eq!(o.first().map(String::as_str), Some("Redrob Studio"), "{o:?}");
+    assert_eq!(o.first().map(String::as_str), Some("Redrob Shape"), "{o:?}");
 }
 
 #[test]
@@ -836,7 +835,7 @@ fn web_build_offers_downloads() {
     let (mut h, _) = harness(ViewMode::Grid, egui::Theme::Dark, false);
     h.run_steps(8);
     snapshot(&mut h, "web-grid-dark");
-    assert!(h.query_all_by_label("Download for macOS").count() >= 8);
+    assert!(h.query_all_by_label("Download for macOS").count() >= 7);
     assert!(h.query_by_label("Install").is_none());
 }
 
