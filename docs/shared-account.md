@@ -18,7 +18,7 @@ workspace API key named **Redrob Launcher**. Nobody copies a key by hand. The co
 
 | Platform | Path |
 |---|---|
-| Linux, FreeBSD | `$XDG_CONFIG_HOME/redrob-shared/account.json` (`~/.config/redrob-shared/account.json`) |
+| Linux | `$XDG_CONFIG_HOME/redrob-shared/account.json` (`~/.config/redrob-shared/account.json`) |
 | macOS | `~/Library/Application Support/ai.redrob.shared/account.json` |
 | Windows | `%APPDATA%\Redrob\Shared\account.json` |
 

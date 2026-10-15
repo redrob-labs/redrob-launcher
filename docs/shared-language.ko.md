@@ -28,7 +28,7 @@ Redrob Canvas, Film, Shape, Code, ...  이 파일을 읽어 그 언어로 그림
 
 | 플랫폼 | 경로 |
 |---|---|
-| Linux, FreeBSD | `$XDG_CONFIG_HOME/redrob-shared/language.json` (`~/.config/redrob-shared/language.json`) |
+| Linux | `$XDG_CONFIG_HOME/redrob-shared/language.json` (`~/.config/redrob-shared/language.json`) |
 | macOS | `~/Library/Application Support/ai.redrob.shared/language.json` |
 | Windows | `%APPDATA%\Redrob\Shared\language.json` |
 

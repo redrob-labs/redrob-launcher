@@ -1,4 +1,4 @@
-//! Reading system package lists (dpkg, rpm, pacman, Flatpak) and matching them to Redrob apps.
+//! Reading system package lists (dpkg, rpm, pacman) and matching them to Redrob apps.
 //!
 //! Pure functions over the tools' text output, so they're tested on every platform; only Linux
 //! runs the tools (`detect::linux`).
@@ -9,7 +9,7 @@ use redrob_launcher_core::{CraftApp, InstallSource, version};
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Package {
     pub manager: InstallSource,
-    /// The package's name (`redrob-canvas-bin`) or Flatpak app id.
+    /// The package's name (`redrob-canvas-bin`).
     pub name: String,
     /// As the package manager reports it (`0.5.0-1`); empty when it doesn't say.
     pub version: String,
@@ -46,30 +46,12 @@ pub fn parse_pacman(text: &str) -> Vec<(String, String)> {
         .collect()
 }
 
-/// `flatpak list --app --columns=application,version`: the version column is often empty for
-/// bundles built from a release tarball.
-pub fn parse_flatpak_list(text: &str) -> Vec<(String, String)> {
-    text.lines()
-        .filter_map(|line| {
-            let mut f = line.split('\t');
-            let id = f.next()?.trim();
-            (!id.is_empty()).then(|| (id.to_string(), f.next().unwrap_or("").trim().to_string()))
-        })
-        .collect()
-}
-
-/// The `Version:` line of `flatpak info <id>`.
-pub fn parse_flatpak_info(text: &str) -> Option<String> {
-    text.lines().find_map(|l| l.trim().strip_prefix("Version:").map(|v| v.trim().to_string())).filter(|v| !v.is_empty())
-}
-
 /// The package names a Redrob app may be installed under with `manager`. On Arch the AUR carries
 /// each app three ways: built from source (`redrob-canvas`), the release binary (`redrob-canvas-bin`)
 /// and the latest commit (`redrob-canvas-git`). Debian and RPM packages may use either the short stem
 /// (`redrob-canvas`) or the reverse-DNS bundle id (`ai.redrob.canvas`).
 pub fn candidate_names(app: &CraftApp, manager: InstallSource) -> Vec<String> {
     match manager {
-        InstallSource::Flatpak => vec![app.bundle_id()],
         InstallSource::Pacman => {
             app.stems().flat_map(|s| [s.to_string(), format!("{s}-bin"), format!("{s}-git")]).chain(std::iter::once(app.bundle_id())).collect()
         }
@@ -107,13 +89,6 @@ mod tests {
         );
         assert_eq!(parse_rpm("redrob-query|0.3.0\n"), [("redrob-query".into(), "0.3.0".into())]);
         assert_eq!(parse_pacman("redrob-canvas-bin 0.5.0-1\nlinux 6.11.1.arch1-1\n").len(), 2);
-        assert_eq!(
-            parse_flatpak_list("ai.redrob.code\t\nai.redrob.cad\t0.3.0\n"),
-            [("ai.redrob.code".into(), String::new()), ("ai.redrob.cad".into(), "0.3.0".into())]
-        );
-        let info = "\nWordCraft - Word processor\n\n          ID: ai.redrob.code\n     Version: 0.3.0\n      Branch: master\n";
-        assert_eq!(parse_flatpak_info(info).as_deref(), Some("0.3.0"));
-        assert_eq!(parse_flatpak_info("Version: \n"), None);
     }
 
     #[test]
@@ -152,11 +127,11 @@ mod tests {
     fn prefers_managers_in_order_and_reads_revisions() {
         let photo = CraftApp::by_id("redrob-canvas").unwrap();
         let mut installed = pkgs(InstallSource::Deb, parse_dpkg("redrob-canvas|installed|0.5.0-1\n"));
-        installed.extend(pkgs(InstallSource::Flatpak, parse_flatpak_list("ai.redrob.canvas\t0.4.0\n")));
-        let hit = find(photo, &installed, &[InstallSource::Deb, InstallSource::Flatpak]).unwrap();
+        installed.extend(pkgs(InstallSource::Rpm, parse_rpm("ai.redrob.canvas|0.4.0\n")));
+        let hit = find(photo, &installed, &[InstallSource::Deb, InstallSource::Rpm]).unwrap();
         assert_eq!(hit.manager, InstallSource::Deb);
         // 0.5.0-1 is the 0.5.0 release, not a pre-release of it.
         assert_eq!(version_of(hit).unwrap().to_string(), "0.5.0");
-        assert_eq!(find(photo, &installed, &[InstallSource::Flatpak]).unwrap().version, "0.4.0");
+        assert_eq!(find(photo, &installed, &[InstallSource::Rpm]).unwrap().version, "0.4.0");
     }
 }

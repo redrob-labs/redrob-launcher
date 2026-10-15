@@ -2,7 +2,7 @@
 //!
 //! - macOS: a LaunchAgent in `~/Library/LaunchAgents`.
 //! - Windows: a value under `HKCU\…\CurrentVersion\Run`.
-//! - Linux and FreeBSD: an XDG autostart entry in `~/.config/autostart`.
+//! - Linux: an XDG autostart entry in `~/.config/autostart`.
 //!
 //! The launcher starts hidden in the tray when it's started this way (`--hidden`).
 

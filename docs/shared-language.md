@@ -30,7 +30,7 @@ Next to the shared account file (`docs/shared-account.md`):
 
 | Platform | Path |
 |---|---|
-| Linux, FreeBSD | `$XDG_CONFIG_HOME/redrob-shared/language.json` (`~/.config/redrob-shared/language.json`) |
+| Linux | `$XDG_CONFIG_HOME/redrob-shared/language.json` (`~/.config/redrob-shared/language.json`) |
 | macOS | `~/Library/Application Support/ai.redrob.shared/language.json` |
 | Windows | `%APPDATA%\Redrob\Shared\language.json` |
 

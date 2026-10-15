@@ -15,7 +15,6 @@ pub enum Os {
     Windows,
     MacOs,
     Linux,
-    FreeBsd,
 }
 
 impl Os {
@@ -24,7 +23,6 @@ impl Os {
             Self::Windows => "Windows",
             Self::MacOs => "macOS",
             Self::Linux => "Linux",
-            Self::FreeBsd => "FreeBSD",
         }
     }
 }
@@ -60,8 +58,7 @@ pub enum PackageKind {
     AppImage,
     Deb,
     Rpm,
-    Flatpak,
-    /// Linux or FreeBSD tarball (`bin/<app>`, `share/…`).
+    /// Linux tarball (`bin/<app>`, `share/…`).
     TarGz,
 }
 
@@ -74,7 +71,6 @@ impl PackageKind {
             Self::AppImage => "AppImage",
             Self::Deb => "Debian package (.deb)",
             Self::Rpm => "RPM package (.rpm)",
-            Self::Flatpak => "Flatpak bundle",
             Self::TarGz => "Tarball (.tar.gz)",
         }
     }
@@ -87,7 +83,6 @@ impl PackageKind {
             Self::AppImage => ".AppImage",
             Self::Deb => ".deb",
             Self::Rpm => ".rpm",
-            Self::Flatpak => ".flatpak",
             Self::TarGz => ".tar.gz",
         }
     }
@@ -109,8 +104,6 @@ impl Platform {
             Os::MacOs
         } else if cfg!(target_os = "linux") {
             Os::Linux
-        } else if cfg!(target_os = "freebsd") {
-            Os::FreeBsd
         } else {
             return None;
         };
@@ -148,8 +141,6 @@ impl Platform {
             (Os::Linux, Arch::Arm64) => &["linux-aarch64"],
             (Os::Linux, Arch::Riscv64) => &["linux-riscv64"],
             (Os::Linux, Arch::X86) => &[],
-            (Os::FreeBsd, Arch::X64) => &["freebsd-x86_64"],
-            (Os::FreeBsd, _) => &[],
         }
     }
 
@@ -159,7 +150,6 @@ impl Platform {
             Os::Windows => &[PackageKind::Msi, PackageKind::PortableZip],
             Os::MacOs => &[PackageKind::Dmg],
             Os::Linux => &[PackageKind::AppImage, PackageKind::TarGz],
-            Os::FreeBsd => &[PackageKind::TarGz],
         }
     }
 
@@ -168,8 +158,7 @@ impl Platform {
         match self.os {
             Os::Windows => &[PackageKind::Msi, PackageKind::PortableZip],
             Os::MacOs => &[PackageKind::Dmg],
-            Os::Linux => &[PackageKind::AppImage, PackageKind::Deb, PackageKind::Rpm, PackageKind::Flatpak, PackageKind::TarGz],
-            Os::FreeBsd => &[PackageKind::TarGz],
+            Os::Linux => &[PackageKind::AppImage, PackageKind::Deb, PackageKind::Rpm, PackageKind::TarGz],
         }
     }
 }
@@ -186,16 +175,8 @@ pub struct AssetName {
 /// Reads `<stem>-<version>-<os>-<arch>[-portable].<ext>`; `None` for checksums, zsync files, CLI
 /// and web bundles, or anything else.
 pub fn parse_asset_name(name: &str, stems: &[&str]) -> Option<AssetName> {
-    const KINDS: [PackageKind; 8] = [
-        PackageKind::PortableZip,
-        PackageKind::TarGz,
-        PackageKind::Msi,
-        PackageKind::Dmg,
-        PackageKind::AppImage,
-        PackageKind::Deb,
-        PackageKind::Rpm,
-        PackageKind::Flatpak,
-    ];
+    const KINDS: [PackageKind; 7] =
+        [PackageKind::PortableZip, PackageKind::TarGz, PackageKind::Msi, PackageKind::Dmg, PackageKind::AppImage, PackageKind::Deb, PackageKind::Rpm];
     let (kind, base) = KINDS.iter().find_map(|k| name.strip_suffix(k.suffix()).map(|b| (*k, b)))?;
     for stem in stems {
         let Some(rest) = base.strip_prefix(stem).and_then(|r| r.strip_prefix('-')) else { continue };
@@ -236,7 +217,6 @@ mod tests {
     }
 
     const PHOTO: &[&str] = &[
-        "redrob-canvas-0.5.0-freebsd-x86_64.tar.gz",
         "redrob-canvas-0.5.0-linux-aarch64.AppImage",
         "redrob-canvas-0.5.0-linux-aarch64.AppImage.zsync",
         "redrob-canvas-0.5.0-linux-aarch64.deb",
@@ -279,7 +259,6 @@ mod tests {
         assert_eq!(pick(Os::Linux, Arch::Arm64, &[PackageKind::AppImage]).as_deref(), Some("redrob-canvas-0.5.0-linux-aarch64.AppImage"));
         assert_eq!(pick(Os::Linux, Arch::Arm64, &[PackageKind::TarGz]), None);
         assert_eq!(pick(Os::Linux, Arch::Riscv64, &[PackageKind::TarGz]).as_deref(), Some("redrob-canvas-0.5.0-linux-riscv64.tar.gz"));
-        assert_eq!(pick(Os::FreeBsd, Arch::X64, &[PackageKind::TarGz]).as_deref(), Some("redrob-canvas-0.5.0-freebsd-x86_64.tar.gz"));
         // Preference order across kinds.
         assert_eq!(
             pick(Os::Windows, Arch::X64, &[PackageKind::PortableZip, PackageKind::Msi]).as_deref(),
@@ -316,8 +295,6 @@ mod tests {
             "redrob-canvas-0.5.0-linux-x86_64.deb",
             "redrob-canvas-0.5.0-linux-aarch64.rpm",
             "redrob-canvas-0.5.0-linux-x86_64.rpm",
-            "redrob-canvas-0.5.0-linux-aarch64.flatpak",
-            "redrob-canvas-0.5.0-linux-x86_64.flatpak",
             "redrob-canvas-0.5.0-linux-aarch64.tar.gz",
             "redrob-canvas-0.5.0-linux-x86_64.tar.gz",
         ]);
@@ -325,7 +302,7 @@ mod tests {
         let p_x64 = Platform { os: Os::Linux, arch: Arch::X64 };
         let p_arm64 = Platform { os: Os::Linux, arch: Arch::Arm64 };
 
-        for kind in [PackageKind::AppImage, PackageKind::Deb, PackageKind::Rpm, PackageKind::Flatpak, PackageKind::TarGz] {
+        for kind in [PackageKind::AppImage, PackageKind::Deb, PackageKind::Rpm, PackageKind::TarGz] {
             let pick_x64 = pick_asset(&multi_arch_release, &["redrob-canvas"], p_x64, &[kind]).map(|(a, _)| a.name.clone());
             assert!(pick_x64.as_deref().unwrap().contains("linux-x86_64"), "Expected x86_64 asset for {kind:?}, got {pick_x64:?}");
 
@@ -338,10 +315,9 @@ mod tests {
             "redrob-canvas-0.5.0-linux-aarch64.AppImage",
             "redrob-canvas-0.5.0-linux-aarch64.deb",
             "redrob-canvas-0.5.0-linux-aarch64.rpm",
-            "redrob-canvas-0.5.0-linux-aarch64.flatpak",
             "redrob-canvas-0.5.0-linux-aarch64.tar.gz",
         ]);
-        for kind in [PackageKind::AppImage, PackageKind::Deb, PackageKind::Rpm, PackageKind::Flatpak, PackageKind::TarGz] {
+        for kind in [PackageKind::AppImage, PackageKind::Deb, PackageKind::Rpm, PackageKind::TarGz] {
             assert_eq!(
                 pick_asset(&arm_only_release, &["redrob-canvas"], p_x64, &[kind]),
                 None,

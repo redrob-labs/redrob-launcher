@@ -18,7 +18,7 @@ English: [README.md](./README.md)
   SHA-256으로 검사한 뒤 설치합니다.
 - 설치된 앱과 버전을 보여 주고, 새 버전이 나오면 알리고 업데이트합니다.
 - 트레이와 메뉴 막대에 머뭅니다. 순수 Rust와 egui로 만들어 Electron도 웹뷰도 없습니다.
-- macOS·Windows·Linux·FreeBSD 네이티브, 웹 빌드는 앱 목록과 다운로드 링크를 보여 줍니다.
+- macOS·Windows·Linux 네이티브, 웹 빌드는 앱 목록과 다운로드 링크를 보여 줍니다.
 - 영어와 한국어. Windows 설치 마법사 첫 페이지에서 고르면 런처와 모든 레드롭 앱이 그 언어를 따릅니다. 앱별로
   다르게도 됩니다([docs/shared-language.ko.md](docs/shared-language.ko.md)).
 

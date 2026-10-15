@@ -16,7 +16,7 @@ English: [shared-account.md](./shared-account.md)
 
 | 플랫폼 | 경로 |
 |---|---|
-| Linux, FreeBSD | `$XDG_CONFIG_HOME/redrob-shared/account.json` (`~/.config/redrob-shared/account.json`) |
+| Linux | `$XDG_CONFIG_HOME/redrob-shared/account.json` (`~/.config/redrob-shared/account.json`) |
 | macOS | `~/Library/Application Support/ai.redrob.shared/account.json` |
 | Windows | `%APPDATA%\Redrob\Shared\account.json` |
 

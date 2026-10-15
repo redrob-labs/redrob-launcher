@@ -59,7 +59,6 @@ fn os_key(os: Os) -> Option<&'static str> {
         Os::MacOs => Some("macos"),
         Os::Linux => Some("linux"),
         Os::Windows => Some("windows"),
-        Os::FreeBsd => None,
     }
 }
 
@@ -127,7 +126,6 @@ mod tests {
         );
         assert_eq!(stock.asset_for(Os::MacOs, Arch::Arm64, Backend::Metal).map(|(k, _)| k), Some("macos-arm64"));
         assert_eq!(stock.asset_for(Os::MacOs, Arch::X64, Backend::Cpu), None);
-        assert_eq!(stock.asset_for(Os::FreeBsd, Arch::X64, Backend::Cpu), None);
         // The fork ships CPU builds where it has no Vulkan.
         let prism = &r["llama-server-prism"];
         assert_eq!(prism.asset_for(Os::Windows, Arch::X64, Backend::Vulkan).map(|(k, _)| k), Some("windows-x64-cpu"));

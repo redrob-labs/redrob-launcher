@@ -128,7 +128,6 @@
 	AppImage	AppImage
 	Debian package (.deb)	Debian 패키지(.deb)
 	RPM package (.rpm)	RPM 패키지(.rpm)
-	Flatpak bundle	Flatpak 번들
 	Tarball (.tar.gz)	압축 파일(.tar.gz)
 	Video editing	영상 편집
 	3D	3D

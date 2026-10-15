@@ -156,7 +156,7 @@ mod tests {
         assert_eq!(p("0.5.0-2.fc40").as_deref(), Some("0.5.0"));
         // AUR -git packages: the release the snapshot follows.
         assert_eq!(p("0.3.0.r47.g47f9306-1").as_deref(), Some("0.3.0"));
-        // Plain versions (rpm %{VERSION}, Flatpak) pass through.
+        // Plain versions (rpm %{VERSION}) pass through.
         assert_eq!(p("0.4.0").as_deref(), Some("0.4.0"));
         assert_eq!(p("0.5").as_deref(), Some("0.5.0"));
         // A version inside text, as `--version` prints it.
