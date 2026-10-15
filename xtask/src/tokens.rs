@@ -145,7 +145,7 @@ pub fn generate(version: &str, json: &serde_json::Value) -> Result<String, Strin
         }
         out.push_str("}\n");
         if theme == "light" {
-            out.push_str("\n");
+            out.push('\n');
         }
     }
     Ok(out)
