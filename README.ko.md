@@ -12,7 +12,7 @@ English: [README.md](./README.md)
 
 ## 무엇인가
 
-- 레드롭 앱 전부를 보여 줍니다: Cut, Shape, CAD, Canvas, Design, Studio, Browser, Code, Cowork,
+- 레드롭 앱 전부를 보여 줍니다: Cut, Shape, CAD, Canvas, Design, Browser, Code, Cowork,
   Office, Query, Recall.
 - 각 앱의 GitHub 릴리스를 읽어 내 OS와 CPU에 맞는 빌드(DMG, MSI, AppImage, .deb, .rpm 등)를 고르고,
   SHA-256으로 검사한 뒤 설치합니다.

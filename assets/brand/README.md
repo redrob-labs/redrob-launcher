@@ -20,6 +20,6 @@ Rules that bind here (design system `10-logo.md`, `Logos/README.md`, `Products/R
   size is the next larger file resized down. Nothing is upscaled, so no icon here is larger than 512.
 - The lockup variant is picked by ground; it is never tinted to fit one.
 
-Redrob Cut, Shape, CAD, Canvas, Studio, IDE, Cowork, Query and Recall have no product mark in the
+Redrob Cut, Shape, CAD, Canvas, IDE, Cowork, Query and Recall have no product mark in the
 design system yet, so they carry the Redrob tile. When a mark is added to `Products/`, copy its SVG
 here, add it to `SHA256SUMS` and to `packaging/brand-assets.sh`, and rerun the script.
