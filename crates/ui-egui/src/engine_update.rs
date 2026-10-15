@@ -69,6 +69,8 @@ pub struct Flow {
     pub attempted: std::collections::BTreeSet<String>,
     /// What the dialog shows: the apps holding the update back, if any.
     pub waiting_on: Vec<String>,
+    /// The last (status, newer) logged, so the log says when the picture changes and not every frame.
+    pub last_seen: Option<(redrob_launcher_core::AppStatus, Option<String>)>,
 }
 
 impl Flow {
