@@ -143,7 +143,10 @@ pub fn generate(version: &str, json: &serde_json::Value) -> Result<String, Strin
             let value = colour(token, theme)?;
             out.push_str(&format!("    /// {doc} (`{token}`).\n    pub const {}: u32 = 0x{value:06x};\n", role.to_uppercase()));
         }
-        out.push_str("}\n\n");
+        out.push_str("}\n");
+        if theme == "light" {
+            out.push_str("\n");
+        }
     }
     Ok(out)
 }
