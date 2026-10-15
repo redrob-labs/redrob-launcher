@@ -8,13 +8,16 @@
 
 pub mod account;
 pub mod catalog;
+pub mod device;
 pub mod distro;
 pub mod engine;
 pub mod feed;
 pub mod models;
 pub mod platform;
 pub mod protocol;
+pub mod registry;
 pub mod release;
+pub mod runtimes;
 pub mod status;
 pub mod time;
 pub mod version;

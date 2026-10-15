@@ -1,0 +1,72 @@
+{
+  "$comment": "Inference runtimes the Redrob Launcher downloads for llama-server models. Each archive is pinned to a release tag, its SHA-256 and byte size. Asset keys: <os>-<arch>[-<backend>]; macOS arm64 uses Metal. The Prism build is required for PQ2_0 / PTQ1_0 ternary GGUFs (Bonsai 2).",
+  "version": 1,
+  "runtimes": {
+    "llama-server": {
+      "release": "https://github.com/ggml-org/llama.cpp/releases/tag/b11669",
+      "tag": "b11669",
+      "binary": "llama-server",
+      "note": "b11669 is the build the llama.cpp v0.7.0 release (2026-10-15) points at via nightly-tag.txt; the v0.7.0 tag itself carries no binaries. The CUDA archives expect the matching CUDA runtime (cudart-llama-*.tar.gz / .zip on the same release) or a system CUDA 12.x install.",
+      "assets": {
+        "macos-arm64": {
+          "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11669/llama-b11669-bin-macos-arm64.tar.gz",
+          "sha256": "dbed55493d72bc1ba2babc8770d669c2289b5bc4ee9fb2a4dfc158d45b7d13fd",
+          "size": 12191582
+        },
+        "linux-x64-cuda": {
+          "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11669/llama-b11669-bin-ubuntu-cuda-12.8-x64.tar.gz",
+          "sha256": "4703ed1a3cd6e8504affb6cb9866f501e96d634d68a002dc9a8251c9e2819b49",
+          "size": 172525113
+        },
+        "linux-x64-vulkan": {
+          "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11669/llama-b11669-bin-ubuntu-vulkan-x64.tar.gz",
+          "sha256": "e8709e5ba6c1b093dea7f3de57f4aba842f9a188fba6b465782d65d6fcfa4d9f",
+          "size": 30497889
+        },
+        "windows-x64-cuda": {
+          "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11669/llama-b11669-bin-win-cuda-12.4-x64.zip",
+          "sha256": "c2da1f73ed176ae093ac5aceb978a7b167a16113f6d74c6789eeaee2135cb8dc",
+          "size": 266582698
+        },
+        "windows-x64-vulkan": {
+          "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11669/llama-b11669-bin-win-vulkan-x64.zip",
+          "sha256": "2c07574e7bde71321cb785282b20cc821e951132149eeceeea32ddebdbf0598e",
+          "size": 32182350
+        }
+      }
+    },
+    "llama-server-prism": {
+      "release": "https://github.com/PrismML-Eng/llama.cpp/releases/tag/prism-b10777-e3de715",
+      "tag": "prism-b10777-e3de715",
+      "binary": "llama-server",
+      "note": "PrismML-Eng/llama.cpp fork with the ternary PQ2_0 / PTQ1_0 kernels (CUDA, Metal, CPU). No Vulkan asset is listed because the ternary kernels do not target Vulkan; CPU archives cover the cpu backend.",
+      "assets": {
+        "macos-arm64": {
+          "url": "https://github.com/PrismML-Eng/llama.cpp/releases/download/prism-b10777-e3de715/llama-prism-b10777-e3de715-bin-macos-arm64.tar.gz",
+          "sha256": "bd22ade1ece9dbcd7140a171044a50d5de37c1eb6d020ab83f61c86dfc0323a8",
+          "size": 11567567
+        },
+        "linux-x64-cuda": {
+          "url": "https://github.com/PrismML-Eng/llama.cpp/releases/download/prism-b10777-e3de715/llama-prism-b10777-e3de715-bin-linux-cuda-12.8-x64.tar.gz",
+          "sha256": "aa53e2256276e683386effdc8be34b3bd1cdf64ef9dc5d492da69227ac52531b",
+          "size": 208198074
+        },
+        "linux-x64-cpu": {
+          "url": "https://github.com/PrismML-Eng/llama.cpp/releases/download/prism-b10777-e3de715/llama-prism-b10777-e3de715-bin-ubuntu-x64.tar.gz",
+          "sha256": "3f97b6fbec0065fede2be92f05df531c1050636fc2613e1ba0d975249df19713",
+          "size": 17882710
+        },
+        "windows-x64-cuda": {
+          "url": "https://github.com/PrismML-Eng/llama.cpp/releases/download/prism-b10777-e3de715/llama-prism-b10777-e3de715-bin-win-cuda-12.4-x64.zip",
+          "sha256": "fa5874a1412e251a6efb13f289e97bacbbb4e7fc6714c1836b4fc6c1dc863462",
+          "size": 313951324
+        },
+        "windows-x64-cpu": {
+          "url": "https://github.com/PrismML-Eng/llama.cpp/releases/download/prism-b10777-e3de715/llama-prism-b10777-e3de715-bin-win-cpu-x64.zip",
+          "sha256": "cff7eeff19163e6263720618cf98023715b8dac14d0873f5be0918765de323c4",
+          "size": 19530958
+        }
+      }
+    }
+  }
+}
