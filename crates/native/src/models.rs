@@ -198,8 +198,6 @@ fn unmeasured() -> Device {
             Os::MacOs
         } else if cfg!(windows) {
             Os::Windows
-        } else if cfg!(target_os = "freebsd") {
-            Os::FreeBsd
         } else {
             Os::Linux
         },

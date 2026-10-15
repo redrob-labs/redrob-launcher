@@ -16,8 +16,6 @@ fn os() -> Os {
         Os::MacOs
     } else if cfg!(windows) {
         Os::Windows
-    } else if cfg!(target_os = "freebsd") {
-        Os::FreeBsd
     } else {
         Os::Linux
     }
@@ -117,12 +115,6 @@ fn ram_mb() -> u64 {
         if let Some(b) = capture("powershell", &["-NoProfile", "-Command", "(Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory"], PROBE)
             .and_then(|s| s.trim().parse::<u64>().ok())
         {
-            return b / (1024 * 1024);
-        }
-    }
-    #[cfg(target_os = "freebsd")]
-    {
-        if let Some(b) = capture("sysctl", &["-n", "hw.physmem"], PROBE).and_then(|s| s.trim().parse::<u64>().ok()) {
             return b / (1024 * 1024);
         }
     }
