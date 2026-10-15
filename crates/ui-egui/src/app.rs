@@ -54,6 +54,18 @@ pub trait Host {
     }
     /// Quit the launcher for real (not just hide to the tray).
     fn quit(&mut self) {}
+    /// The language every Redrob app should draw in changed (the launcher's own language, or a
+    /// per-app override). The desktop shell publishes it in the shared language file.
+    fn language_changed(&mut self, _choice: &LanguageChoice) {}
+}
+
+/// The language the launcher publishes for the other apps: what it draws in itself (resolved,
+/// never `auto`), whether a person chose it, and per-app overrides (app id to code).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct LanguageChoice {
+    pub language: String,
+    pub chosen: bool,
+    pub apps: std::collections::BTreeMap<String, String>,
 }
 
 pub(crate) struct Toast {
@@ -115,6 +127,8 @@ pub struct LauncherUi {
     /// Versions of apps or the launcher already queued for auto-update during this session,
     /// preventing repeated install loops if an update fails or is in progress.
     pub(crate) auto_update_attempted: std::collections::BTreeSet<(String, String)>,
+    /// What was last handed to [`Host::language_changed`], so it is called on a change only.
+    published_language: Option<LanguageChoice>,
 }
 
 /// The language to draw in: the preference, or English where it needs a Chinese font the system
@@ -164,6 +178,7 @@ impl LauncherUi {
             last_detect: 0,
             was_focused: true,
             auto_update_attempted: std::collections::BTreeSet::new(),
+            published_language: None,
         }
     }
 
@@ -513,12 +528,27 @@ impl LauncherUi {
         }
     }
 
+    /// The language to publish for the other apps: the one the launcher draws in, `chosen` unless
+    /// the setting is `auto`, with the per-app overrides from the settings.
+    pub fn language_choice(&self) -> LanguageChoice {
+        LanguageChoice {
+            language: effective_lang(&self.settings.language).code().to_string(),
+            chosen: crate::i18n::Lang::from_code(&self.settings.language).is_some(),
+            apps: self.settings.app_languages.clone(),
+        }
+    }
+
     /// Draws the launcher.
     pub fn ui(&mut self, ui: &mut egui::Ui, host: &mut dyn Host) {
         let ctx = ui.ctx().clone();
         // Set the current language for this frame based on settings.
         let lang = effective_lang(&self.settings.language);
         set_current(lang);
+        let choice = self.language_choice();
+        if self.published_language.as_ref() != Some(&choice) {
+            host.language_changed(&choice);
+            self.published_language = Some(choice);
+        }
         // `effective_lang` only picks Chinese once its font has loaded.
         if lang.needs_cjk_font() && !self.cjk_fonts {
             theme::install_fonts(&ctx, true);

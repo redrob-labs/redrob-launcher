@@ -91,6 +91,10 @@ pub struct Settings {
     /// Interface language: `auto` (follow the system) or a language code from the registry
     /// (`en`, `ru`, `zh-CN`, `de`).
     pub language: String,
+    /// Per-app interface language overrides, app id to language code; an app not listed follows
+    /// `language`. Published for the apps in the shared language file.
+    #[serde(default)]
+    pub app_languages: BTreeMap<String, String>,
     /// Closing the window keeps the launcher in the tray (menu bar) instead of quitting.
     pub close_to_tray: bool,
     /// macOS: showing the window brings it to the current desktop (Space) instead of switching to
@@ -185,6 +189,7 @@ impl Default for Settings {
             sort_descending: false,
             theme: ThemeChoice::System,
             language: "auto".to_string(),
+            app_languages: BTreeMap::new(),
             close_to_tray: true,
             show_on_current_desktop: true,
             check_every: CheckEvery::Hour,
