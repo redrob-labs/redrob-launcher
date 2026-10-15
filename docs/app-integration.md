@@ -23,7 +23,7 @@ product id (the console's `DEVICE_PRODUCTS`); those apps are one small change aw
 
 The launcher's account window reads this table through `SHARED_READERS` in `crates/core/src/account.rs`:
 an app whose installed version is at or past the listed release shows "Uses this sign-in"; a merged but
-unreleased one shows "Next release uses this sign-in"; IDE and Studio show "Needs no sign-in". When an app
+unreleased one shows "Next release uses this sign-in"; IDE shows "Needs no sign-in". When an app
 releases, put its version into that table -- or, better, let the release carry
 [`redrob-launcher.json`](./release-manifest.md), which the launcher believes over the table.
 
