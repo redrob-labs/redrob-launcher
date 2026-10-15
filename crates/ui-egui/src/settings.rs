@@ -108,6 +108,10 @@ pub struct Settings {
     /// Show a system notification when an installed app has an update.
     pub notify: bool,
     pub prereleases: bool,
+    /// Show models that need PrismML's llama.cpp fork (ternary packs such as Bonsai 2). Off by
+    /// default: the fork is a second runtime to download and keep current.
+    #[serde(default)]
+    pub prism_runtime: bool,
     /// Linux: the package format to prefer for new installs (empty: the system's own).
     pub preferred_kinds: Vec<PackageKind>,
     /// Announcements and alerts from the release feed the user dismissed (by notice id).
@@ -188,6 +192,7 @@ impl Default for Settings {
             engine_auto_update: true,
             notify: true,
             prereleases: false,
+            prism_runtime: false,
             preferred_kinds: default_preferred_kinds(),
             dismissed_notices: std::collections::BTreeSet::new(),
             notified: BTreeMap::new(),

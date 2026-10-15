@@ -228,6 +228,9 @@ impl LauncherUi {
         }
         ui.checkbox(&mut self.settings.notify, tl!("Notify me when an installed app has an update"));
         ui.checkbox(&mut self.settings.prereleases, tl!("Include pre-releases (betas and release candidates)"));
+        if self.caps.manage_apps {
+            ui.checkbox(&mut self.settings.prism_runtime, tl!("Offer models that need PrismML's llama.cpp fork (Bonsai 2)"));
+        }
 
         if self.caps.manage_apps && self.platform.is_some_and(|p| p.os == Os::Linux) {
             section(ui, tl!("Installing on Linux"));

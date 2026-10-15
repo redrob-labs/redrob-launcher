@@ -29,10 +29,15 @@ Redrob Launcher is one place to install, update, sign in and connect every Redro
   attached, and Start / Stop / Restart. Uses `redrob-engine-client`, the Rust crate the apps use
   to reach that one daemon, pinned to the engine release it ships with ([docs/engine.md](docs/engine.md)).
 
-- Downloads the models the apps use (today Redrob Cut's Whisper speech models and natural voices)
-  straight into the folder each app reads them from: resumable, pausable, every file checked
-  against its pinned SHA-256. The list is `assets/models/models.json`, regenerated from each app's
-  own catalogue by `scripts/gen_models_manifest.py`.
+- Downloads the local models every Redrob app can use: chat, coding and vision LLMs, Canvas's
+  image models (our own Redrob Image, LaMa inpainting, background removal, upscaling, selection),
+  Cut's speech models and voices, Shape's image-to-3D and Recall's OCR. Measures this computer
+  first and says which of them run here. Resumable, pausable, every file checked against its
+  pinned SHA-256. The list is `assets/models/models.json`.
+
+- Serves a downloaded GGUF with `llama-server` on loopback, and tells the apps about every local
+  model through one registry file, so an app uses the local model when there is one and the
+  Console when there is not ([docs/local-models.md](docs/local-models.md)).
 
 ## Build from source
 
