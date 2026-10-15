@@ -72,6 +72,8 @@ pub(crate) enum Dialog {
     Account,
     /// The apps' downloadable models.
     Models,
+    /// The shared Redrob Code engine: running or not, who uses it, start and stop.
+    Engine,
 }
 
 pub struct LauncherUi {
@@ -84,6 +86,8 @@ pub struct LauncherUi {
     pub(crate) last_source: Option<Source>,
     pub(crate) rate_limited_until: Option<i64>,
     pub(crate) launcher_update: Option<Release>,
+    /// Keeping the shared Redrob Code engine current (stop, install, start again).
+    pub(crate) engine_update: crate::engine_update::Flow,
     /// The launcher's own update, while it downloads and installs.
     pub(crate) launcher_job: Option<redrob_launcher_core::protocol::JobPhase>,
     /// The new launcher is in place: quit so it can start.
@@ -144,6 +148,7 @@ impl LauncherUi {
             last_source: None,
             rate_limited_until: None,
             launcher_update: None,
+            engine_update: crate::engine_update::Flow::default(),
             launcher_job: None,
             restart_requested: false,
             announcements: Vec::new(),
@@ -184,6 +189,14 @@ impl LauncherUi {
     }
 
     /// Looks for updates now (the tray's "Check for Updates").
+    /// Open the engine dialog (the tray's "Redrob Code engine" item).
+    pub fn show_engine(&mut self) {
+        if let Some(engine) = self.backend.engine() {
+            engine.refresh();
+        }
+        self.dialog = Some(Dialog::Engine);
+    }
+
     pub fn check_now(&mut self) {
         self.auto_update_attempted.clear();
         self.backend.send(Command::CheckForUpdates { force: true });
@@ -251,6 +264,7 @@ impl LauncherUi {
                 self.trigger_auto_updates();
             }
         }
+        self.engine_update_tick();
         if self.restart_requested {
             // The helper is waiting for this process to exit before it starts the new launcher.
             self.restart_requested = false;
@@ -320,6 +334,13 @@ impl LauncherUi {
                     e.job = None;
                 }
                 let kept = self.entry(&app).is_some_and(|e| e.ready);
+                if app == crate::engine_update::ENGINE_APP
+                    && self.engine_update.job_finished(result.is_ok())
+                    && let Some(engine) = self.backend.engine()
+                {
+                    // The daemon was up before the update: bring it back on the new binary.
+                    engine.start();
+                }
                 match result {
                     Ok(msg) => self.toast(ctx, msg, false),
                     // The paused card says it all.
@@ -404,6 +425,8 @@ impl LauncherUi {
         let to_update: Vec<(String, String)> = self
             .entries
             .iter()
+            // The engine is a daemon apps are attached to; `engine_update_tick` updates it.
+            .filter(|e| e.app.id != crate::engine_update::ENGINE_APP)
             .filter(|e| e.status(self.platform, true) == AppStatus::UpdateAvailable && e.job.is_none() && !e.ready)
             .filter_map(|e| {
                 let v = e.latest_label()?;
@@ -425,6 +448,47 @@ impl LauncherUi {
                 log::info!("auto-update: queuing launcher self-update to {v}");
                 self.auto_update_attempted.insert((id, v));
                 self.send(Command::UpdateLauncher);
+            }
+        }
+    }
+
+    /// One frame of keeping the shared engine current: see `engine_update`. Runs every frame; the
+    /// engine state it reads is cached by the backend, so it costs nothing most frames.
+    pub(crate) fn engine_update_tick(&mut self) {
+        use crate::engine_update::{Action, ENGINE_APP, Facts};
+        if !self.caps.manage_apps {
+            return;
+        }
+        let Some(entry) = self.entry(ENGINE_APP) else { return };
+        let newer = (entry.status(self.platform, true) == AppStatus::UpdateAvailable).then(|| entry.latest_label()).flatten();
+        let job_running = entry.job.is_some();
+        if newer.is_none() {
+            self.engine_update.settled();
+        }
+        if !(self.settings.engine_auto_update || self.engine_update.forced) && self.engine_update.step == crate::engine_update::Step::Idle {
+            // Off: the dialog still shows the newer version and its "Update now".
+            self.engine_update.waiting_on.clear();
+            return;
+        }
+        let Some(engine) = self.backend.engine() else { return };
+        let facts = Facts {
+            attempted: newer.as_ref().is_some_and(|v| self.engine_update.attempted.contains(v)),
+            newer,
+            job_running,
+            engine: engine.state(),
+            forced: self.engine_update.forced,
+        };
+        match self.engine_update.tick(&facts) {
+            Action::None | Action::Wait { .. } => {}
+            Action::Stop => {
+                log::info!("engine update: stopping the daemon before installing {}", facts.newer.as_deref().unwrap_or("?"));
+                if let Some(engine) = self.backend.engine() {
+                    engine.stop();
+                }
+            }
+            Action::Install { restart } => {
+                log::info!("engine update: installing {} (restart after: {restart})", facts.newer.as_deref().unwrap_or("?"));
+                self.send(Command::Install { app: ENGINE_APP.to_string() });
             }
         }
     }

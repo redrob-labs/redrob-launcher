@@ -422,6 +422,10 @@ impl Launcher {
                 tray::TrayAction::Toggle => requests.push(Request::Toggle),
                 tray::TrayAction::Show => requests.push(Request::Show),
                 tray::TrayAction::Check => self.ui.check_now(),
+                tray::TrayAction::Engine => {
+                    self.ui.show_engine();
+                    requests.push(Request::Show);
+                }
                 // Straight to the browser: works while the window is hidden in the tray.
                 tray::TrayAction::Open(url) => {
                     if let Err(e) = redrob_launcher_native::process::open(std::ffi::OsStr::new(url)) {

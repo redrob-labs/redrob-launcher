@@ -25,6 +25,10 @@ Redrob Launcher is one place to install, update, sign in and connect every Redro
   every Redrob app can read it, and hands it to apps that keep their own key
   ([docs/shared-account.md](docs/shared-account.md)).
 
+- Shows the Redrob Code engine every app runs its AI through: whether it is up, which apps are
+  attached, and Start / Stop / Restart. Uses `redrob-engine-client`, the Rust crate the apps use
+  to reach that one daemon, pinned to the engine release it ships with ([docs/engine.md](docs/engine.md)).
+
 - Downloads the models the apps use (today Redrob Cut's Whisper speech models and natural voices)
   straight into the folder each app reads them from: resumable, pausable, every file checked
   against its pinned SHA-256. The list is `assets/models/models.json`, regenerated from each app's
@@ -46,8 +50,8 @@ libxrandr-dev libxi-dev libgl1-mesa-dev`). Packaging scripts for every platform 
 ## Branches and contributing
 
 - Default branch `develop`, release branch `main`. Branch names take a
-  `feat/ fix/ chore/ docs/ test/ refactor/ perf/ sync/ hotfix/ release/` prefix, checked by
-  `.github/workflows/gitflow.yml`.
+  `feat/ fix/ chore/ docs/ test/ refactor/ perf/ ci/ build/ sync/ hotfix/ release/` prefix, checked by
+  the shared redrob-labs gitflow workflow (one type list for every repository).
 - Upstream syncs land through `sync/upstream-<tag>` branches as merge commits.
 - Organisation rules: CONTRIBUTING.md and FORKS.md in [redrob-labs/.github](https://github.com/redrob-labs/.github).
 - Contributor guide for agents and people: [AGENTS.md](./AGENTS.md).

@@ -24,6 +24,10 @@ English: [README.md](./README.md)
 - 컴퓨터를 레드롭 워크스페이스에 한 번 로그인시키고(콘솔 기기 인증), 모든 레드롭 앱이 읽을 수 있는 곳에 키를
   두고, 자기 키를 따로 두는 앱에는 그 키를 넣어 줍니다([docs/shared-account.ko.md](docs/shared-account.ko.md)).
 
+- 모든 앱이 AI를 돌리는 Redrob Code 엔진을 보여 줍니다: 실행 중인지, 어느 앱이 붙어 있는지, 시작·중지·다시 시작.
+  앱들이 그 데몬 하나에 닿는 데 쓰는 Rust 크레이트 `redrob-engine-client`를 엔진 릴리즈 태그에 고정해 사용합니다
+  ([docs/engine.md](docs/engine.md)).
+
 - 앱이 쓰는 모델(지금은 레드롭 컷의 Whisper 음성 인식 모델과 내레이션 목소리)을 각 앱이 읽는 폴더에 바로
   내려받습니다. 이어받기와 일시 정지가 되고, 모든 파일을 고정된 SHA-256과 대조합니다. 목록은
   `assets/models/models.json`이고, 각 앱의 카탈로그에서 `scripts/gen_models_manifest.py`로 다시 만듭니다.
@@ -39,7 +43,7 @@ packaging/brand-assets.sh                  # assets/brand/에서 아이콘 다�
 
 ## 브랜치와 기여
 
-- 기본 브랜치 `develop`, 릴리스 브랜치 `main`. 브랜치 이름은 `feat/ fix/ chore/ docs/ test/ refactor/ perf/ sync/ hotfix/ release/` 접두사를 따르며 `.github/workflows/gitflow.yml`이 검사합니다.
+- 기본 브랜치 `develop`, 릴리스 브랜치 `main`. 브랜치 이름은 `feat/ fix/ chore/ docs/ test/ refactor/ perf/ ci/ build/ sync/ hotfix/ release/` 접두사를 따르며, redrob-labs 공용 gitflow 워크플로가 검사합니다(모든 레포가 같은 목록).
 - 상류 동기화는 `sync/upstream-<tag>` 브랜치로, 머지 커밋으로만 합칩니다.
 - 조직 공통 규약: [redrob-labs/.github](https://github.com/redrob-labs/.github)의 CONTRIBUTING.ko.md와 FORKS.ko.md.
 

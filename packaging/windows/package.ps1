@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Build, sign and package Redrob Launcher for Windows.
+  Build and package Redrob Launcher for Windows.
 
 .DESCRIPTION
   Produces, in $env:DIST (default: dist/release):
@@ -8,22 +8,27 @@
     redrob-launcher-<version>-windows-<arch>-portable.zip   redrob-launcher.exe + portable.txt
 
   The binary links the C runtime statically (+crt-static), so neither the MSI nor the portable
-  zip needs the Visual C++ redistributable. Signing is delegated to sign.ps1 (skipped with a
-  warning when no signing secrets are set).
+  zip needs the Visual C++ redistributable. This script does not sign: the release workflow signs
+  the staged executable (after -BuildOnly) and the MSI (after -SkipBuild) with the shared
+  redrob-labs/.github/actions/sign-windows action, so the portable zip carries the signed
+  executable and the installer is signed last. A local run produces unsigned packages.
 
-  Needs: Rust (MSVC toolchain + the target), the Windows SDK (rc.exe, signtool.exe),
+  Needs: Rust (MSVC toolchain + the target), the Windows SDK (rc.exe),
   and WiX v5: dotnet tool install --global wix --version 5.0.2
              wix extension add -g WixToolset.UI.wixext/5.0.2 WixToolset.Util.wixext/5.0.2
 
 .EXAMPLE
   pwsh packaging/windows/package.ps1 -Arch x64
   pwsh packaging/windows/package.ps1 -Arch x86 -SkipBuild
+  pwsh packaging/windows/package.ps1 -Arch x64 -BuildOnly  # CI: build and stage, sign the stage, then -SkipBuild
   pwsh packaging/windows/package.ps1 -Arch arm64     # cross-compiled; needs the MSVC ARM64 build tools
 #>
 param(
   [ValidateSet('x64', 'x86', 'arm64')] [string] $Arch = 'x64',
-  [switch] $SkipBuild
+  [switch] $SkipBuild,
+  [switch] $BuildOnly
 )
+if ($SkipBuild -and $BuildOnly) { throw '-SkipBuild and -BuildOnly exclude each other' }
 $ErrorActionPreference = 'Stop'
 $Root = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 
@@ -69,9 +74,20 @@ if (-not $SkipBuild) {
   $env:REDROB_LAUNCHER_REQUIRE_WINRES = '1'
   Invoke-Native "cargo build ($Target)" { cargo build --release --locked -p $Pkg --target $Target }
 }
-
 $Bin = Join-Path $TargetDir "$Target\release"
 $Exe = "$Pkg.exe"
+$Stage = Join-Path $TargetDir "windows-package\$Arch"
+
+# The release workflow builds and stages first, signs the staged executable, then packages in a
+# second invocation, so the short-lived OpenID Connect login happens right before signing instead
+# of expiring during a 12-minute build. The stage is therefore filled in the build phase and only
+# read in the package phase.
+if (-not $SkipBuild) {
+  Remove-Item -Recurse -Force $Stage -ErrorAction SilentlyContinue
+  New-Item -ItemType Directory -Force -Path $Stage | Out-Null
+  Copy-Item (Join-Path $Bin $Exe) $Stage
+}
+if ($BuildOnly) { exit 0 }
 
 # Check the PE header before packaging. Machine (COFF header) must match -Arch, so an x64 build
 # can never ship labelled arm64. Subsystem (optional header) must be 2 = Windows GUI, so no
@@ -82,17 +98,11 @@ function Get-PeHeader([string] $Path) {
   return @{ Machine = [BitConverter]::ToUInt16($bytes, $pe + 4); Subsystem = [BitConverter]::ToUInt16($bytes, $pe + 0x5C) }
 }
 $Machine = switch ($Arch) { 'x64' { 0x8664 } 'x86' { 0x14C } 'arm64' { 0xAA64 } }
-$h = Get-PeHeader (Join-Path $Bin $Exe)
+if (-not (Test-Path (Join-Path $Stage $Exe))) { throw "$Exe is not staged in $Stage; run with -BuildOnly first" }
+$h = Get-PeHeader (Join-Path $Stage $Exe)
 if ($h.Machine -ne $Machine) { throw "$Exe is for machine 0x$('{0:X}' -f $h.Machine), expected 0x$('{0:X}' -f $Machine) ($Arch)" }
 if ($h.Subsystem -ne 2) { throw "$Exe has PE subsystem $($h.Subsystem), expected 2 (Windows GUI)" }
 Write-Output "ok ${Exe}: $Arch, PE subsystem $($h.Subsystem)"
-
-$Stage = Join-Path $TargetDir "windows-package\$Arch"
-Remove-Item -Recurse -Force $Stage -ErrorAction SilentlyContinue
-New-Item -ItemType Directory -Force -Path $Stage | Out-Null
-Copy-Item (Join-Path $Bin $Exe) $Stage
-
-& (Join-Path $PSScriptRoot 'sign.ps1') (Join-Path $Stage $Exe)
 
 # ---- MSI ---------------------------------------------------------------------------------------
 # The setup wizard's art, drawn here (System.Drawing) in the launcher's own style so the MSI shows
@@ -187,7 +197,6 @@ Invoke-Native 'MSI shortcut icon validation (ICE50)' {
 }
 # wix writes its debug symbols (.wixpdb) next to the MSI; keep them out of the release assets.
 Remove-Item -Force -ErrorAction SilentlyContinue ([IO.Path]::ChangeExtension($Msi, '.wixpdb'))
-& (Join-Path $PSScriptRoot 'sign.ps1') $Msi
 
 # ---- portable zip ------------------------------------------------------------------------------
 $Portable = Join-Path $TargetDir "windows-package\$Pkg-$Version-windows-$Arch-portable"

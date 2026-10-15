@@ -3675,8 +3675,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "redrob-engine-client"
+version = "0.1.0"
+source = "git+https://github.com/redrob-labs/redrob-code?tag=v0.6.3#ef3e511afb1107fd0066fa95cb29256b7d020d3c"
+dependencies = [
+ "base64 0.22.1",
+ "dirs 6.0.0",
+ "log",
+ "serde",
+ "serde_json",
+ "ureq",
+]
+
+[[package]]
 name = "redrob-launcher"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "eframe",
  "egui",
@@ -3698,7 +3711,7 @@ dependencies = [
 
 [[package]]
 name = "redrob-launcher-core"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "semver",
  "serde",
@@ -3707,12 +3720,13 @@ dependencies = [
 
 [[package]]
 name = "redrob-launcher-native"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "dirs 6.0.0",
  "flate2",
  "log",
  "plist",
+ "redrob-engine-client",
  "redrob-launcher-core",
  "serde",
  "serde_json",
@@ -3725,7 +3739,7 @@ dependencies = [
 
 [[package]]
 name = "redrob-launcher-ui-egui"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "egui",
  "egui_extras",
@@ -3741,7 +3755,7 @@ dependencies = [
 
 [[package]]
 name = "redrob-launcher-web"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "eframe",
  "egui",
@@ -5799,7 +5813,7 @@ checksum = "ec7a2a501ed189703dba8b08142f057e887dfc4b2cc4db2d343ac6376ba3e0b9"
 
 [[package]]
 name = "xtask"
-version = "0.1.1"
+version = "0.1.2"
 
 [[package]]
 name = "yoke"

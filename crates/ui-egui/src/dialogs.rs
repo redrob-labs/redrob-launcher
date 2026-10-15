@@ -27,6 +27,7 @@ impl LauncherUi {
             Dialog::LauncherUpdate(r) => modal.show(ctx, |ui| close = self.launcher_update_dialog(ui, r)),
             Dialog::Account => modal.show(ctx, |ui| close = self.account_dialog(ui)),
             Dialog::Models => modal.show(ctx, |ui| close = self.models_dialog(ui)),
+            Dialog::Engine => modal.show(ctx, |ui| close = self.engine_dialog(ui)),
         };
         if close || response.should_close() {
             self.dialog = None;
@@ -221,6 +222,9 @@ impl LauncherUi {
             && self.settings.auto_update
         {
             self.trigger_auto_updates();
+        }
+        if self.caps.manage_apps {
+            ui.checkbox(&mut self.settings.engine_auto_update, tl!("Keep the Redrob Code engine up to date on its own (when no app is using it)"));
         }
         ui.checkbox(&mut self.settings.notify, tl!("Notify me when an installed app has an update"));
         ui.checkbox(&mut self.settings.prereleases, tl!("Include pre-releases (betas and release candidates)"));
