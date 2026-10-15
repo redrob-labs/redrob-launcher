@@ -200,7 +200,7 @@ pub fn apply(ctx: &egui::Context, choice: ThemeChoice) {
 
 /// The Korean system face of the Redrob design system (Wanted Sans Regular, SIL OFL 1.1; licence
 /// beside the file). Pretendard carries no Hangul, so Korean falls to this face.
-pub const KOREAN_FONT: &[u8] = include_bytes!("../../../assets/fonts/WantedSans-Regular.ttf");
+pub const KOREAN_FONT: &[u8] = include_bytes!("../../../../assets/fonts/WantedSans-Regular.ttf");
 
 /// Korean system text is set at 96% of the Latin size (design system, `35-korean.md`).
 const KOREAN_SCALE: f32 = 0.96;
@@ -248,9 +248,9 @@ type Face<'a> = (&'a str, &'static [u8], FontFamily);
 /// falls to the right face (design system `30-typography.md`). Files are the design system's,
 /// byte for byte (SIL OFL 1.1, licences beside them).
 pub fn install_fonts(ctx: &egui::Context, cjk: bool) {
-    const REGULAR: &[u8] = include_bytes!("../../../assets/fonts/Pretendard-Regular.ttf");
-    const MEDIUM: &[u8] = include_bytes!("../../../assets/fonts/Pretendard-Medium.ttf");
-    const SEMIBOLD: &[u8] = include_bytes!("../../../assets/fonts/Pretendard-SemiBold.ttf");
+    const REGULAR: &[u8] = include_bytes!("../../../../assets/fonts/Pretendard-Regular.ttf");
+    const MEDIUM: &[u8] = include_bytes!("../../../../assets/fonts/Pretendard-Medium.ttf");
+    const SEMIBOLD: &[u8] = include_bytes!("../../../../assets/fonts/Pretendard-SemiBold.ttf");
     let mut fonts = FontDefinitions::default();
     // egui's own fonts stay behind ours, for symbols and emoji ours don't have.
     let fallback: Vec<String> = fonts.families.get(&FontFamily::Proportional).cloned().unwrap_or_default();
