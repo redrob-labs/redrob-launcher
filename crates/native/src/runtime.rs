@@ -298,9 +298,13 @@ mod tests {
 
     #[test]
     fn the_command_line_names_model_projector_and_port() {
-        let a = args(&model("vision", true), Path::new("/m"), 4101);
+        let dir = Path::new("/m");
+        let a = args(&model("vision", true), dir, 4101);
         let s = a.join(" ");
-        assert!(s.contains("-m /m/m.gguf") && s.contains("--mmproj /m/mm.gguf") && s.contains("--port 4101") && s.contains("--host 127.0.0.1"));
+        // Paths are joined by the OS, so compare against the same join (Windows uses backslashes).
+        let m = format!("-m {}", dir.join("m.gguf").display());
+        let mm = format!("--mmproj {}", dir.join("mm.gguf").display());
+        assert!(s.contains(&m) && s.contains(&mm) && s.contains("--port 4101") && s.contains("--host 127.0.0.1"), "{s}");
         assert!(s.contains("--jinja") && !s.contains("--embedding"));
         let e = args(&model("embedding", false), Path::new("/m"), 4102).join(" ");
         assert!(e.contains("--embedding") && !e.contains("--mmproj"));
