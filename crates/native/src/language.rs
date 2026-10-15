@@ -58,17 +58,18 @@ pub fn save(path: &Path, lang: &SharedLanguage) -> std::io::Result<()> {
 /// writes `HKCU\Software\Redrob\Redrob Launcher\Language` (`en`, `ko`). The macOS disk image and
 /// the Linux packages have no wizard, so there the answer is `None` and the launcher follows the
 /// system until the person picks a language in its settings.
+#[cfg(windows)]
 pub fn installer_language() -> Option<String> {
-    #[cfg(windows)]
-    {
-        use winreg::RegKey;
-        use winreg::enums::HKEY_CURRENT_USER;
-        let key = RegKey::predef(HKEY_CURRENT_USER).open_subkey(r"Software\Redrob\Redrob Launcher").ok()?;
-        let code: String = key.get_value("Language").ok()?;
-        let code = code.trim().to_ascii_lowercase();
-        return if code.is_empty() { None } else { Some(code) };
-    }
-    #[cfg(not(windows))]
+    use winreg::RegKey;
+    use winreg::enums::HKEY_CURRENT_USER;
+    let key = RegKey::predef(HKEY_CURRENT_USER).open_subkey(r"Software\Redrob\Redrob Launcher").ok()?;
+    let code: String = key.get_value("Language").ok()?;
+    let code = code.trim().to_ascii_lowercase();
+    if code.is_empty() { None } else { Some(code) }
+}
+
+#[cfg(not(windows))]
+pub fn installer_language() -> Option<String> {
     None
 }
 
