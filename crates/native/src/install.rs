@@ -117,10 +117,12 @@ pub fn download_path(paths: &Paths, asset: &Asset) -> PathBuf {
     paths.downloads().join(&asset.name)
 }
 
-#[allow(dead_code)]
-/// The suite id of Redrob Code, the shared engine (`~/.redrob/bin/redrob`).
+/// The suite id of Redrob Code, the shared engine (`~/.redrob/bin/redrob`). Only tree installs
+/// (Linux) link it today; the other platforms' arms never read it.
+#[cfg(target_os = "linux")]
 const ENGINE_ID: &str = "redrob-code";
 
+#[allow(dead_code)]
 fn record(version: &str, kind: PackageKind, path: PathBuf, files: Vec<PathBuf>, needs_root: bool) -> Record {
     Record { version: version.to_string(), kind, path, installed_at: crate::now(), files, needs_root }
 }
