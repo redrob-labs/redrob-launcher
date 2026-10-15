@@ -106,7 +106,11 @@ impl Device {
         match self.accel_memory_mb() {
             None => Fit::Unknown,
             Some(mem) if mem >= need => {
-                if backend == Backend::Cpu { Fit::Slow } else { Fit::Runs }
+                if backend == Backend::Cpu {
+                    Fit::Slow
+                } else {
+                    Fit::Runs
+                }
             }
             // Too big for the card: llama.cpp spills layers into RAM when the model allows CPU.
             Some(_) if on_cpu && self.ram_mb >= need => Fit::Slow,

@@ -14,10 +14,10 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, PoisonError};
 
 use redrob_launcher_core::device::Device;
-use redrob_launcher_core::models::{Model, ModelBackend, ModelState, ModelView, Runtime, RuntimeState, Serving, SHARED_APP};
+use redrob_launcher_core::models::{Model, ModelBackend, ModelState, ModelView, Runtime, RuntimeState, SHARED_APP, Serving};
 use redrob_launcher_core::platform::{Arch, Os};
 use redrob_launcher_core::protocol::{CANCELLED, PAUSED};
-use redrob_launcher_core::registry::{InstalledModel, Registry, Served, REGISTRY_FILE};
+use redrob_launcher_core::registry::{InstalledModel, REGISTRY_FILE, Registry, Served};
 
 use crate::http::{self, Http, Stop, Transfer};
 use crate::runtime;
@@ -134,7 +134,6 @@ enum Serve {
 }
 
 struct RuntimeJob {
-    stop: Arc<Stop>,
     done: u64,
     total: u64,
 }
@@ -463,7 +462,7 @@ impl ModelBackend for Models {
             return;
         };
         let stop = Arc::new(Stop::default());
-        self.runtime_jobs.lock().unwrap_or_else(PoisonError::into_inner).insert(rt, RuntimeJob { stop: stop.clone(), done: 0, total: 0 });
+        self.runtime_jobs.lock().unwrap_or_else(PoisonError::into_inner).insert(rt, RuntimeJob { done: 0, total: 0 });
         self.runtime_failed.lock().unwrap_or_else(PoisonError::into_inner).remove(&rt);
         let (jobs, failed, shared) = (self.runtime_jobs.clone(), self.runtime_failed.clone(), self.shared.clone());
         let device = self.device();
@@ -527,7 +526,7 @@ impl ModelBackend for Models {
         std::thread::spawn(move || {
             // The runtime first, if it isn't here yet (shown as the runtime's own download).
             let stop = Arc::new(Stop::default());
-            rjobs.lock().unwrap_or_else(PoisonError::into_inner).entry(m.runtime).or_insert(RuntimeJob { stop: stop.clone(), done: 0, total: 0 });
+            rjobs.lock().unwrap_or_else(PoisonError::into_inner).entry(m.runtime).or_insert(RuntimeJob { done: 0, total: 0 });
             let bin = runtime::install(&http, &root, &device, m.runtime, &stop, &mut |done, total| {
                 if let Some(j) = rjobs.lock().unwrap_or_else(PoisonError::into_inner).get_mut(&m.runtime) {
                     j.done = done;
@@ -548,10 +547,10 @@ impl ModelBackend for Models {
             let result = runtime::Server::start(&bin, &m, &dir, port, &http, std::time::Duration::from_secs(240));
             let entry = match result {
                 Ok(server) => {
-                    if let Some(cfg) = &code_config {
-                        if let Err(e) = runtime::set_code_provider(cfg, &m, Some(&server.url())) {
-                            log::warn!("couldn't add the local provider to Redrob Code's config: {e}");
-                        }
+                    if let Some(cfg) = &code_config
+                        && let Err(e) = runtime::set_code_provider(cfg, &m, Some(&server.url()))
+                    {
+                        log::warn!("couldn't add the local provider to Redrob Code's config: {e}");
                     }
                     Serve::Running(server)
                 }
@@ -573,10 +572,10 @@ impl ModelBackend for Models {
         let Some(entry) = removed else { return };
         if let Serve::Running(server) = entry {
             server.stop();
-            if let (Some(cfg), Some(m)) = (&self.code_config, self.find(app, id)) {
-                if let Err(e) = runtime::set_code_provider(cfg, m, None) {
-                    log::warn!("couldn't remove the local provider from Redrob Code's config: {e}");
-                }
+            if let (Some(cfg), Some(m)) = (&self.code_config, self.find(app, id))
+                && let Err(e) = runtime::set_code_provider(cfg, m, None)
+            {
+                log::warn!("couldn't remove the local provider from Redrob Code's config: {e}");
             }
         }
         self.shared.write_registry();

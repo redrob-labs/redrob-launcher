@@ -216,7 +216,9 @@ pub enum Serving {
     No,
     Starting,
     /// `llama-server` answers at this loopback URL (`http://127.0.0.1:4097`).
-    Running { url: String },
+    Running {
+        url: String,
+    },
     Failed(String),
 }
 
@@ -238,7 +240,10 @@ pub enum RuntimeState {
     /// There is no build of it for this platform and backend.
     Unavailable,
     NotInstalled,
-    Downloading { done: u64, total: u64 },
+    Downloading {
+        done: u64,
+        total: u64,
+    },
     Installed,
     Failed(String),
 }

@@ -79,7 +79,9 @@ impl LauncherUi {
         let views = models.models();
         let busy = views.iter().any(|v| matches!(v.state, ModelState::Downloading { .. }) || v.serving == Serving::Starting);
         let label = if busy { tl!("Models…") } else { tl!("Models") };
-        if widgets::nav_link(ui, label, tl!("Local models: what runs on this computer"), height, matches!(self.dialog, Some(Dialog::Models))).clicked() {
+        if widgets::nav_link(ui, label, tl!("Local models: what runs on this computer"), height, matches!(self.dialog, Some(Dialog::Models)))
+            .clicked()
+        {
             self.dialog = Some(Dialog::Models);
         }
     }
@@ -94,9 +96,13 @@ impl LauncherUi {
                     widgets::hud(ui, tl!("This computer"), t.muted);
                     let gpu = match &device.gpu {
                         Some(g) => match g.memory_mb {
-                            Some(mb) if g.unified => fmt(tl!("{name}, {gb} GB unified memory"), &[("name", &g.name), ("gb", &(mb / 1024).to_string())]),
+                            Some(mb) if g.unified => {
+                                fmt(tl!("{name}, {gb} GB unified memory"), &[("name", &g.name), ("gb", &(mb / 1024).to_string())])
+                            }
                             Some(mb) => fmt(tl!("{name}, {gb} GB"), &[("name", &g.name), ("gb", &mb.div_ceil(1024).to_string())]),
-                            None if g.unified => fmt(tl!("{name}, {gb} GB unified memory"), &[("name", &g.name), ("gb", &(device.ram_mb / 1024).to_string())]),
+                            None if g.unified => {
+                                fmt(tl!("{name}, {gb} GB unified memory"), &[("name", &g.name), ("gb", &(device.ram_mb / 1024).to_string())])
+                            }
                             None => fmt(tl!("{name} (memory not measured)"), &[("name", &g.name)]),
                         },
                         None if device.gpu_probed => tl!("No GPU found; models run on the CPU").to_string(),
@@ -162,7 +168,12 @@ impl LauncherUi {
     pub(crate) fn models_dialog(&mut self, ui: &mut egui::Ui) -> bool {
         let t = Tokens::get(ui.ctx());
         ui.set_width(680.0f32.min(ui.ctx().content_rect().width() - 80.0));
-        Self::title(ui, Some(crate::icons::redrob_mark()), tl!("Models"), tl!("Local models for every Redrob app. Nothing here is required: an app with no local model uses the Redrob Console."));
+        Self::title(
+            ui,
+            Some(crate::icons::redrob_mark()),
+            tl!("Models"),
+            tl!("Local models for every Redrob app. Nothing here is required: an app with no local model uses the Redrob Console."),
+        );
         let prism = self.settings.prism_runtime;
         let Some(models) = self.backend.models() else { return true };
         let device = models.device();
@@ -178,7 +189,8 @@ impl LauncherUi {
             ask = Some((Ask::Remeasure, String::new(), String::new()));
         }
         ui.add_space(8.0);
-        egui::ScrollArea::vertical().max_height(ui.ctx().content_rect().height() * 0.6).show(ui, |ui| {
+        // Everything above and below the list (title, device card, footer) is about 400 px.
+        egui::ScrollArea::vertical().max_height((ui.ctx().content_rect().height() - 400.0).max(240.0)).show(ui, |ui| {
             let mut last_app = "";
             for v in &views {
                 let m = &v.model;
@@ -206,10 +218,20 @@ impl LauncherUi {
                             ui.horizontal(|ui| {
                                 ui.label(RichText::new(&m.name).family(theme::medium()).color(t.ink_strong));
                                 let (fit_text, tone) = fit_label(v.fit);
-                                let need = fmt(tl!("Needs about {gb} GB of {kind}"), &[
-                                    ("gb", &format!("{:.0}", f64::from(m.requires.memory_mb) / 1024.0)),
-                                    ("kind", if device.backend() == redrob_launcher_core::models::Backend::Cpu { tl!("RAM") } else { tl!("GPU memory") }),
-                                ]);
+                                let need = fmt(
+                                    tl!("Needs about {gb} GB of {kind}"),
+                                    &[
+                                        ("gb", &format!("{:.0}", f64::from(m.requires.memory_mb) / 1024.0)),
+                                        (
+                                            "kind",
+                                            if device.backend() == redrob_launcher_core::models::Backend::Cpu {
+                                                tl!("RAM")
+                                            } else {
+                                                tl!("GPU memory")
+                                            },
+                                        ),
+                                    ],
+                                );
                                 widgets::badge(ui, &fit_text, widgets::tone_color(&t, tone)).on_hover_text(need);
                             });
                             if !m.description.is_empty() {

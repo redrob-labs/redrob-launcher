@@ -89,26 +89,20 @@ struct NoHost;
 impl Host for NoHost {}
 
 fn view(m: &Model, state: ModelState) -> ModelView {
-    ModelView { model: m.clone(), state, folder: Some(format!("/home/u/.local/share/redrob-cut/models/{}", m.id)), fit: Fit::Runs, serving: Serving::No }
+    ModelView {
+        model: m.clone(),
+        state,
+        folder: Some(format!("/home/u/.local/share/redrob-cut/models/{}", m.id)),
+        fit: Fit::Runs,
+        serving: Serving::No,
+    }
 }
 
-#[test]
-fn every_state_offers_the_right_action() {
+/// A harness with the dialog open on the given rows. The modal is at most about 60% of the window
+/// tall and kittest cannot scroll, so each test shows only the rows it clicks.
+fn open(views: Vec<ModelView>) -> (Harness<'static, Option<LauncherUi>>, Rc<RefCell<State>>) {
     redrob_launcher_ui_egui::i18n::set_test_lang(redrob_launcher_ui_egui::i18n::Lang::EN);
-    let m = builtin();
-    let qwen = m.iter().find(|x| x.id == "qwen3.8-27b-q4").unwrap().clone();
-    let coder = m.iter().find(|x| x.id == "qwen3-coder-30b-a3b-q4").unwrap().clone();
-    let state = Rc::new(RefCell::new(State {
-        views: vec![
-            view(&m[0], ModelState::Installed),
-            view(&m[1], ModelState::Downloading { done: 100 << 20, total: 277 << 20 }),
-            view(&m[2], ModelState::Partial { done: 300 << 20, total: 924 << 20 }),
-            view(&m[3], ModelState::NotDownloaded),
-            ModelView { serving: Serving::Running { url: "http://127.0.0.1:4100".into() }, fit: Fit::Slow, ..view(&qwen, ModelState::Installed) },
-            ModelView { fit: Fit::WontRun, ..view(&coder, ModelState::Installed) },
-        ],
-        asked: Vec::new(),
-    }));
+    let state = Rc::new(RefCell::new(State { views, asked: Vec::new() }));
     let mut backend = Some(Fake(FakeModels(state.clone())));
     let mut h = Harness::builder().with_size(egui::vec2(1180.0, 1500.0)).build_ui_state(
         move |ui, s: &mut Option<LauncherUi>| {
@@ -125,21 +119,27 @@ fn every_state_offers_the_right_action() {
         None,
     );
     h.run_steps(4);
+    (h, state)
+}
+
+#[test]
+fn every_download_state_offers_the_right_action() {
+    let m = builtin();
+    let (mut h, state) = open(vec![
+        view(&m[1], ModelState::Downloading { done: 100 << 20, total: 277 << 20 }),
+        view(&m[2], ModelState::Partial { done: 300 << 20, total: 924 << 20 }),
+        view(&m[3], ModelState::NotDownloaded),
+    ]);
     // A download is running, so the header says so.
     h.get_by_label("Models…").click();
     h.run_steps(12);
     h.get_by_label("Whisper base (multilingual)");
     h.get_by_label("Natural voices (Kokoro-82M)");
-    h.get_by_label("Downloaded");
     h.get_by_label("Downloading 100 MB of 277 MB");
     h.get_by_label("300 MB of 924 MB downloaded");
     h.get_by_label("Not downloaded");
-    // The device card and the verdict chips.
     h.get_by_label("Apple M3 Pro, 36 GB unified memory");
-    h.get_by_label("Serving at http://127.0.0.1:4100");
-    h.get_by_label("Runs slowly");
-    h.get_by_label("Won't run here");
-    h.get_by_label("llama-server is installed on first start");
+    h.get_all_by_label("Runs here").next().unwrap();
     if let Some(dir) = std::env::var_os("REDROB_LAUNCHER_SNAPSHOTS") {
         h.render().unwrap().save(std::path::Path::new(&dir).join("models.png")).unwrap();
     }
@@ -149,13 +149,8 @@ fn every_state_offers_the_right_action() {
     h.run_steps(8);
     h.get_by_label("Download").click();
     h.run_steps(8);
-    h.get_by_label("Stop").click();
-    h.run_steps(8);
-    h.get_by_label("Start").click();
-    h.run_steps(8);
     h.get_by_label("Measure again").click();
     h.run_steps(8);
-    // The shared models are listed first, so the first Delete is the served Qwen's.
     h.get_all_by_label("Delete").next().unwrap().click();
     h.run_steps(8);
     assert_eq!(
@@ -164,10 +159,34 @@ fn every_state_offers_the_right_action() {
             "pause redrob-cut/whisper-base",
             "download redrob-cut/whisper-small",
             "download redrob-cut/kokoro-82m",
-            "stop redrob/qwen3.8-27b-q4",
-            "start redrob/qwen3-coder-30b-a3b-q4",
             "remeasure",
-            "delete redrob/qwen3.8-27b-q4"
+            "delete redrob-cut/whisper-small"
         ]
     );
+}
+
+#[test]
+fn served_models_show_their_verdict_and_start_or_stop() {
+    let m = builtin();
+    let qwen = m.iter().find(|x| x.id == "qwen3.8-27b-q4").unwrap().clone();
+    let coder = m.iter().find(|x| x.id == "qwen3-coder-30b-a3b-q4").unwrap().clone();
+    let (mut h, state) = open(vec![
+        ModelView { serving: Serving::Running { url: "http://127.0.0.1:4100".into() }, fit: Fit::Slow, ..view(&qwen, ModelState::Installed) },
+        ModelView { fit: Fit::WontRun, ..view(&coder, ModelState::Installed) },
+    ]);
+    h.get_by_label("Models").click();
+    h.run_steps(12);
+    h.get_by_label("Every app");
+    h.get_by_label("llama-server is installed on first start");
+    h.get_by_label("Serving at http://127.0.0.1:4100");
+    h.get_by_label("Downloaded");
+    h.get_by_label("Runs slowly");
+    h.get_by_label("Won't run here");
+    h.get_by_label("Stop").click();
+    h.run_steps(8);
+    h.get_by_label("Start").click();
+    h.run_steps(8);
+    h.get_all_by_label("Delete").next().unwrap().click();
+    h.run_steps(8);
+    assert_eq!(state.borrow().asked, ["stop redrob/qwen3.8-27b-q4", "start redrob/qwen3-coder-30b-a3b-q4", "delete redrob/qwen3.8-27b-q4"]);
 }

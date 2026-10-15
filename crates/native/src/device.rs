@@ -99,10 +99,11 @@ pub fn parse_lspci(out: &str) -> Option<Gpu> {
 fn ram_mb() -> u64 {
     #[cfg(target_os = "linux")]
     {
-        if let Ok(s) = std::fs::read_to_string("/proc/meminfo") {
-            if let Some(kb) = s.lines().find_map(|l| l.strip_prefix("MemTotal:")).and_then(|v| v.trim().trim_end_matches("kB").trim().parse::<u64>().ok()) {
-                return kb / 1024;
-            }
+        if let Ok(s) = std::fs::read_to_string("/proc/meminfo")
+            && let Some(kb) =
+                s.lines().find_map(|l| l.strip_prefix("MemTotal:")).and_then(|v| v.trim().trim_end_matches("kB").trim().parse::<u64>().ok())
+        {
+            return kb / 1024;
         }
     }
     #[cfg(target_os = "macos")]
@@ -131,10 +132,10 @@ fn ram_mb() -> u64 {
 fn cpu_name() -> String {
     #[cfg(target_os = "linux")]
     {
-        if let Ok(s) = std::fs::read_to_string("/proc/cpuinfo") {
-            if let Some(n) = s.lines().find_map(|l| l.strip_prefix("model name")).and_then(|l| l.split_once(':')).map(|(_, v)| v.trim().to_string()) {
-                return n;
-            }
+        if let Ok(s) = std::fs::read_to_string("/proc/cpuinfo")
+            && let Some(n) = s.lines().find_map(|l| l.strip_prefix("model name")).and_then(|l| l.split_once(':')).map(|(_, v)| v.trim().to_string())
+        {
+            return n;
         }
     }
     #[cfg(target_os = "macos")]
@@ -157,12 +158,15 @@ fn gpu() -> (Option<Gpu>, bool) {
     if cfg!(target_os = "macos") {
         // Apple silicon: the GPU is the chip, and its memory is the unified memory.
         if cfg!(target_arch = "aarch64") {
-            let chip = capture("sysctl", &["-n", "machdep.cpu.brand_string"], PROBE).map_or_else(|| "Apple silicon".to_string(), |s| s.trim().to_string());
+            let chip =
+                capture("sysctl", &["-n", "machdep.cpu.brand_string"], PROBE).map_or_else(|| "Apple silicon".to_string(), |s| s.trim().to_string());
             return (Some(Gpu { name: chip, vendor: GpuVendor::Apple, memory_mb: None, unified: true }), true);
         }
         return (None, true);
     }
-    if let Some(g) = capture("nvidia-smi", &["--query-gpu=name,memory.total", "--format=csv,noheader,nounits"], PROBE).and_then(|o| parse_nvidia_smi(&o)) {
+    if let Some(g) =
+        capture("nvidia-smi", &["--query-gpu=name,memory.total", "--format=csv,noheader,nounits"], PROBE).and_then(|o| parse_nvidia_smi(&o))
+    {
         return (Some(g), true);
     }
     if cfg!(windows) {
@@ -185,9 +189,18 @@ fn gpu() -> (Option<Gpu>, bool) {
 /// An NPU the OS names, if any. Best-effort: only what a device list says in so many words.
 fn npu() -> Option<Npu> {
     let text = if cfg!(windows) {
-        capture("powershell", &["-NoProfile", "-Command", "(Get-PnpDevice -PresentOnly | Where-Object { $_.FriendlyName -match 'NPU|Neural|AI Boost|Hexagon' }).FriendlyName"], PROBE)
+        capture(
+            "powershell",
+            &[
+                "-NoProfile",
+                "-Command",
+                "(Get-PnpDevice -PresentOnly | Where-Object { $_.FriendlyName -match 'NPU|Neural|AI Boost|Hexagon' }).FriendlyName",
+            ],
+            PROBE,
+        )
     } else if cfg!(target_os = "linux") {
-        capture("lspci", &[], PROBE).map(|o| o.lines().filter(|l| l.contains("NPU") || l.contains("Neural") || l.contains("AI Boost")).collect::<Vec<_>>().join("\n"))
+        capture("lspci", &[], PROBE)
+            .map(|o| o.lines().filter(|l| l.contains("NPU") || l.contains("Neural") || l.contains("AI Boost")).collect::<Vec<_>>().join("\n"))
     } else if cfg!(target_os = "macos") && cfg!(target_arch = "aarch64") {
         Some("Apple Neural Engine".to_string())
     } else {
@@ -228,7 +241,8 @@ mod tests {
 
     #[test]
     fn windows_picks_the_discrete_card_and_distrusts_the_4gb_cap() {
-        let json = r#"[{"Name":"Intel(R) UHD Graphics","AdapterRAM":1073741824},{"Name":"NVIDIA GeForce RTX 4060 Laptop GPU","AdapterRAM":4293918720}]"#;
+        let json =
+            r#"[{"Name":"Intel(R) UHD Graphics","AdapterRAM":1073741824},{"Name":"NVIDIA GeForce RTX 4060 Laptop GPU","AdapterRAM":4293918720}]"#;
         let g = parse_win32_video(json).unwrap();
         assert_eq!(g.vendor, GpuVendor::Nvidia);
         assert_eq!(g.memory_mb, None, "AdapterRAM saturates at 4 GB");

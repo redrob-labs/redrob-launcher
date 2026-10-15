@@ -85,7 +85,14 @@ fn unpack(archive: &Path, into: &Path) -> Result<(), String> {
 }
 
 /// Downloads and unpacks a runtime's release for this computer. Returns the executable.
-pub fn install(http: &Http, root: &Path, device: &Device, runtime: Runtime, stop: &Stop, progress: &mut dyn FnMut(u64, u64)) -> Result<PathBuf, String> {
+pub fn install(
+    http: &Http,
+    root: &Path,
+    device: &Device,
+    runtime: Runtime,
+    stop: &Stop,
+    progress: &mut dyn FnMut(u64, u64),
+) -> Result<PathBuf, String> {
     let (release, key, asset) = asset_for(device, runtime).ok_or_else(|| format!("no {} build for this computer", runtime.id()))?;
     let dir = release_dir(root, runtime, &release);
     if let Some(bin) = installed_binary(&dir, &release) {
@@ -188,7 +195,10 @@ impl Server {
         let started = Instant::now();
         loop {
             if let Ok(Some(status)) = server.child.try_wait() {
-                let tail = std::fs::read_to_string(&log).ok().map(|s| s.lines().rev().take(5).collect::<Vec<_>>().into_iter().rev().collect::<Vec<_>>().join("\n")).unwrap_or_default();
+                let tail = std::fs::read_to_string(&log)
+                    .ok()
+                    .map(|s| s.lines().rev().take(5).collect::<Vec<_>>().into_iter().rev().collect::<Vec<_>>().join("\n"))
+                    .unwrap_or_default();
                 return Err(format!("llama-server exited ({status}). {tail}").trim().to_string());
             }
             if http.get_text(&format!("{}/health", server.url())).is_ok_and(|t| t.is_some_and(|t| t.contains("ok"))) {
@@ -234,7 +244,9 @@ pub fn provider_id(model_id: &str) -> String {
 /// exactly what is written; everything else in the file is left as it was.
 pub fn set_code_provider(path: &Path, model: &Model, url: Option<&str>) -> Result<(), String> {
     let mut root: serde_json::Value = match std::fs::read_to_string(path) {
-        Ok(s) if !s.trim().is_empty() => serde_json::from_str(&s).map_err(|e| format!("{} isn't valid JSON ({e}); not touching it", path.display()))?,
+        Ok(s) if !s.trim().is_empty() => {
+            serde_json::from_str(&s).map_err(|e| format!("{} isn't valid JSON ({e}); not touching it", path.display()))?
+        }
         _ => serde_json::json!({ "$schema": "https://code.redrob.ai/config.json" }),
     };
     let obj = root.as_object_mut().ok_or("config isn't an object")?;
@@ -327,7 +339,8 @@ mod tests {
     #[test]
     fn the_installed_binary_is_found_at_the_top_or_one_folder_down() {
         let dir = tempfile::tempdir().unwrap();
-        let release = RuntimeRelease { release: String::new(), tag: "b1".into(), binary: "llama-server".into(), assets: Default::default(), note: None };
+        let release =
+            RuntimeRelease { release: String::new(), tag: "b1".into(), binary: "llama-server".into(), assets: Default::default(), note: None };
         assert!(installed_binary(dir.path(), &release).is_none());
         let nested = dir.path().join("build").join("bin");
         std::fs::create_dir_all(&nested).unwrap();

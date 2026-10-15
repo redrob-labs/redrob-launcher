@@ -120,7 +120,11 @@ mod tests {
         let r = builtin();
         let stock = &r["llama-server"];
         assert_eq!(stock.asset_for(Os::Linux, Arch::X64, Backend::Cuda).map(|(k, _)| k), Some("linux-x64-cuda"));
-        assert_eq!(stock.asset_for(Os::Linux, Arch::X64, Backend::Cpu).map(|(k, _)| k), Some("linux-x64-vulkan"), "no cpu build: vulkan runs on cpu-less boxes too");
+        assert_eq!(
+            stock.asset_for(Os::Linux, Arch::X64, Backend::Cpu).map(|(k, _)| k),
+            Some("linux-x64-vulkan"),
+            "no cpu build: vulkan runs on cpu-less boxes too"
+        );
         assert_eq!(stock.asset_for(Os::MacOs, Arch::Arm64, Backend::Metal).map(|(k, _)| k), Some("macos-arm64"));
         assert_eq!(stock.asset_for(Os::MacOs, Arch::X64, Backend::Cpu), None);
         assert_eq!(stock.asset_for(Os::FreeBsd, Arch::X64, Backend::Cpu), None);
