@@ -28,9 +28,14 @@ English: [README.md](./README.md)
   앱들이 그 데몬 하나에 닿는 데 쓰는 Rust 크레이트 `redrob-engine-client`를 엔진 릴리즈 태그에 고정해 사용합니다
   ([docs/engine.md](docs/engine.md)).
 
-- 앱이 쓰는 모델(지금은 레드롭 컷의 Whisper 음성 인식 모델과 내레이션 목소리)을 각 앱이 읽는 폴더에 바로
-  내려받습니다. 이어받기와 일시 정지가 되고, 모든 파일을 고정된 SHA-256과 대조합니다. 목록은
-  `assets/models/models.json`이고, 각 앱의 카탈로그에서 `scripts/gen_models_manifest.py`로 다시 만듭니다.
+- 모든 레드롭 앱이 쓸 수 있는 로컬 모델을 내려받습니다. 대화·코딩·비전 LLM, 캔버스의 이미지 모델(우리
+  레드롭 이미지, LaMa 인페인팅, 배경 제거, 업스케일, 선택), 컷의 음성 모델과 목소리, 셰이프의 이미지→3D,
+  리콜의 글자 인식. 먼저 이 컴퓨터를 측정해 어떤 것이 여기서 돌아가는지 알려 줍니다. 이어받기와 일시 정지가
+  되고, 모든 파일을 고정된 SHA-256과 대조합니다. 목록은 `assets/models/models.json`입니다.
+
+- 내려받은 GGUF를 `llama-server`로 루프백에서 서빙하고, 레지스트리 파일 하나로 모든 로컬 모델을 앱에
+  알립니다. 앱은 로컬 모델이 있으면 그것을, 없으면 Console을 씁니다
+  ([docs/local-models.ko.md](docs/local-models.ko.md)).
 
 ## 소스에서 빌드
 
