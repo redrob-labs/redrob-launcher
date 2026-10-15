@@ -10,7 +10,7 @@ product id (the console's `DEVICE_PRODUCTS`); those apps are one small change aw
 | App | Its own sign-in today | Reads the shared file | Launcher can hand it the key | What is left |
 |---|---|---|---|---|
 | Redrob CAD | Device flow (`cad`), `account.json` | Yes, released in v0.0.3 (redrob-cad#32) | Yes | Nothing |
-| Redrob Cut | Device flow (`cut`), `account.json` | Yes, released in v0.0.1 (redrob-cut#6) | Yes | Nothing |
+| Redrob Film | Device flow (`cut`), `account.json` | Yes, released in v0.0.1 (redrob-film#6) | Yes | Nothing |
 | Redrob Code | `REDROB_API_KEY`, its credential store, `auth.json` | Merged (redrob-code#88): fourth origin of `ConsoleKey.resolve`, reported as `source: "launcher"` | Yes (`auth.json`, other providers kept) | Release it |
 | Redrob Shape | Device flow (`shape`) | Merged (redrob-shape#38) | No | Release it |
 | Redrob Browser | Device flow (`redrob-browser`) | Merged (redrob-browser#110) | No | Release it |
@@ -29,7 +29,7 @@ releases, put its version into that table -- or, better, let the release carry
 
 For an app that reads the shared file, the rules are the four in
 [shared-account.md](./shared-account.md#rules-for-readers): read, never write; read it when the key is
-needed; never log or show the key; the app's own key wins. Redrob CAD's and Redrob Cut's change is the
+needed; never log or show the key; the app's own key wins. Redrob CAD's and Redrob Film's change is the
 reference: `shared_account_path()` and `KeySource::current()` in their `device.rs`, and "Signed in
 with Redrob Launcher" in place of Disconnect when the shared key is the one in use.
 
@@ -41,7 +41,7 @@ The launcher installs an asset only when its name reads `<stem>-<version>-<os>-<
 | App | Latest | Example asset | Installable | To fix in that repo |
 |---|---|---|---|---|
 | Redrob CAD | v0.0.3 | `redrob-cad-0.0.3-linux-x86_64.tar.gz` | Yes, every platform | Nothing |
-| Redrob Cut | v0.0.1 | `redrob-cut-0.0.1-linux-x86_64.tar.gz` | Yes, every platform | Rename `filmcraft-web-0.0.1.zip` (not installable anyway) |
+| Redrob Film | v0.0.1 | `redrob-film-0.0.1-linux-x86_64.tar.gz` | Yes, every platform | Rename `filmcraft-web-0.0.1.zip` (not installable anyway) |
 | Redrob Canvas | v0.5.6 | `redrob-canvas-0.5.6-linux-x86_64.tar.gz` | Linux, macOS; Windows only via the `.zip` | `-setup.exe` carries a suffix the parser does not read |
 | Redrob Shape | v0.1.0 | `redrob-shape-linux-x64-0.1.0.tar.xz` | No | Version before OS; `x64` -> `x86_64`; `.tar.xz` -> `.tar.gz` |
 | Redrob Browser | v0.1.8 | `redrob-browser-macos-arm64-0.1.8.zip`, `redrob-browser-stable_0.1.8+155…_amd64.deb` | No | Version before OS; the Debian name is the packaging's own |

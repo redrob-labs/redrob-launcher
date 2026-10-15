@@ -12,7 +12,7 @@ Console을 씁니다. 이 계약의 어떤 것도 앱이 동작하는 데 필수
 | 필드 | 뜻 |
 | --- | --- |
 | `id` | 모델 폴더 이름 (`qwen3.8-27b-q4`) |
-| `app` | 읽는 앱 (`redrob-cut`), 모든 앱이 쓰는 모델이면 `redrob` |
+| `app` | 읽는 앱 (`redrob-film`), 모든 앱이 쓰는 모델이면 `redrob` |
 | `task` | 하는 일: `chat`, `code`, `vision`, `embedding`, `text-to-image`, `image-edit`, `inpaint`, `background-removal`, `upscale`, `segmentation`, `vectorize`, `stt`, `tts`, `vad`, `stem-separation`, `image-to-3d`, `ocr` |
 | `runtime` | `files`(앱이 직접 로드), `llama-server`(런처가 서빙), `llama-server-prism`(PrismML llama.cpp 포크로 서빙, 설정을 켠 사람에게만 보임) |
 | `requires` | `memory_gb`와 `backends`(`cuda`, `metal`, `vulkan`, `cpu`): 컴퓨터에 필요한 것 |
@@ -30,7 +30,7 @@ Console을 씁니다. 이 계약의 어떤 것도 앱이 동작하는 데 필수
 
 | `app` | 폴더 |
 | --- | --- |
-| `redrob-cut` | Redrob Cut 자체 모델 폴더(`<데이터 폴더>/models`), 이전과 같음 |
+| `redrob-film` | Redrob Film 자체 모델 폴더(`<데이터 폴더>/models`), 이전과 같음 |
 | `redrob`, `redrob-canvas`, `redrob-shape`, `redrob-recall`, `redrob-code` | `~/.redrob/models/<id>/` (`REDROB_MODELS_DIR`로 바꿀 수 있음) |
 
 파일은 SHA-256이 맞은 뒤에만 제자리에 놓입니다. 받다 만 파일은 `.part`가 붙어 있고 앱이 열 것이

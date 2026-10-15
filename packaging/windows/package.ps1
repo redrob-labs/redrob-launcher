@@ -120,7 +120,7 @@ function New-InstallerArt([string] $BannerOut, [string] $DialogOut) {
   $muted = [System.Drawing.ColorTranslator]::FromHtml('#aab0bb')
   $line = [System.Drawing.ColorTranslator]::FromHtml('#292e37')
   # The Redrob apps, in the launcher's order (crates/core/src/catalog.rs).
-  $apps = 'redrob-cut', 'redrob-shape', 'redrob-cad', 'redrob-canvas', 'redrob-design',
+  $apps = 'redrob-film', 'redrob-shape', 'redrob-cad', 'redrob-canvas', 'redrob-design',
     'redrob-browser', 'redrob-code', 'redrob-cowork', 'redrob-office', 'redrob-query'
   $mark = [System.Drawing.Image]::FromFile((Join-Path $Root 'assets\app-icon\hicolor\256x256\apps\ai.redrob.launcher.png'))
   $wordmark = [System.Drawing.Image]::FromFile((Join-Path $Root 'assets\app-icon\redrob-logo-dark.png'))

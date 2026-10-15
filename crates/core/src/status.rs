@@ -19,8 +19,6 @@ pub enum InstallSource {
     Rpm,
     /// An Arch Linux package (from the AUR: `<app>`, `<app>-bin` or `<app>-git`).
     Pacman,
-    /// A Flatpak.
-    Flatpak,
     /// An AppImage file found on disk.
     AppImage,
     /// A binary found on `PATH` or in a system prefix.
@@ -36,14 +34,13 @@ impl InstallSource {
             Self::Deb => "Debian package",
             Self::Rpm => "RPM package",
             Self::Pacman => "Arch package (AUR)",
-            Self::Flatpak => "Flatpak",
             Self::AppImage => "AppImage",
             Self::Binary => "System binary",
         }
     }
 
     /// Whether the launcher may replace or remove this copy itself. Packages owned by a system
-    /// package manager (deb, rpm, Flatpak) are updated through that manager instead.
+    /// package manager (deb, rpm, pacman) are updated through that manager instead.
     pub fn launcher_can_update(self) -> bool {
         matches!(self, Self::Launcher | Self::MacApp | Self::Msi | Self::AppImage)
     }

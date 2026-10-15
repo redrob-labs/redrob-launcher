@@ -97,16 +97,14 @@ fn candidates() -> Vec<Candidate> {
     }
     #[cfg(all(unix, not(target_os = "macos")))]
     {
-        // Debian/Ubuntu, Arch, Fedora (static and variable) and FreeBSD's ports.
-        const NOTO_DIRS: [&str; 8] = [
+        // Debian/Ubuntu, Arch and Fedora (static and variable).
+        const NOTO_DIRS: [&str; 6] = [
             "/usr/share/fonts/opentype/noto",
             "/usr/share/fonts/noto-cjk",
             "/usr/share/fonts/google-noto-cjk",
             "/usr/share/fonts/google-noto-sans-cjk-fonts",
             "/usr/share/fonts/google-noto-sans-cjk-vf-fonts",
             "/usr/share/fonts/noto",
-            "/usr/local/share/fonts/noto",
-            "/usr/local/share/fonts/noto-cjk",
         ];
         for file in ["NotoSansCJK-Regular.ttc", "NotoSansCJKsc-Regular.otf", "NotoSansCJK-VF.ttc"] {
             for dir in NOTO_DIRS {

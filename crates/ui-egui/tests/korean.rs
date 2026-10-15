@@ -70,7 +70,7 @@ fn events() -> Vec<Event> {
     let versions = [
         ("redrob-canvas", "0.5.0"),
         ("redrob-shape", "0.7.0"),
-        ("redrob-cut", "0.4.0"),
+        ("redrob-film", "0.4.0"),
         ("redrob-office", "0.4.0"),
         ("redrob-browser", "0.6.0"),
         ("redrob-code", "0.3.0"),
@@ -97,7 +97,7 @@ fn events() -> Vec<Event> {
         });
         ev.push(Event::Detected { app: app.id.into(), installed: inst });
     }
-    ev.push(Event::Progress { app: "redrob-cut".into(), phase: JobPhase::Downloading { done: 48 << 20, total: 131 << 20 } });
+    ev.push(Event::Progress { app: "redrob-film".into(), phase: JobPhase::Downloading { done: 48 << 20, total: 131 << 20 } });
     ev.push(Event::Paused { app: "redrob-cowork".into(), download: Some(PausedDownload { done: 30 << 20, total: 120 << 20 }) });
     ev.push(Event::Progress { app: "redrob-query".into(), phase: JobPhase::Reconnecting { done: 10 << 20, total: 90 << 20 } });
     ev.push(Event::CheckFinished { at: NOW - 180, source: Source::GitHubApi, rate_limited_until: None });

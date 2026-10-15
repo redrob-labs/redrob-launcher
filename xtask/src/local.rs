@@ -19,7 +19,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Every Redrob app: (id = folder name, display name). Keep in step with `catalog::SUITE`.
 const APPS: &[(&str, &str)] = &[
-    ("redrob-cut", "Redrob Cut"),
+    ("redrob-film", "Redrob Film"),
     ("redrob-shape", "Redrob Shape"),
     ("redrob-cad", "Redrob CAD"),
     ("redrob-canvas", "Redrob Canvas"),
@@ -273,10 +273,9 @@ fn package_command(repo: &Path, o: &Opts) -> Result<Command, String> {
         let arch = o.arch.clone().unwrap_or_else(|| if cfg!(target_arch = "aarch64") { "aarch64".into() } else { "x86_64".into() });
         c.args(["--arch", &arch]);
         c
-    } else if cfg!(target_os = "linux") || cfg!(target_os = "freebsd") {
-        let os = if cfg!(target_os = "linux") { "linux" } else { "freebsd" };
+    } else if cfg!(target_os = "linux") {
         let mut c = Command::new("bash");
-        c.arg(repo.join(format!("packaging/{os}/package.sh")));
+        c.arg(repo.join("packaging/linux/package.sh"));
         c
     } else if cfg!(windows) {
         let mut c = Command::new("powershell");

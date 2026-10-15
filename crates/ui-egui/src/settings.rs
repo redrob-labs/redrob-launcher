@@ -91,6 +91,10 @@ pub struct Settings {
     /// Interface language: `auto` (follow the system) or a language code from the registry
     /// (`en`, `ru`, `zh-CN`, `de`).
     pub language: String,
+    /// Per-app interface language overrides, app id to language code; an app not listed follows
+    /// `language`. Published for the apps in the shared language file.
+    #[serde(default)]
+    pub app_languages: BTreeMap<String, String>,
     /// Closing the window keeps the launcher in the tray (menu bar) instead of quitting.
     pub close_to_tray: bool,
     /// macOS: showing the window brings it to the current desktop (Space) instead of switching to
@@ -141,16 +145,6 @@ impl Settings {
     }
 }
 
-/// Whether this process is running inside a Flatpak container sandbox.
-pub fn is_flatpak_sandbox() -> bool {
-    #[cfg(target_os = "linux")]
-    {
-        std::env::var_os("FLATPAK_ID").is_some() || std::path::Path::new("/.flatpak-info").exists()
-    }
-    #[cfg(not(target_os = "linux"))]
-    false
-}
-
 /// Whether this process was launched from an AppImage.
 pub fn is_appimage() -> bool {
     #[cfg(target_os = "linux")]
@@ -166,14 +160,8 @@ fn default_true() -> bool {
 }
 
 /// Default package kinds preferred on Linux based on how the launcher itself was installed.
-fn default_preferred_kinds() -> Vec<PackageKind> {
-    if is_flatpak_sandbox() {
-        vec![PackageKind::Flatpak]
-    } else if is_appimage() {
-        vec![PackageKind::AppImage]
-    } else {
-        Vec::new()
-    }
+pub fn default_preferred_kinds() -> Vec<PackageKind> {
+    if is_appimage() { vec![PackageKind::AppImage] } else { Vec::new() }
 }
 
 impl Default for Settings {
@@ -185,6 +173,7 @@ impl Default for Settings {
             sort_descending: false,
             theme: ThemeChoice::System,
             language: "auto".to_string(),
+            app_languages: BTreeMap::new(),
             close_to_tray: true,
             show_on_current_desktop: true,
             check_every: CheckEvery::Hour,

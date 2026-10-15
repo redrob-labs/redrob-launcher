@@ -9,7 +9,7 @@ console.redrob.ai에서 자기 키를 받는다는 뜻입니다(콘솔의 `DEVIC
 | 앱 | 지금 자기 로그인 | 공용 파일 읽기 | 런처가 키를 넣어 줄 수 있음 | 남은 일 |
 |---|---|---|---|---|
 | Redrob CAD | 기기 인증(`cad`), `account.json` | 예. v0.0.3에 포함(redrob-cad#32) | 예 | 없음 |
-| Redrob Cut | 기기 인증(`cut`), `account.json` | 예. v0.0.1에 포함(redrob-cut#6) | 예 | 없음 |
+| Redrob Film | 기기 인증(`cut`), `account.json` | 예. v0.0.1에 포함(redrob-film#6) | 예 | 없음 |
 | Redrob Code | `REDROB_API_KEY`, 자격 저장소, `auth.json` | 머지됨(redrob-code#88). `ConsoleKey.resolve`의 네 번째 출처, `source: "launcher"`로 보고 | 예(`auth.json`, 다른 제공자 유지) | 릴리스 |
 | Redrob Shape | 기기 인증(`shape`) | 머지됨(redrob-shape#38) | 아니요 | 릴리스 |
 | Redrob Browser | 기기 인증(`redrob-browser`) | 머지됨(redrob-browser#110) | 아니요 | 릴리스 |
@@ -26,7 +26,7 @@ console.redrob.ai에서 자기 키를 받는다는 뜻입니다(콘솔의 `DEVIC
 [`redrob-launcher.json`](./release-manifest.ko.md)을 실어 보냅니다. 런처는 표보다 그 파일을 믿습니다.
 
 공용 파일을 읽는 앱의 규칙은 [shared-account.ko.md](./shared-account.ko.md)의 네 가지입니다. 읽기만 하고 쓰지
-않기, 키가 필요할 때 읽기, 키를 기록하거나 보여 주지 않기, 앱 자신의 키가 먼저. Redrob CAD와 Redrob Cut의
+않기, 키가 필요할 때 읽기, 키를 기록하거나 보여 주지 않기, 앱 자신의 키가 먼저. Redrob CAD와 Redrob Film의
 변경이 기준입니다. 각 `device.rs`의 `shared_account_path()`와 `KeySource::current()`, 그리고 공용 키를 쓸 때
 연결 해제 대신 보이는 "Signed in with Redrob Launcher"입니다.
 
@@ -38,7 +38,7 @@ console.redrob.ai에서 자기 키를 받는다는 뜻입니다(콘솔의 `DEVIC
 | 앱 | 최신 | 자산 예 | 설치 가능 | 그 레포에서 고칠 것 |
 |---|---|---|---|---|
 | Redrob CAD | v0.0.3 | `redrob-cad-0.0.3-linux-x86_64.tar.gz` | 예, 전 플랫폼 | 없음 |
-| Redrob Cut | v0.0.1 | `redrob-cut-0.0.1-linux-x86_64.tar.gz` | 예, 전 플랫폼 | `filmcraft-web-0.0.1.zip` 이름(설치 대상은 아님) |
+| Redrob Film | v0.0.1 | `redrob-film-0.0.1-linux-x86_64.tar.gz` | 예, 전 플랫폼 | `filmcraft-web-0.0.1.zip` 이름(설치 대상은 아님) |
 | Redrob Canvas | v0.5.6 | `redrob-canvas-0.5.6-linux-x86_64.tar.gz` | Linux, macOS. Windows는 `.zip`만 | `-setup.exe`의 접미사를 파서가 안 읽음 |
 | Redrob Shape | v0.1.0 | `redrob-shape-linux-x64-0.1.0.tar.xz` | 아니요 | 버전이 OS 앞에; `x64` -> `x86_64`; `.tar.xz` -> `.tar.gz` |
 | Redrob Browser | v0.1.8 | `redrob-browser-macos-arm64-0.1.8.zip`, `redrob-browser-stable_0.1.8+155…_amd64.deb` | 아니요 | 버전이 OS 앞에; deb 이름은 패키징 고유 |

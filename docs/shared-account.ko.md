@@ -16,7 +16,7 @@ English: [shared-account.md](./shared-account.md)
 
 | 플랫폼 | 경로 |
 |---|---|
-| Linux, FreeBSD | `$XDG_CONFIG_HOME/redrob-shared/account.json` (`~/.config/redrob-shared/account.json`) |
+| Linux | `$XDG_CONFIG_HOME/redrob-shared/account.json` (`~/.config/redrob-shared/account.json`) |
 | macOS | `~/Library/Application Support/ai.redrob.shared/account.json` |
 | Windows | `%APPDATA%\Redrob\Shared\account.json` |
 
@@ -33,7 +33,7 @@ English: [shared-account.md](./shared-account.md)
 }
 ```
 
-Redrob CAD와 Redrob Cut이 이미 자기 `account.json`에 쓰는 모양과 같아서, 앱은 같은 코드로 두 파일을 다 읽을
+Redrob CAD와 Redrob Film이 이미 자기 `account.json`에 쓰는 모양과 같아서, 앱은 같은 코드로 두 파일을 다 읽을
 수 있습니다. 비밀은 `apiKey` 하나입니다. `apiBaseUrl`은 키를 쓰는 곳이고, 앱은 거기에 bearer 토큰으로 보냅니다.
 
 ## 읽는 앱의 규칙
@@ -60,7 +60,7 @@ Redrob CAD와 Redrob Cut이 이미 자기 `account.json`에 쓰는 모양과 같
 | 앱 | 파일 | 형식 |
 |---|---|---|
 | Redrob CAD | `%APPDATA%\Redrob CAD`, `~/Library/Application Support/ai.redrob.cad`, `~/.config/redrob-cad`의 `account.json` (`REDROB_CAD_CONFIG_DIR`) | 위와 같음 |
-| Redrob Cut | `%APPDATA%\Redrob Cut`, `~/Library/Application Support/ai.redrob.cut`, `~/.config/redrob-cut`의 `account.json` (`REDROB_CUT_CONFIG_DIR`) | 위와 같음 |
+| Redrob Film | `%APPDATA%\Redrob Film`, `~/Library/Application Support/ai.redrob.film`, `~/.config/redrob-film`의 `account.json` (`REDROB_CUT_CONFIG_DIR`) | 위와 같음 |
 | Redrob Code | 모든 플랫폼에서 `$XDG_DATA_HOME/redrob/auth.json` (`~/.local/share/redrob/auth.json`) | `"redrob": {"type": "api", "key": "rk_…"}`. 파일의 다른 제공자 항목은 그대로 둠 |
 
 다른 앱은 공용 파일을 읽거나 런처가 그 앱의 파일을 알게 될 때까지 **아직 지원 안 됨**으로 보입니다. 코드는

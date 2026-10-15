@@ -103,7 +103,7 @@ pub struct Serve {
 pub struct Model {
     /// Folder name under the app's models folder (`whisper-base`).
     pub id: String,
-    /// The app that uses it (`redrob-cut`), or `redrob` for a shared one.
+    /// The app that uses it (`redrob-film`), or `redrob` for a shared one.
     pub app: String,
     pub name: String,
     pub description: String,
@@ -227,7 +227,7 @@ pub enum Serving {
 pub struct ModelView {
     pub model: Model,
     pub state: ModelState,
-    /// The folder it goes into, for the person to see (`~/.local/share/redrob-cut/models/whisper-base`).
+    /// The folder it goes into, for the person to see (`~/.local/share/redrob-film/models/whisper-base`).
     pub folder: Option<String>,
     /// Whether this computer can run it, from [`crate::device::Device::fit`].
     pub fit: crate::device::Fit,
@@ -309,15 +309,15 @@ mod tests {
             format!(r#"{{"id":"{id}","app":"{app}","name":"N","description":"","license":"","source":"https://x","files":[{file}]}}"#)
         };
         let doc = |entries: Vec<String>| format!(r#"{{"version":1,"models":[{}]}}"#, entries.join(","));
-        let ok = m("good", "redrob-cut", f);
+        let ok = m("good", "redrob-film", f);
         let models = parse(&doc(vec![
             ok.clone(),
             ok.clone(),
-            m("../escape", "redrob-cut", f),
+            m("../escape", "redrob-film", f),
             m("x", "not-an-app", f),
-            m("y", "redrob-cut", &f.replace("https://", "http://")),
-            m("z", "redrob-cut", &f.replace("a.bin", "../a.bin")),
-            m("w", "redrob-cut", &f.replace("0000", "zzzz")),
+            m("y", "redrob-film", &f.replace("https://", "http://")),
+            m("z", "redrob-film", &f.replace("a.bin", "../a.bin")),
+            m("w", "redrob-film", &f.replace("0000", "zzzz")),
         ]))
         .unwrap();
         assert_eq!(models.iter().map(|m| m.id.as_str()).collect::<Vec<_>>(), ["good"]);

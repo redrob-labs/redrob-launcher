@@ -28,20 +28,20 @@ fn env_dir(k: &str) -> Option<PathBuf> {
 
 /// The folder an app reads its downloaded models from, as that app computes it. `None`: unknown.
 ///
-/// Redrob Cut: `<data dir>/models`, where the data dir is `FILMCRAFT_DATA_DIR`, else
-/// `~/Library/Application Support/Redrob Cut`, `%APPDATA%\Redrob Cut` or
-/// `$XDG_DATA_HOME/redrob-cut` (`~/.local/share/redrob-cut`). A portable Redrob Cut keeps its data
+/// Redrob Film: `<data dir>/models`, where the data dir is `FILMCRAFT_DATA_DIR`, else
+/// `~/Library/Application Support/Redrob Film`, `%APPDATA%\Redrob Film` or
+/// `$XDG_DATA_HOME/redrob-film` (`~/.local/share/redrob-film`). A portable Redrob Film keeps its data
 /// beside itself; the launcher installs the regular kind, so that case isn't looked for.
 pub fn models_dir(app: &str) -> Option<PathBuf> {
     match app {
-        "redrob-cut" => {
+        "redrob-film" => {
             let data = env_dir("FILMCRAFT_DATA_DIR").or_else(|| {
                 if cfg!(target_os = "macos") {
-                    env_dir("HOME").map(|h| h.join("Library/Application Support/Redrob Cut"))
+                    env_dir("HOME").map(|h| h.join("Library/Application Support/Redrob Film"))
                 } else if cfg!(windows) {
-                    env_dir("APPDATA").map(|h| h.join("Redrob Cut"))
+                    env_dir("APPDATA").map(|h| h.join("Redrob Film"))
                 } else {
-                    env_dir("XDG_DATA_HOME").map(|d| d.join("redrob-cut")).or_else(|| env_dir("HOME").map(|h| h.join(".local/share/redrob-cut")))
+                    env_dir("XDG_DATA_HOME").map(|d| d.join("redrob-film")).or_else(|| env_dir("HOME").map(|h| h.join(".local/share/redrob-film")))
                 }
             })?;
             Some(data.join("models"))
@@ -198,8 +198,6 @@ fn unmeasured() -> Device {
             Os::MacOs
         } else if cfg!(windows) {
             Os::Windows
-        } else if cfg!(target_os = "freebsd") {
-            Os::FreeBsd
         } else {
             Os::Linux
         },
@@ -596,7 +594,7 @@ mod tests {
     fn model(files: &[(&str, &[u8])]) -> Model {
         Model {
             id: "m".into(),
-            app: "redrob-cut".into(),
+            app: "redrob-film".into(),
             name: "M".into(),
             description: String::new(),
             license: String::new(),
@@ -674,27 +672,27 @@ mod tests {
             vec![m.clone(), Model { app: "redrob-code".into(), ..m.clone() }],
             None,
             Arc::new(|| {}),
-            Arc::new(move |app: &str| (app == "redrob-cut").then(|| r.clone())),
+            Arc::new(move |app: &str| (app == "redrob-film").then(|| r.clone())),
         );
         let v = models.models();
         assert_eq!(v[0].state, ModelState::NotDownloaded);
         assert_eq!(v[1].state, ModelState::NoFolder);
         assert!(v[0].folder.as_deref().is_some_and(|f| f.ends_with("m")));
         // Without HTTPS the download fails with a reason, and nothing is left running.
-        models.download("redrob-cut", "m");
+        models.download("redrob-film", "m");
         assert_eq!(models.models()[0].state, ModelState::Failed("HTTPS isn't available on this computer.".into()));
         // Present on disk wins over an old failure.
         std::fs::create_dir_all(root.join("m")).unwrap();
         std::fs::write(root.join("m").join("a.bin"), b"aaaa").unwrap();
         assert_eq!(models.models()[0].state, ModelState::Installed);
-        models.delete("redrob-cut", "m").unwrap();
+        models.delete("redrob-film", "m").unwrap();
         assert_eq!(models.models()[0].state, ModelState::NotDownloaded);
         let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]
-    fn redrob_cut_models_go_where_it_reads_them() {
-        let dir = models_dir("redrob-cut");
+    fn redrob_film_models_go_where_it_reads_them() {
+        let dir = models_dir("redrob-film");
         assert!(dir.as_ref().is_some_and(|d| d.ends_with("models")), "{dir:?}");
         assert_eq!(models_dir("redrob-office"), None);
         assert_eq!(models_dir("redrob"), shared_models_dir());
@@ -717,7 +715,7 @@ mod tests {
         assert!(reg.models[0].path.ends_with("m"));
         assert_eq!(reg.models[0].files, ["a.bin"]);
         // Deleting rewrites it empty, and the verdicts follow the device record.
-        models.delete("redrob-cut", "m").unwrap();
+        models.delete("redrob-film", "m").unwrap();
         let reg = Registry::parse(&std::fs::read_to_string(root.join(REGISTRY_FILE)).unwrap()).unwrap();
         assert!(reg.models.is_empty());
         assert_eq!(models.models()[0].fit, redrob_launcher_core::device::Fit::WontRun, "0 MB RAM before the probe");
@@ -739,7 +737,7 @@ mod tests {
             ..m.clone()
         };
         let mut models = Models::new(vec![m, served], None, Arc::new(|| {}), Arc::new(move |_: &str| Some(r.clone())));
-        models.start("redrob-cut", "m");
+        models.start("redrob-film", "m");
         assert_eq!(models.models()[0].serving, Serving::No);
         // Not downloaded: refused with a reason, no thread started.
         models.start("redrob", "s");
@@ -766,13 +764,13 @@ mod tests {
                 std::thread::sleep(std::time::Duration::from_millis(100));
             }
         };
-        models.download("redrob-cut", "whisper-tiny");
+        models.download("redrob-film", "whisper-tiny");
         wait(&models, &|s| matches!(s, ModelState::Downloading { done, .. } if *done > 20 << 20));
-        models.pause("redrob-cut", "whisper-tiny");
+        models.pause("redrob-film", "whisper-tiny");
         wait(&models, &|s| !matches!(s, ModelState::Downloading { .. }));
         let paused = state(&models);
         assert!(matches!(paused, ModelState::Partial { done, total } if done > 0 && done < total), "{paused:?}");
-        models.download("redrob-cut", "whisper-tiny");
+        models.download("redrob-film", "whisper-tiny");
         wait(&models, &|s| *s == ModelState::Installed);
         assert_eq!(state(&models), ModelState::Installed);
         for f in &tiny.files {

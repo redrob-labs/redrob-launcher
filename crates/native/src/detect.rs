@@ -4,9 +4,7 @@
 //! - Windows: the Windows Installer's uninstall entries (`Redrob`), and portable
 //!   copies the launcher unpacked.
 //! - Linux: AppImages in `~/Applications` (where the launcher and AppImageLauncher put them),
-//!   `~/AppImages` (Gear Lever) and `~/.local/bin`, Debian/RPM packages, Flatpaks, and tarball
-//!   installs.
-//! - FreeBSD: tarball installs and `/usr/local/bin/<app>`.
+//!   `~/AppImages` (Gear Lever) and `~/.local/bin`, Debian/RPM packages, and tarball installs.
 
 use redrob_launcher_core::{CraftApp, InstallSource, Installed, version};
 
@@ -44,8 +42,6 @@ pub fn detect(app: &CraftApp, manifest: &Manifest, snapshot: &Snapshot) -> Optio
     return windows::detect(app);
     #[cfg(target_os = "linux")]
     return linux::detect(app, snapshot);
-    #[cfg(target_os = "freebsd")]
-    return freebsd::detect(app);
     #[allow(unreachable_code)]
     None
 }
@@ -212,11 +208,11 @@ pub mod linux {
     use crate::process::capture;
 
     /// Installed Redrob app packages from every package manager on this system (dpkg, rpm,
-    /// pacman, Flatpak). Read once per detection pass.
+    /// pacman). Read once per detection pass.
     pub fn packages() -> Vec<Package> {
         let ours = |name: &str| {
             redrob_launcher_core::SUITE.iter().any(|a| {
-                [InstallSource::Deb, InstallSource::Rpm, InstallSource::Pacman, InstallSource::Flatpak]
+                [InstallSource::Deb, InstallSource::Rpm, InstallSource::Pacman]
                     .iter()
                     .any(|m| crate::packages::candidate_names(a, *m).iter().any(|n| n == name))
             })
@@ -234,17 +230,6 @@ pub mod linux {
         }
         if let Some(list) = capture("pacman", &["-Q"], t) {
             add(InstallSource::Pacman, packages::parse_pacman(&list));
-        }
-        let arch = format!("--arch={}", std::env::consts::ARCH);
-        if let Some(list) = crate::process::capture_flatpak(&["list", "--app", &arch, "--columns=application,version"], t) {
-            let mut flatpaks = packages::parse_flatpak_list(&list);
-            // Bundles built from a release tarball often list no version: ask Flatpak directly.
-            for (id, version) in flatpaks.iter_mut().filter(|(id, v)| v.is_empty() && id.starts_with("ai.redrob.")) {
-                if let Some(v) = crate::process::capture_flatpak(&["info", &arch, id], t).as_deref().and_then(packages::parse_flatpak_info) {
-                    *version = v;
-                }
-            }
-            add(InstallSource::Flatpak, flatpaks);
         }
         out
     }
@@ -313,9 +298,9 @@ pub mod linux {
         if let Some((path, version)) = appimages(app).into_iter().next() {
             return Some(Installed { version, source: InstallSource::AppImage, location: path.display().to_string(), package: None });
         }
-        let order = [InstallSource::Deb, InstallSource::Rpm, InstallSource::Pacman, InstallSource::Flatpak];
+        let order = [InstallSource::Deb, InstallSource::Rpm, InstallSource::Pacman];
         if let Some(p) = packages::find(app, &snapshot.packages, &order) {
-            let location = if p.manager == InstallSource::Flatpak { app.bundle_id() } else { binary_on_path(app.id) };
+            let location = binary_on_path(app.id);
             return Some(Installed { version: packages::version_of(p), source: p.manager, location, package: Some(p.name.clone()) });
         }
         detect_system_install(app)
@@ -343,29 +328,6 @@ pub mod linux {
     }
 }
 
-#[cfg(target_os = "freebsd")]
-pub mod freebsd {
-    use std::path::Path;
-    use std::time::Duration;
-
-    use super::*;
-
-    pub fn detect(app: &CraftApp) -> Option<Installed> {
-        let bin = Path::new("/usr/local/bin").join(app.id);
-        if !bin.exists() {
-            return None;
-        }
-        Some(Installed { version: binary_version(&bin, app.id), source: InstallSource::Binary, location: bin.display().to_string(), package: None })
-    }
-
-    /// `<app> --version` prints `<app> 0.5.0 (sha, date)`.
-    fn binary_version(bin: &Path, id: &str) -> Option<version::Version> {
-        let out = crate::process::capture(bin.to_str()?, &["--version"], Duration::from_secs(5))?;
-        let rest = out.trim().strip_prefix(id)?.trim_start();
-        version::parse(rest.split_whitespace().next()?)
-    }
-}
-
 #[cfg(all(test, target_os = "linux"))]
 mod linux_tests {
     use super::*;
@@ -374,13 +336,12 @@ mod linux_tests {
     fn ours_filter_matches_rpm_packages() {
         let ours = |name: &str| {
             redrob_launcher_core::SUITE.iter().any(|a| {
-                [InstallSource::Deb, InstallSource::Rpm, InstallSource::Pacman, InstallSource::Flatpak]
+                [InstallSource::Deb, InstallSource::Rpm, InstallSource::Pacman]
                     .iter()
                     .any(|m| crate::packages::candidate_names(a, *m).iter().any(|n| n == name))
             })
         };
         assert!(ours("redrob-canvas"));
-        assert!(ours("ai.redrob.canvas"));
         assert!(!ours("unrelated-package"));
     }
 

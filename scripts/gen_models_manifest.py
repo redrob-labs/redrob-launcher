@@ -1,16 +1,16 @@
-"""Regenerate assets/models/models.json from Redrob Cut's pinned catalogue.
+"""Regenerate assets/models/models.json from Redrob Film's pinned catalogue.
 
-Usage: python3 scripts/gen_models_manifest.py <redrob-cut checkout> assets/models/models.json
+Usage: python3 scripts/gen_models_manifest.py <redrob-film checkout> assets/models/models.json
 """
 import json
 import re
 import sys
 
-cut = sys.argv[1]
+film = sys.argv[1]
 out = sys.argv[2]
 
-speech = open(f"{cut}/crates/speech/src/models.rs", encoding="utf-8").read()
-tts = open(f"{cut}/crates/tts/src/catalog.rs", encoding="utf-8").read()
+speech = open(f"{film}/crates/speech/src/models.rs", encoding="utf-8").read()
+tts = open(f"{film}/crates/tts/src/catalog.rs", encoding="utf-8").read()
 
 models = []
 for block in re.findall(r"ModelInfo \{(.*?)\n    \},", speech, re.S):
@@ -20,7 +20,7 @@ for block in re.findall(r"ModelInfo \{(.*?)\n    \},", speech, re.S):
         files.append({"name": name, "url": f"https://huggingface.co/openai/{repo}/resolve/{rev}/{name}", "sha256": sha, "size": int(size.replace("_", ""))})
     models.append({
         "id": get("id"),
-        "app": "redrob-cut",
+        "app": "redrob-film",
         "name": get("name"),
         "description": get("description"),
         "license": "MIT (OpenAI Whisper weights); Hugging Face conversion: Apache-2.0",
@@ -36,7 +36,7 @@ m = re.search(r'name: "cmudict.dict",\s*url: "([^"]+)",\s*sha256: "([0-9a-f]{64}
 tts_files.insert(2, {"name": "cmudict.dict", "url": m.group(1), "sha256": m.group(2), "size": int(m.group(3).replace("_", ""))})
 models.append({
     "id": "kokoro-82m",
-    "app": "redrob-cut",
+    "app": "redrob-film",
     "name": "Natural voices (Kokoro-82M)",
     "description": "Nine US English narration voices and the CMUdict pronunciation dictionary.",
     "license": "Apache-2.0 (Kokoro-82M by hexgrad); CMUdict: BSD-style (Carnegie Mellon University)",
@@ -45,7 +45,7 @@ models.append({
 })
 
 doc = {
-    "$comment": "Models the launcher can download for each Redrob app, into the folder that app reads them from. Every file is pinned to a revision and its SHA-256. Generated from each app's own catalogue (Redrob Cut: crates/speech/src/models.rs and crates/tts/src/catalog.rs); keep in step with it.",
+    "$comment": "Models the launcher can download for each Redrob app, into the folder that app reads them from. Every file is pinned to a revision and its SHA-256. Generated from each app's own catalogue (Redrob Film: crates/speech/src/models.rs and crates/tts/src/catalog.rs); keep in step with it.",
     "version": 1,
     "models": models,
 }
