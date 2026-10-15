@@ -13,10 +13,14 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, PoisonError};
 
-use redrob_launcher_core::models::{Model, ModelBackend, ModelState, ModelView};
+use redrob_launcher_core::device::Device;
+use redrob_launcher_core::models::{Model, ModelBackend, ModelState, ModelView, Runtime, RuntimeState, Serving, SHARED_APP};
+use redrob_launcher_core::platform::{Arch, Os};
+use redrob_launcher_core::protocol::{CANCELLED, PAUSED};
+use redrob_launcher_core::registry::{InstalledModel, Registry, Served, REGISTRY_FILE};
 
 use crate::http::{self, Http, Stop, Transfer};
-use redrob_launcher_core::protocol::{CANCELLED, PAUSED};
+use crate::runtime;
 
 fn env_dir(k: &str) -> Option<PathBuf> {
     std::env::var_os(k).filter(|v| !v.is_empty()).map(PathBuf::from)
@@ -42,8 +46,16 @@ pub fn models_dir(app: &str) -> Option<PathBuf> {
             })?;
             Some(data.join("models"))
         }
+        // Shared models, and every other app's: one folder every Redrob app reads through the
+        // installed registry (`installed.json` beside the model folders).
+        SHARED_APP | "redrob-canvas" | "redrob-shape" | "redrob-recall" | "redrob-code" => shared_models_dir(),
         _ => None,
     }
+}
+
+/// `~/.redrob/models` (`REDROB_MODELS_DIR` overrides): the shared models folder and the registry.
+pub fn shared_models_dir() -> Option<PathBuf> {
+    env_dir("REDROB_MODELS_DIR").or_else(|| dirs::home_dir().map(|h| h.join(".redrob").join("models")))
 }
 
 /// Where the model lives, given its app's models folder.
@@ -106,35 +118,176 @@ pub fn delete(dir: &Path, m: &Model) -> Result<(), String> {
 /// Where an app's models go: the app's real folder, or a test's.
 pub type FolderOf = Arc<dyn Fn(&str) -> Option<PathBuf> + Send + Sync>;
 
+type Key = (String, String);
+
 struct Job {
     stop: Arc<Stop>,
     done: u64,
     total: u64,
 }
 
-/// The launcher's model downloads: at most one job per model, each on its own thread.
-pub struct Models {
-    models: Vec<Model>,
-    http: Option<Http>,
-    jobs: Arc<Mutex<HashMap<(String, String), Job>>>,
-    failed: Arc<Mutex<HashMap<(String, String), String>>>,
-    wake: Arc<dyn Fn() + Send + Sync>,
-    /// Where each app's models go (overridable in tests).
+/// A served model's lifecycle, as the backend tracks it.
+enum Serve {
+    Starting,
+    Running(runtime::Server),
+    Failed(String),
+}
+
+struct RuntimeJob {
+    stop: Arc<Stop>,
+    done: u64,
+    total: u64,
+}
+
+/// Everything a worker thread needs to rewrite the installed registry after a change.
+#[derive(Clone)]
+struct Shared {
+    models: Arc<Vec<Model>>,
     dir: FolderOf,
+    servers: Arc<Mutex<HashMap<Key, Serve>>>,
+    device: Arc<Mutex<Device>>,
+    registry_path: Option<PathBuf>,
+    wake: Arc<dyn Fn() + Send + Sync>,
+}
+
+impl Shared {
+    /// Rewrites `installed.json` from what is on disk and what is being served.
+    fn write_registry(&self) {
+        let Some(path) = &self.registry_path else { return };
+        let backend = self.device.lock().unwrap_or_else(PoisonError::into_inner).backend();
+        let servers = self.servers.lock().unwrap_or_else(PoisonError::into_inner);
+        let mut installed = Vec::new();
+        for m in self.models.iter() {
+            let Some(dir) = (self.dir)(&m.app).map(|d| model_dir(&d, m)) else { continue };
+            if disk_state(&dir, m) != ModelState::Installed {
+                continue;
+            }
+            let served = match servers.get(&key(&m.app, &m.id)) {
+                Some(Serve::Running(s)) => Some(Served { url: s.url(), port: s.port, pid: s.pid() }),
+                _ => None,
+            };
+            installed.push(InstalledModel::from_model(m, dir.display().to_string(), served));
+        }
+        drop(servers);
+        let registry = Registry::new(backend.id(), installed);
+        if let Some(parent) = path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        if let Err(e) = crate::paths::write_atomic(path, registry.to_json().as_bytes()) {
+            log::warn!("couldn't write the models registry {}: {e}", path.display());
+        }
+    }
+}
+
+/// The launcher's model downloads and local servers: at most one job per model, each on its
+/// own thread; one `llama-server` process per served model.
+pub struct Models {
+    shared: Shared,
+    http: Option<Http>,
+    jobs: Arc<Mutex<HashMap<Key, Job>>>,
+    failed: Arc<Mutex<HashMap<Key, String>>>,
+    runtime_jobs: Arc<Mutex<HashMap<Runtime, RuntimeJob>>>,
+    runtime_failed: Arc<Mutex<HashMap<Runtime, String>>>,
+    runtimes_root: Option<PathBuf>,
+    code_config: Option<PathBuf>,
+}
+
+/// The device record before the probe has run: the platform, nothing measured.
+fn unmeasured() -> Device {
+    Device {
+        os: if cfg!(target_os = "macos") {
+            Os::MacOs
+        } else if cfg!(windows) {
+            Os::Windows
+        } else if cfg!(target_os = "freebsd") {
+            Os::FreeBsd
+        } else {
+            Os::Linux
+        },
+        arch: if cfg!(target_arch = "aarch64") { Arch::Arm64 } else { Arch::X64 },
+        cpu: String::new(),
+        cores: 0,
+        ram_mb: 0,
+        gpu: None,
+        npu: None,
+        gpu_probed: false,
+    }
 }
 
 impl Models {
     pub fn new(models: Vec<Model>, http: Option<Http>, wake: Arc<dyn Fn() + Send + Sync>, dir: FolderOf) -> Self {
-        Self { models, http, jobs: Arc::default(), failed: Arc::default(), wake, dir }
+        let registry_path = dir(SHARED_APP).map(|d| d.join(REGISTRY_FILE));
+        Self {
+            shared: Shared {
+                models: Arc::new(models),
+                dir,
+                servers: Arc::default(),
+                device: Arc::new(Mutex::new(unmeasured())),
+                registry_path,
+                wake,
+            },
+            http,
+            jobs: Arc::default(),
+            failed: Arc::default(),
+            runtime_jobs: Arc::default(),
+            runtime_failed: Arc::default(),
+            runtimes_root: None,
+            code_config: None,
+        }
     }
 
-    /// The built-in manifest and the apps' real folders.
+    /// The built-in manifest, the apps' real folders, the real runtimes folder and Redrob Code's
+    /// config; measures the computer on a thread right away.
     pub fn desktop(http: Option<Http>, wake: Arc<dyn Fn() + Send + Sync>) -> Self {
-        Self::new(redrob_launcher_core::models::builtin(), http, wake, Arc::new(models_dir))
+        let mut m = Self::new(redrob_launcher_core::models::builtin(), http, wake, Arc::new(models_dir));
+        m.runtimes_root = runtime::runtimes_dir();
+        m.code_config = runtime::code_config_path();
+        m.remeasure();
+        m
+    }
+
+    /// Test hook: where runtimes unpack and where Redrob Code's config is.
+    pub fn with_paths(mut self, runtimes_root: Option<PathBuf>, code_config: Option<PathBuf>) -> Self {
+        self.runtimes_root = runtimes_root;
+        self.code_config = code_config;
+        self
+    }
+
+    /// Test hook: a device record instead of a probe.
+    pub fn with_device(self, device: Device) -> Self {
+        *self.shared.device.lock().unwrap_or_else(PoisonError::into_inner) = device;
+        self
     }
 
     fn find(&self, app: &str, id: &str) -> Option<&Model> {
-        self.models.iter().find(|m| m.app == app && m.id == id)
+        self.shared.models.iter().find(|m| m.app == app && m.id == id)
+    }
+
+    fn served_ports(&self) -> Vec<u16> {
+        self.shared
+            .servers
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .values()
+            .filter_map(|s| match s {
+                Serve::Running(s) => Some(s.port),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// Stops every server. Called when the launcher quits so no `llama-server` outlives it.
+    pub fn stop_all(&mut self) {
+        let keys: Vec<Key> = self.shared.servers.lock().unwrap_or_else(PoisonError::into_inner).keys().cloned().collect();
+        for (app, id) in keys {
+            self.stop(&app, &id);
+        }
+    }
+}
+
+impl Drop for Models {
+    fn drop(&mut self) {
+        self.stop_all();
     }
 }
 
@@ -142,14 +295,37 @@ fn key(app: &str, id: &str) -> (String, String) {
     (app.to_string(), id.to_string())
 }
 
+/// Free bytes on the volume holding `dir`, through the OS's own tool.
+fn free_bytes(dir: &Path) -> Option<u64> {
+    let probe = std::time::Duration::from_secs(3);
+    let mut at = dir.to_path_buf();
+    while !at.exists() {
+        at = at.parent()?.to_path_buf();
+    }
+    let s = at.display().to_string();
+    if cfg!(windows) {
+        let script = format!("(Get-Item -LiteralPath '{}').PSDrive.Free", s.replace('\'', "''"));
+        crate::process::capture("powershell", &["-NoProfile", "-Command", &script], probe)?.trim().parse().ok()
+    } else {
+        // POSIX `df -Pk`: the fourth column of the last line is the free KiB.
+        let out = crate::process::capture("df", &["-Pk", &s], probe)?;
+        let line = out.lines().last()?;
+        let kib: u64 = line.split_whitespace().nth(3)?.parse().ok()?;
+        Some(kib * 1024)
+    }
+}
+
 impl ModelBackend for Models {
     fn models(&self) -> Vec<ModelView> {
         let jobs = self.jobs.lock().unwrap_or_else(PoisonError::into_inner);
         let failed = self.failed.lock().unwrap_or_else(PoisonError::into_inner);
-        self.models
+        let servers = self.shared.servers.lock().unwrap_or_else(PoisonError::into_inner);
+        let device = self.shared.device.lock().unwrap_or_else(PoisonError::into_inner).clone();
+        self.shared
+            .models
             .iter()
             .map(|m| {
-                let folder = (self.dir)(&m.app).map(|d| model_dir(&d, m));
+                let folder = (self.shared.dir)(&m.app).map(|d| model_dir(&d, m));
                 let k = key(&m.app, &m.id);
                 let state = match (&folder, jobs.get(&k), failed.get(&k)) {
                     (None, ..) => ModelState::NoFolder,
@@ -160,14 +336,20 @@ impl ModelBackend for Models {
                         (s, None) => s,
                     },
                 };
-                ModelView { model: m.clone(), state, folder: folder.map(|d| d.display().to_string()) }
+                let serving = match servers.get(&k) {
+                    None => Serving::No,
+                    Some(Serve::Starting) => Serving::Starting,
+                    Some(Serve::Running(s)) => Serving::Running { url: s.url() },
+                    Some(Serve::Failed(e)) => Serving::Failed(e.clone()),
+                };
+                ModelView { model: m.clone(), state, folder: folder.map(|d| d.display().to_string()), fit: device.fit(&m.requires), serving }
             })
             .collect()
     }
 
     fn download(&mut self, app: &str, id: &str) {
         let Some(m) = self.find(app, id).cloned() else { return };
-        let Some(dir) = (self.dir)(app).map(|d| model_dir(&d, &m)) else { return };
+        let Some(dir) = (self.shared.dir)(app).map(|d| model_dir(&d, &m)) else { return };
         let k = key(app, id);
         let stop = Arc::new(Stop::default());
         {
@@ -185,10 +367,10 @@ impl ModelBackend for Models {
         let Some(http) = self.http.clone() else {
             self.jobs.lock().unwrap_or_else(PoisonError::into_inner).remove(&k);
             self.failed.lock().unwrap_or_else(PoisonError::into_inner).insert(k, "HTTPS isn't available on this computer.".into());
-            (self.wake)();
+            (self.shared.wake)();
             return;
         };
-        let (jobs, failed, wake) = (self.jobs.clone(), self.failed.clone(), self.wake.clone());
+        let (jobs, failed, shared) = (self.jobs.clone(), self.failed.clone(), self.shared.clone());
         std::thread::spawn(move || {
             let mut last = std::time::Instant::now();
             let result = download(&http, &dir, &m, &stop, &mut |done, total| {
@@ -199,12 +381,12 @@ impl ModelBackend for Models {
                 // A repaint every quarter second is plenty for a progress bar.
                 if last.elapsed() >= std::time::Duration::from_millis(250) {
                     last = std::time::Instant::now();
-                    wake();
+                    (shared.wake)();
                 }
             });
             jobs.lock().unwrap_or_else(PoisonError::into_inner).remove(&k);
             match result {
-                Ok(()) => {}
+                Ok(()) => shared.write_registry(),
                 // Paused or cancelled: what's on disk says where it stands.
                 Err(e) if e == PAUSED || e == CANCELLED => {}
                 Err(e) => {
@@ -212,9 +394,9 @@ impl ModelBackend for Models {
                     failed.lock().unwrap_or_else(PoisonError::into_inner).insert(k, e);
                 }
             }
-            wake();
+            (shared.wake)();
         });
-        (self.wake)();
+        (self.shared.wake)();
     }
 
     fn pause(&mut self, app: &str, id: &str) {
@@ -225,7 +407,8 @@ impl ModelBackend for Models {
 
     fn delete(&mut self, app: &str, id: &str) -> Result<(), String> {
         let m = self.find(app, id).cloned().ok_or("unknown model")?;
-        let dir = (self.dir)(app).map(|d| model_dir(&d, &m)).ok_or("the app's models folder isn't known")?;
+        let dir = (self.shared.dir)(app).map(|d| model_dir(&d, &m)).ok_or("the app's models folder isn't known")?;
+        self.stop(app, id);
         if let Some(j) = self.jobs.lock().unwrap_or_else(PoisonError::into_inner).get(&key(app, id)) {
             // Stop it first: its thread deletes its partial file and ends.
             j.stop.cancel();
@@ -233,8 +416,176 @@ impl ModelBackend for Models {
         }
         self.failed.lock().unwrap_or_else(PoisonError::into_inner).remove(&key(app, id));
         let r = delete(&dir, &m);
-        (self.wake)();
+        self.shared.write_registry();
+        (self.shared.wake)();
         r
+    }
+
+    fn device(&self) -> Device {
+        self.shared.device.lock().unwrap_or_else(PoisonError::into_inner).clone()
+    }
+
+    fn remeasure(&mut self) {
+        let shared = self.shared.clone();
+        std::thread::spawn(move || {
+            let d = crate::device::measure();
+            *shared.device.lock().unwrap_or_else(PoisonError::into_inner) = d;
+            shared.write_registry();
+            (shared.wake)();
+        });
+    }
+
+    fn runtime(&self, rt: Runtime) -> RuntimeState {
+        if !rt.served() {
+            return RuntimeState::Installed;
+        }
+        if let Some(j) = self.runtime_jobs.lock().unwrap_or_else(PoisonError::into_inner).get(&rt) {
+            return RuntimeState::Downloading { done: j.done, total: j.total };
+        }
+        if let Some(e) = self.runtime_failed.lock().unwrap_or_else(PoisonError::into_inner).get(&rt) {
+            return RuntimeState::Failed(e.clone());
+        }
+        let device = self.device();
+        let Some((release, _, _)) = runtime::asset_for(&device, rt) else { return RuntimeState::Unavailable };
+        match &self.runtimes_root {
+            Some(root) if runtime::installed_binary(&runtime::release_dir(root, rt, &release), &release).is_some() => RuntimeState::Installed,
+            Some(_) => RuntimeState::NotInstalled,
+            None => RuntimeState::Unavailable,
+        }
+    }
+
+    fn install_runtime(&mut self, rt: Runtime) {
+        if !rt.served() || matches!(self.runtime(rt), RuntimeState::Installed | RuntimeState::Downloading { .. } | RuntimeState::Unavailable) {
+            return;
+        }
+        let (Some(http), Some(root)) = (self.http.clone(), self.runtimes_root.clone()) else {
+            self.runtime_failed.lock().unwrap_or_else(PoisonError::into_inner).insert(rt, "HTTPS isn't available on this computer.".into());
+            return;
+        };
+        let stop = Arc::new(Stop::default());
+        self.runtime_jobs.lock().unwrap_or_else(PoisonError::into_inner).insert(rt, RuntimeJob { stop: stop.clone(), done: 0, total: 0 });
+        self.runtime_failed.lock().unwrap_or_else(PoisonError::into_inner).remove(&rt);
+        let (jobs, failed, shared) = (self.runtime_jobs.clone(), self.runtime_failed.clone(), self.shared.clone());
+        let device = self.device();
+        std::thread::spawn(move || {
+            let r = runtime::install(&http, &root, &device, rt, &stop, &mut |done, total| {
+                if let Some(j) = jobs.lock().unwrap_or_else(PoisonError::into_inner).get_mut(&rt) {
+                    j.done = done;
+                    j.total = total;
+                }
+                (shared.wake)();
+            });
+            jobs.lock().unwrap_or_else(PoisonError::into_inner).remove(&rt);
+            if let Err(e) = r {
+                log::warn!("installing {} failed: {e}", rt.id());
+                failed.lock().unwrap_or_else(PoisonError::into_inner).insert(rt, e);
+            }
+            (shared.wake)();
+        });
+        (self.shared.wake)();
+    }
+
+    fn start(&mut self, app: &str, id: &str) {
+        let Some(m) = self.find(app, id).cloned() else { return };
+        let k = key(app, id);
+        let fail = |servers: &Arc<Mutex<HashMap<Key, Serve>>>, e: &str| {
+            servers.lock().unwrap_or_else(PoisonError::into_inner).insert(k.clone(), Serve::Failed(e.into()));
+        };
+        if !m.runtime.served() {
+            return;
+        }
+        {
+            let servers = self.shared.servers.lock().unwrap_or_else(PoisonError::into_inner);
+            if matches!(servers.get(&k), Some(Serve::Starting | Serve::Running(_))) {
+                return;
+            }
+        }
+        let Some(dir) = (self.shared.dir)(app).map(|d| model_dir(&d, &m)) else {
+            fail(&self.shared.servers, "the models folder isn't known");
+            return;
+        };
+        if disk_state(&dir, &m) != ModelState::Installed {
+            fail(&self.shared.servers, "download the model first");
+            return;
+        }
+        let (Some(http), Some(root)) = (self.http.clone(), self.runtimes_root.clone()) else {
+            fail(&self.shared.servers, "HTTPS isn't available on this computer.");
+            return;
+        };
+        let port = match runtime::free_port(4100, &self.served_ports()) {
+            Some(p) => p,
+            None => {
+                fail(&self.shared.servers, "no free port between 4100 and 4300");
+                return;
+            }
+        };
+        self.shared.servers.lock().unwrap_or_else(PoisonError::into_inner).insert(k.clone(), Serve::Starting);
+        let device = self.device();
+        let shared = self.shared.clone();
+        let code_config = self.code_config.clone();
+        let (rjobs, rfailed) = (self.runtime_jobs.clone(), self.runtime_failed.clone());
+        std::thread::spawn(move || {
+            // The runtime first, if it isn't here yet (shown as the runtime's own download).
+            let stop = Arc::new(Stop::default());
+            rjobs.lock().unwrap_or_else(PoisonError::into_inner).entry(m.runtime).or_insert(RuntimeJob { stop: stop.clone(), done: 0, total: 0 });
+            let bin = runtime::install(&http, &root, &device, m.runtime, &stop, &mut |done, total| {
+                if let Some(j) = rjobs.lock().unwrap_or_else(PoisonError::into_inner).get_mut(&m.runtime) {
+                    j.done = done;
+                    j.total = total;
+                }
+                (shared.wake)();
+            });
+            rjobs.lock().unwrap_or_else(PoisonError::into_inner).remove(&m.runtime);
+            let bin = match bin {
+                Ok(b) => b,
+                Err(e) => {
+                    rfailed.lock().unwrap_or_else(PoisonError::into_inner).insert(m.runtime, e.clone());
+                    shared.servers.lock().unwrap_or_else(PoisonError::into_inner).insert(k, Serve::Failed(e));
+                    (shared.wake)();
+                    return;
+                }
+            };
+            let result = runtime::Server::start(&bin, &m, &dir, port, &http, std::time::Duration::from_secs(240));
+            let entry = match result {
+                Ok(server) => {
+                    if let Some(cfg) = &code_config {
+                        if let Err(e) = runtime::set_code_provider(cfg, &m, Some(&server.url())) {
+                            log::warn!("couldn't add the local provider to Redrob Code's config: {e}");
+                        }
+                    }
+                    Serve::Running(server)
+                }
+                Err(e) => {
+                    log::warn!("serving {} failed: {e}", m.id);
+                    Serve::Failed(e)
+                }
+            };
+            shared.servers.lock().unwrap_or_else(PoisonError::into_inner).insert(k, entry);
+            shared.write_registry();
+            (shared.wake)();
+        });
+        (self.shared.wake)();
+    }
+
+    fn stop(&mut self, app: &str, id: &str) {
+        let k = key(app, id);
+        let removed = self.shared.servers.lock().unwrap_or_else(PoisonError::into_inner).remove(&k);
+        let Some(entry) = removed else { return };
+        if let Serve::Running(server) = entry {
+            server.stop();
+            if let (Some(cfg), Some(m)) = (&self.code_config, self.find(app, id)) {
+                if let Err(e) = runtime::set_code_provider(cfg, m, None) {
+                    log::warn!("couldn't remove the local provider from Redrob Code's config: {e}");
+                }
+            }
+        }
+        self.shared.write_registry();
+        (self.shared.wake)();
+    }
+
+    fn disk_free(&self) -> Option<u64> {
+        let dir = (self.shared.dir)(SHARED_APP)?;
+        free_bytes(&dir)
     }
 }
 
@@ -251,6 +602,10 @@ mod tests {
             description: String::new(),
             license: String::new(),
             source: "https://x".into(),
+            task: "stt".into(),
+            runtime: Runtime::Files,
+            requires: redrob_launcher_core::models::Requires { memory_mb: 1024, backends: vec![redrob_launcher_core::models::Backend::Cpu] },
+            serve: None,
             files: files
                 .iter()
                 .map(|(n, b)| ModelFile {
@@ -343,6 +698,56 @@ mod tests {
         let dir = models_dir("redrob-cut");
         assert!(dir.as_ref().is_some_and(|d| d.ends_with("models")), "{dir:?}");
         assert_eq!(models_dir("redrob-office"), None);
+        assert_eq!(models_dir("redrob"), shared_models_dir());
+        assert_eq!(models_dir("redrob-canvas"), shared_models_dir());
+    }
+
+    #[test]
+    fn the_registry_lists_installed_models_and_the_backend() {
+        let root = temp("registry");
+        let r = root.clone();
+        let m = model(&[("a.bin", b"aaaa")]);
+        let mut models = Models::new(vec![m.clone()], None, Arc::new(|| {}), Arc::new(move |_: &str| Some(r.clone())));
+        std::fs::create_dir_all(root.join("m")).unwrap();
+        std::fs::write(root.join("m").join("a.bin"), b"aaaa").unwrap();
+        models.shared.write_registry();
+        let reg = Registry::parse(&std::fs::read_to_string(root.join(REGISTRY_FILE)).unwrap()).unwrap();
+        assert_eq!(reg.backend, "cpu", "nothing measured yet means the CPU");
+        assert_eq!(reg.models.len(), 1);
+        assert_eq!((reg.models[0].id.as_str(), reg.models[0].task.as_str(), reg.models[0].served.is_none()), ("m", "stt", true));
+        assert!(reg.models[0].path.ends_with("m"));
+        assert_eq!(reg.models[0].files, ["a.bin"]);
+        // Deleting rewrites it empty, and the verdicts follow the device record.
+        models.delete("redrob-cut", "m").unwrap();
+        let reg = Registry::parse(&std::fs::read_to_string(root.join(REGISTRY_FILE)).unwrap()).unwrap();
+        assert!(reg.models.is_empty());
+        assert_eq!(models.models()[0].fit, redrob_launcher_core::device::Fit::WontRun, "0 MB RAM before the probe");
+        assert_eq!(models.models()[0].serving, Serving::No);
+        assert_eq!(models.runtime(Runtime::Files), RuntimeState::Installed);
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn starting_a_plain_files_model_or_an_absent_one_does_nothing_harmful() {
+        let root = temp("start");
+        let r = root.clone();
+        let m = model(&[("a.bin", b"aaaa")]);
+        let served = Model {
+            id: "s".into(),
+            app: "redrob".into(),
+            runtime: Runtime::LlamaServer,
+            serve: Some(redrob_launcher_core::models::Serve { model: "a.bin".into(), mmproj: None }),
+            ..m.clone()
+        };
+        let mut models = Models::new(vec![m, served], None, Arc::new(|| {}), Arc::new(move |_: &str| Some(r.clone())));
+        models.start("redrob-cut", "m");
+        assert_eq!(models.models()[0].serving, Serving::No);
+        // Not downloaded: refused with a reason, no thread started.
+        models.start("redrob", "s");
+        assert_eq!(models.models()[1].serving, Serving::Failed("download the model first".into()));
+        models.stop("redrob", "s");
+        assert_eq!(models.models()[1].serving, Serving::No);
+        let _ = std::fs::remove_dir_all(&root);
     }
 
     /// Live, end to end through the same backend the UI drives: Whisper tiny (146 MB) from
