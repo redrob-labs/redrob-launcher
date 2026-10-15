@@ -20,9 +20,9 @@ use std::time::Duration;
 use eframe::wgpu::rwh::{HasDisplayHandle, RawDisplayHandle};
 use redrob_launcher_core::protocol::Backend;
 use redrob_launcher_native::single_instance::{self, Instance};
-use redrob_launcher_native::{NativeBackend, login};
+use redrob_launcher_native::{NativeBackend, language, login};
 use redrob_launcher_ui_egui::theme::Tokens;
-use redrob_launcher_ui_egui::{Host, LauncherUi, Settings, TitleBar};
+use redrob_launcher_ui_egui::{Host, LanguageChoice, LauncherUi, Settings, TitleBar};
 
 const APP_ID: &str = "ai.redrob.launcher";
 const SETTINGS_KEY: &str = "settings";
@@ -326,6 +326,15 @@ impl Host for DesktopHost {
     fn quit(&mut self) {
         self.quit = true;
     }
+
+    /// Publishes the language for the other apps (`docs/shared-language.md`).
+    fn language_changed(&mut self, choice: &LanguageChoice) {
+        let Some(path) = language::path() else { return };
+        let shared = language::SharedLanguage { language: choice.language.clone(), chosen: choice.chosen, apps: choice.apps.clone() };
+        if let Err(e) = language::save(&path, &shared) {
+            log::warn!("shared language file {}: {e}", path.display());
+        }
+    }
 }
 
 /// Everything that outlives a window: the UI state and its backend, the tray icon, and the work
@@ -375,9 +384,20 @@ impl Launcher {
     /// event loop running, so this waits for the first window there.
     fn start(&mut self, settings: Option<Settings>, waker: &Arc<Waker>) {
         self.started = true;
-        if let Some(settings) = settings {
-            self.ui.settings = settings;
+        match settings {
+            Some(settings) => self.ui.settings = settings,
+            // First run: the language the installer asked for (Windows) becomes the launcher's,
+            // so the wizard, the launcher and then every app speak the same language.
+            None => {
+                if let Some(code) = language::installer_language() {
+                    log::info!("first run: the installer chose the language {code}");
+                    self.ui.settings.language = code;
+                }
+            }
         }
+        // Published now, not at the first frame: an app may start before the window is drawn.
+        let choice = self.ui.language_choice();
+        self.host.language_changed(&choice);
         self.waker = Some(waker.clone());
         let (wake, on_quit) = (waker.clone(), waker.clone());
         match tray::Tray::new(move || wake.wake(), move || on_quit.quit_from_tray()) {

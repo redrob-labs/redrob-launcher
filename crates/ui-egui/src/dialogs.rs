@@ -200,6 +200,32 @@ impl LauncherUi {
             self.settings.language = lang_code;
             crate::i18n::set_current(crate::app::effective_lang(&self.settings.language));
         }
+        // One row per installed app: "Same as launcher" or a language of its own. Published for
+        // the app in the shared language file; the app reads it, the launcher never restarts it.
+        let installed: Vec<&'static redrob_launcher_core::CraftApp> =
+            self.entries.iter().filter(|e| e.installed.is_some() && e.app.id != crate::engine_update::ENGINE_APP).map(|e| e.app).collect();
+        if !installed.is_empty() {
+            ui.add_space(4.0);
+            ui.add(egui::Label::new(RichText::new(tl!("Per-app language")).size(12.0).color(t.faint)).wrap());
+            for app in installed {
+                let mut code = self.settings.app_languages.get(app.id).cloned().unwrap_or_default();
+                let label = if code.is_empty() { tl!("Same as launcher").to_string() } else { Settings::language_label(&code) };
+                row(ui, app.name, &mut |ui| {
+                    egui::ComboBox::from_id_salt(("app-language", app.id)).selected_text(label.clone()).width(180.0).show_ui(ui, |ui| {
+                        ui.selectable_value(&mut code, String::new(), tl!("Same as launcher"));
+                        for lang in crate::i18n::Lang::all() {
+                            ui.selectable_value(&mut code, lang.code().to_string(), Settings::language_label(lang.code()));
+                        }
+                    });
+                });
+                if code.is_empty() {
+                    self.settings.app_languages.remove(app.id);
+                } else {
+                    self.settings.app_languages.insert(app.id.to_string(), code);
+                }
+            }
+            ui.add_space(4.0);
+        }
         if crate::i18n::Lang::from_pref(&self.settings.language).needs_cjk_font() && !theme::cjk_font_available() {
             // In English on purpose: the language asked for can't be drawn.
             let note = "No Chinese font was found on this system, so the interface stays in English. \
