@@ -1,6 +1,6 @@
 {
-  "$comment": "Models the launcher can download for each Redrob app, into the folder that app reads them from. Every file is pinned to a revision and its SHA-256. Generated from each app's own catalogue (Redrob Cut: crates/speech/src/models.rs and crates/tts/src/catalog.rs); keep in step with it.",
-  "version": 1,
+  "$comment": "Models the Redrob Launcher can download for each Redrob app, into the folder that app reads them from. Every file is pinned to a commit or release tag and its SHA-256; URLs never point at a moving branch. app \"redrob\" means shared by every app. \"serve\" is only present for llama-server runtimes. File names are flat: a repo sub-path is flattened with a double underscore (speech_tokenizer/config.json -> speech_tokenizer__config.json), except the Kokoro voices which keep their bare names. Keep in step with each app's own catalogue (Redrob Cut: crates/speech/src/models.rs and crates/tts/src/catalog.rs).",
+  "version": 2,
   "models": [
     {
       "id": "whisper-tiny",
@@ -9,6 +9,17 @@
       "description": "39 M parameters. Fastest; fine for clear speech, rough on noisy audio.",
       "license": "MIT (OpenAI Whisper weights); Hugging Face conversion: Apache-2.0",
       "source": "https://huggingface.co/openai/whisper-tiny",
+      "task": "stt",
+      "runtime": "files",
+      "requires": {
+        "memory_gb": 1,
+        "backends": [
+          "cuda",
+          "metal",
+          "vulkan",
+          "cpu"
+        ]
+      },
       "files": [
         {
           "name": "config.json",
@@ -43,6 +54,17 @@
       "description": "74 M parameters. The default: a good balance of speed and accuracy.",
       "license": "MIT (OpenAI Whisper weights); Hugging Face conversion: Apache-2.0",
       "source": "https://huggingface.co/openai/whisper-base",
+      "task": "stt",
+      "runtime": "files",
+      "requires": {
+        "memory_gb": 1,
+        "backends": [
+          "cuda",
+          "metal",
+          "vulkan",
+          "cpu"
+        ]
+      },
       "files": [
         {
           "name": "config.json",
@@ -74,9 +96,20 @@
       "id": "whisper-small",
       "app": "redrob-cut",
       "name": "Whisper small (multilingual)",
-      "description": "244 M parameters. Most accurate here; about 4\u00d7 slower than base.",
+      "description": "244 M parameters. Most accurate here; about 4× slower than base.",
       "license": "MIT (OpenAI Whisper weights); Hugging Face conversion: Apache-2.0",
       "source": "https://huggingface.co/openai/whisper-small",
+      "task": "stt",
+      "runtime": "files",
+      "requires": {
+        "memory_gb": 2,
+        "backends": [
+          "cuda",
+          "metal",
+          "vulkan",
+          "cpu"
+        ]
+      },
       "files": [
         {
           "name": "config.json",
@@ -111,6 +144,17 @@
       "description": "Nine US English narration voices and the CMUdict pronunciation dictionary.",
       "license": "Apache-2.0 (Kokoro-82M by hexgrad); CMUdict: BSD-style (Carnegie Mellon University)",
       "source": "https://huggingface.co/hexgrad/Kokoro-82M",
+      "task": "tts",
+      "runtime": "files",
+      "requires": {
+        "memory_gb": 1,
+        "backends": [
+          "cuda",
+          "metal",
+          "vulkan",
+          "cpu"
+        ]
+      },
       "files": [
         {
           "name": "config.json",
@@ -183,6 +227,648 @@
           "url": "https://huggingface.co/hexgrad/Kokoro-82M/resolve/f3ff3571791e39611d31c381e3a41a3af07b4987/voices/am_puck.pt",
           "sha256": "dd1d8973f4ce4b7d8ae407c77a435f485dabc052081b80ea75c4f30b84f36223",
           "size": 523420
+        }
+      ]
+    },
+    {
+      "id": "qwen3.8-27b-q4",
+      "app": "redrob",
+      "name": "Qwen3.8 27B (Q4_K_M)",
+      "description": "General chat and reasoning model, 27B parameters quantized to Q4_K_M for llama.cpp.",
+      "license": "Apache-2.0",
+      "source": "https://huggingface.co/bartowski/Qwen3.8-27B-GGUF",
+      "task": "chat",
+      "runtime": "llama-server",
+      "requires": {
+        "memory_gb": 19,
+        "backends": [
+          "cuda",
+          "metal",
+          "vulkan",
+          "cpu"
+        ]
+      },
+      "serve": {
+        "model": "Qwen3.8-27B-Q4_K_M.gguf"
+      },
+      "files": [
+        {
+          "name": "Qwen3.8-27B-Q4_K_M.gguf",
+          "url": "https://huggingface.co/bartowski/Qwen3.8-27B-GGUF/resolve/87410e7b9a5c21e6ca70c0c9cc5237de909fe621/Qwen3.8-27B-Q4_K_M.gguf",
+          "sha256": "880a52af8317974f7b4b064a6bc29ff49e188b91aa218e08eea3078b6b1cc673",
+          "size": 17442399968
+        }
+      ]
+    },
+    {
+      "id": "qwen3-coder-30b-a3b-q4",
+      "app": "redrob",
+      "name": "Qwen3 Coder 30B-A3B Instruct (Q4_K_M)",
+      "description": "Mixture-of-experts coding model with 3B active parameters, quantized to Q4_K_M for llama.cpp.",
+      "license": "Apache-2.0",
+      "source": "https://huggingface.co/unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF",
+      "task": "code",
+      "runtime": "llama-server",
+      "requires": {
+        "memory_gb": 21,
+        "backends": [
+          "cuda",
+          "metal",
+          "vulkan",
+          "cpu"
+        ]
+      },
+      "serve": {
+        "model": "Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf"
+      },
+      "files": [
+        {
+          "name": "Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf",
+          "url": "https://huggingface.co/unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF/resolve/b17cb02dd882d5b6ab62fc777ad2995f19668350/Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf",
+          "sha256": "fadc3e5f8d42bf7e894a785b05082e47daee4df26680389817e2093056f088ad",
+          "size": 18556689568
+        }
+      ]
+    },
+    {
+      "id": "gemma-4-12b-q4",
+      "app": "redrob",
+      "name": "Gemma 4 12B Instruct (Q4_K_M, vision)",
+      "description": "Multimodal instruct model with a separate F16 vision projector, quantized to Q4_K_M for llama.cpp.",
+      "license": "Apache-2.0 (Google Gemma 4 weights, see https://ai.google.dev/gemma/docs/gemma_4_license; Unsloth GGUF conversion)",
+      "source": "https://huggingface.co/unsloth/gemma-4-12b-it-GGUF",
+      "task": "vision",
+      "runtime": "llama-server",
+      "requires": {
+        "memory_gb": 10,
+        "backends": [
+          "cuda",
+          "metal",
+          "vulkan",
+          "cpu"
+        ]
+      },
+      "serve": {
+        "model": "gemma-4-12b-it-Q4_K_M.gguf",
+        "mmproj": "mmproj-F16.gguf"
+      },
+      "files": [
+        {
+          "name": "gemma-4-12b-it-Q4_K_M.gguf",
+          "url": "https://huggingface.co/unsloth/gemma-4-12b-it-GGUF/resolve/fc034cfff751157913579611efad8462ac1be606/gemma-4-12b-it-Q4_K_M.gguf",
+          "sha256": "0a270ec9fe6b34f4a0d33992b6135117b484ebc4766ab76b51d4ae8c457e4c42",
+          "size": 7121861440
+        },
+        {
+          "name": "mmproj-F16.gguf",
+          "url": "https://huggingface.co/unsloth/gemma-4-12b-it-GGUF/resolve/fc034cfff751157913579611efad8462ac1be606/mmproj-F16.gguf",
+          "sha256": "91f086971e56d7a7d8d39e271873fccdb49541bd259d6e02c401a4f1cb7a219e",
+          "size": 175115840
+        }
+      ]
+    },
+    {
+      "id": "gemma-4-small-q4",
+      "app": "redrob",
+      "name": "Gemma 4 E2B Instruct (Q4_K_M, vision)",
+      "description": "Smallest Gemma 4 instruct model with a separate F16 vision projector, quantized to Q4_K_M for llama.cpp.",
+      "license": "Apache-2.0 (Google Gemma 4 weights, see https://ai.google.dev/gemma/docs/gemma_4_license; Unsloth GGUF conversion)",
+      "source": "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF",
+      "task": "chat",
+      "runtime": "llama-server",
+      "requires": {
+        "memory_gb": 5,
+        "backends": [
+          "cuda",
+          "metal",
+          "vulkan",
+          "cpu"
+        ]
+      },
+      "serve": {
+        "model": "gemma-4-E2B-it-Q4_K_M.gguf",
+        "mmproj": "mmproj-F16.gguf"
+      },
+      "files": [
+        {
+          "name": "gemma-4-E2B-it-Q4_K_M.gguf",
+          "url": "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/0314792d7f1f7e229411f620751375812bb9faf2/gemma-4-E2B-it-Q4_K_M.gguf",
+          "sha256": "740185b21d22ceb83a11c3aa62ad5842ef32c70f6096d756bbee85a1e4ec34b8",
+          "size": 3106738272
+        },
+        {
+          "name": "mmproj-F16.gguf",
+          "url": "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/0314792d7f1f7e229411f620751375812bb9faf2/mmproj-F16.gguf",
+          "sha256": "140be8d7849741f88c50757d529b84373ee8e27052cc2236855b537f4a8215fa",
+          "size": 985654080
+        }
+      ]
+    },
+    {
+      "id": "bge-m3-f16",
+      "app": "redrob",
+      "name": "BGE-M3 embeddings (F16)",
+      "description": "Multilingual dense embedding model from BAAI in F16 GGUF for llama.cpp embeddings.",
+      "license": "MIT (BAAI/bge-m3; GGUF conversion by gpustack)",
+      "source": "https://huggingface.co/gpustack/bge-m3-GGUF",
+      "task": "embedding",
+      "runtime": "llama-server",
+      "requires": {
+        "memory_gb": 2,
+        "backends": [
+          "cuda",
+          "metal",
+          "vulkan",
+          "cpu"
+        ]
+      },
+      "serve": {
+        "model": "bge-m3-FP16.gguf"
+      },
+      "files": [
+        {
+          "name": "bge-m3-FP16.gguf",
+          "url": "https://huggingface.co/gpustack/bge-m3-GGUF/resolve/2d48f1737679ad900d5c26c5aad5410e9c70fdca/bge-m3-FP16.gguf",
+          "sha256": "daec91ffb5dd0c27411bd71f29932917c49cf529a641d0168496c3a501e3062c",
+          "size": 1157671200
+        }
+      ]
+    },
+    {
+      "id": "bonsai-2-27b-pq2",
+      "app": "redrob",
+      "name": "Ternary Bonsai 2 27B (PQ2_0, vision)",
+      "description": "Ternary 27B reasoning model packed as PQ2_0 with a Q8_0 vision projector; needs the PrismML llama.cpp build.",
+      "license": "Apache-2.0",
+      "source": "https://huggingface.co/prism-ml/Ternary-Bonsai-2-27B-gguf",
+      "task": "chat",
+      "runtime": "llama-server-prism",
+      "requires": {
+        "memory_gb": 10,
+        "backends": [
+          "cuda",
+          "metal",
+          "cpu"
+        ]
+      },
+      "serve": {
+        "model": "Ternary-Bonsai-2-27B-PQ2_0.gguf",
+        "mmproj": "Ternary-Bonsai-2-27B-mmproj-Q8_0.gguf"
+      },
+      "files": [
+        {
+          "name": "Ternary-Bonsai-2-27B-PQ2_0.gguf",
+          "url": "https://huggingface.co/prism-ml/Ternary-Bonsai-2-27B-gguf/resolve/b072e1d3b35a0a630cece372c2127528e0994386/Ternary-Bonsai-2-27B-PQ2_0.gguf",
+          "sha256": "3907dc1658db1f78a9826bf8d5bcb8dc65db0d466388937af57f2294fae62ec1",
+          "size": 7206168928
+        },
+        {
+          "name": "Ternary-Bonsai-2-27B-mmproj-Q8_0.gguf",
+          "url": "https://huggingface.co/prism-ml/Ternary-Bonsai-2-27B-gguf/resolve/b072e1d3b35a0a630cece372c2127528e0994386/Ternary-Bonsai-2-27B-mmproj-Q8_0.gguf",
+          "sha256": "6807ede61d570bb86ba34b756a0fa109edc33668604de867c6ea6d8f1d631903",
+          "size": 629246976
+        }
+      ]
+    },
+    {
+      "id": "redrob-image",
+      "app": "redrob-canvas",
+      "name": "Redrob Image",
+      "description": "Redrob text-to-image model as one merged safetensors file derived from Z-Image-Turbo.",
+      "license": "Apache-2.0",
+      "source": "https://huggingface.co/redrob-labs/redrob-image",
+      "task": "text-to-image",
+      "runtime": "files",
+      "requires": {
+        "memory_gb": 14,
+        "backends": [
+          "cuda",
+          "metal"
+        ]
+      },
+      "files": [
+        {
+          "name": "redrob-image.safetensors",
+          "url": "https://huggingface.co/redrob-labs/redrob-image/resolve/b421b6a71d674f04a5f06fcc0e89a06e4d4af7cc/redrob-image.safetensors",
+          "sha256": "eed8b835296bf5b8816d8be9e679821ab8ff8f9ad8c99aae0dd821cab8a04ff8",
+          "size": 12309867872
+        },
+        {
+          "name": "LICENSE",
+          "url": "https://huggingface.co/redrob-labs/redrob-image/resolve/b421b6a71d674f04a5f06fcc0e89a06e4d4af7cc/LICENSE",
+          "sha256": "225e536df15c70c55e306f8369be09f20b917632ba94750192b6b2dcc23cd809",
+          "size": 12088
+        },
+        {
+          "name": "NOTICE",
+          "url": "https://huggingface.co/redrob-labs/redrob-image/resolve/b421b6a71d674f04a5f06fcc0e89a06e4d4af7cc/NOTICE",
+          "sha256": "fcb6f7418e50e6808ad406238d68c78a330b9f641c2145f115cd711531719127",
+          "size": 1694
+        }
+      ]
+    },
+    {
+      "id": "lama",
+      "app": "redrob-canvas",
+      "name": "LaMa inpainting (big-lama)",
+      "description": "Large-mask inpainting network, the big-lama checkpoint IOPaint downloads.",
+      "license": "Apache-2.0 (advimman/lama)",
+      "source": "https://github.com/advimman/lama",
+      "task": "inpaint",
+      "runtime": "files",
+      "requires": {
+        "memory_gb": 2,
+        "backends": [
+          "cuda",
+          "metal",
+          "vulkan",
+          "cpu"
+        ]
+      },
+      "files": [
+        {
+          "name": "big-lama.pt",
+          "url": "https://github.com/Sanster/models/releases/download/add_big_lama/big-lama.pt",
+          "sha256": "344c77bbcb158f17dd143070d1e789f38a66c04202311ae3a258ef66667a9ea9",
+          "size": 205669692
+        }
+      ]
+    },
+    {
+      "id": "birefnet-general",
+      "app": "redrob-canvas",
+      "name": "BiRefNet general (background removal)",
+      "description": "Dichotomous image segmentation ONNX model used by rembg for general background removal.",
+      "license": "MIT (ZhengPeng7/BiRefNet; ONNX export by rembg)",
+      "source": "https://github.com/ZhengPeng7/BiRefNet",
+      "task": "background-removal",
+      "runtime": "files",
+      "requires": {
+        "memory_gb": 3,
+        "backends": [
+          "cuda",
+          "metal",
+          "vulkan",
+          "cpu"
+        ]
+      },
+      "files": [
+        {
+          "name": "BiRefNet-general-epoch_244.onnx",
+          "url": "https://github.com/danielgatis/rembg/releases/download/v0.0.0/BiRefNet-general-epoch_244.onnx",
+          "sha256": "58f621f00f5d756097615970a88a791584600dcf7c45b18a0a6267535a1ebd3c",
+          "size": 972666916
+        }
+      ]
+    },
+    {
+      "id": "real-esrgan-x4plus",
+      "app": "redrob-canvas",
+      "name": "Real-ESRGAN x4plus (upscale)",
+      "description": "General 4x image upscaler weights from the Real-ESRGAN project.",
+      "license": "BSD-3-Clause",
+      "source": "https://github.com/xinntao/Real-ESRGAN",
+      "task": "upscale",
+      "runtime": "files",
+      "requires": {
+        "memory_gb": 2,
+        "backends": [
+          "cuda",
+          "metal",
+          "vulkan",
+          "cpu"
+        ]
+      },
+      "files": [
+        {
+          "name": "RealESRGAN_x4plus.pth",
+          "url": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth",
+          "sha256": "4fa0d38905f75ac06eb49a7951b426670021be3018265fd191d2125df9d682f1",
+          "size": 67040989
+        }
+      ]
+    },
+    {
+      "id": "sam2.1-hiera-small",
+      "app": "redrob-canvas",
+      "name": "SAM 2.1 Hiera Small (segmentation)",
+      "description": "Segment Anything 2.1 small checkpoint with its model config for promptable image segmentation.",
+      "license": "Apache-2.0",
+      "source": "https://huggingface.co/facebook/sam2.1-hiera-small",
+      "task": "segmentation",
+      "runtime": "files",
+      "requires": {
+        "memory_gb": 3,
+        "backends": [
+          "cuda",
+          "metal",
+          "vulkan",
+          "cpu"
+        ]
+      },
+      "files": [
+        {
+          "name": "sam2.1_hiera_small.pt",
+          "url": "https://huggingface.co/facebook/sam2.1-hiera-small/resolve/ee5bba1d82bb8749febdf90f45e84b687142ba03/sam2.1_hiera_small.pt",
+          "sha256": "6d1aa6f30de5c92224f8172114de081d104bbd23dd9dc5c58996f0cad5dc4d38",
+          "size": 184416285
+        },
+        {
+          "name": "sam2.1_hiera_s.yaml",
+          "url": "https://huggingface.co/facebook/sam2.1-hiera-small/resolve/ee5bba1d82bb8749febdf90f45e84b687142ba03/sam2.1_hiera_s.yaml",
+          "sha256": "632e5cd0104f5ab6cd4f9d2dfd80a8e7240e481ad7960a13cad2ae3504b88dbd",
+          "size": 3761
+        }
+      ]
+    },
+    {
+      "id": "qwen3-tts-1.7b",
+      "app": "redrob-cut",
+      "name": "Qwen3-TTS 1.7B CustomVoice",
+      "description": "Multilingual text-to-speech model with preset speakers; speech_tokenizer files are flattened with a double underscore.",
+      "license": "Apache-2.0",
+      "source": "https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice",
+      "task": "tts",
+      "runtime": "files",
+      "requires": {
+        "memory_gb": 6,
+        "backends": [
+          "cuda",
+          "metal",
+          "cpu"
+        ]
+      },
+      "files": [
+        {
+          "name": "config.json",
+          "url": "https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice/resolve/0c0e3051f131929182e2c023b9537f8b1c68adfe/config.json",
+          "sha256": "17a07f527a1c25ea30b4e023a184482a23d3e279d697b1dc81b1bde498d29cf9",
+          "size": 4908
+        },
+        {
+          "name": "generation_config.json",
+          "url": "https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice/resolve/0c0e3051f131929182e2c023b9537f8b1c68adfe/generation_config.json",
+          "sha256": "f1b90b4513f3b34c62851049e2492d7b4c5940daf1276f89c82b8ef04127f3aa",
+          "size": 245
+        },
+        {
+          "name": "merges.txt",
+          "url": "https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice/resolve/0c0e3051f131929182e2c023b9537f8b1c68adfe/merges.txt",
+          "sha256": "599bab54075088774b1733fde865d5bd747cbcc7a547c5bc12610e874e26f5e3",
+          "size": 1671839
+        },
+        {
+          "name": "model.safetensors",
+          "url": "https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice/resolve/0c0e3051f131929182e2c023b9537f8b1c68adfe/model.safetensors",
+          "sha256": "38b1d5971bdbd982b561cccec982669a53b0537c3cf5e9bd4778ed07bb2f5137",
+          "size": 3833402552
+        },
+        {
+          "name": "preprocessor_config.json",
+          "url": "https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice/resolve/0c0e3051f131929182e2c023b9537f8b1c68adfe/preprocessor_config.json",
+          "sha256": "efdde1022ea9d76928bf7a9cd53139138f5ba2e466e837f08f6105ab1af1c119",
+          "size": 127
+        },
+        {
+          "name": "speech_tokenizer__config.json",
+          "url": "https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice/resolve/0c0e3051f131929182e2c023b9537f8b1c68adfe/speech_tokenizer/config.json",
+          "sha256": "ee65bb901c876664ab8707c487157aa1a6ee57c65969b28fb5ec9dc211e68167",
+          "size": 2336
+        },
+        {
+          "name": "speech_tokenizer__configuration.json",
+          "url": "https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice/resolve/0c0e3051f131929182e2c023b9537f8b1c68adfe/speech_tokenizer/configuration.json",
+          "sha256": "6bc26d64eb5024b4d1dab5a52371958b429256d6c9d59787f1f5294a54e0cebd",
+          "size": 76
+        },
+        {
+          "name": "speech_tokenizer__model.safetensors",
+          "url": "https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice/resolve/0c0e3051f131929182e2c023b9537f8b1c68adfe/speech_tokenizer/model.safetensors",
+          "sha256": "836b7b357f5ea43e889936a3709af68dfe3751881acefe4ecf0dbd30ba571258",
+          "size": 682293092
+        },
+        {
+          "name": "speech_tokenizer__preprocessor_config.json",
+          "url": "https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice/resolve/0c0e3051f131929182e2c023b9537f8b1c68adfe/speech_tokenizer/preprocessor_config.json",
+          "sha256": "fcb3805e597e786d4067706e602f6688524640f8d3396790e2e09b5942fcbdfb",
+          "size": 234
+        },
+        {
+          "name": "tokenizer_config.json",
+          "url": "https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice/resolve/0c0e3051f131929182e2c023b9537f8b1c68adfe/tokenizer_config.json",
+          "sha256": "dc3c31c3bdaedd5016382bb3cbe07323026775ad51f5a4fb564505992ae4a670",
+          "size": 7344
+        },
+        {
+          "name": "vocab.json",
+          "url": "https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice/resolve/0c0e3051f131929182e2c023b9537f8b1c68adfe/vocab.json",
+          "sha256": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910",
+          "size": 2776833
+        }
+      ]
+    },
+    {
+      "id": "qwen3-asr-1.7b-ko",
+      "app": "redrob-cut",
+      "name": "Qwen3-ASR 1.7B Korean (TeamUNIVA)",
+      "description": "Korean-tuned Qwen3-ASR 1.7B speech recognition model.",
+      "license": "Apache-2.0",
+      "source": "https://huggingface.co/TeamUNIVA/qwen3_asr_1.7b_ko",
+      "task": "stt",
+      "runtime": "files",
+      "requires": {
+        "memory_gb": 4,
+        "backends": [
+          "cuda",
+          "metal",
+          "vulkan",
+          "cpu"
+        ]
+      },
+      "files": [
+        {
+          "name": "added_tokens.json",
+          "url": "https://huggingface.co/TeamUNIVA/qwen3_asr_1.7b_ko/resolve/3e66f586033753589c3effeb2c8cbce46a1ddabb/added_tokens.json",
+          "sha256": "de40784677cbd1843cabe5fbee078c7e042cd0b62155f0810af5a13842e5722a",
+          "size": 1566
+        },
+        {
+          "name": "chat_template.jinja",
+          "url": "https://huggingface.co/TeamUNIVA/qwen3_asr_1.7b_ko/resolve/3e66f586033753589c3effeb2c8cbce46a1ddabb/chat_template.jinja",
+          "sha256": "a103579066642f0e035873f12de6046a1bbc909a7a2833732fda9fd6bc7c528d",
+          "size": 1099
+        },
+        {
+          "name": "config.json",
+          "url": "https://huggingface.co/TeamUNIVA/qwen3_asr_1.7b_ko/resolve/3e66f586033753589c3effeb2c8cbce46a1ddabb/config.json",
+          "sha256": "1b8c9ac5c81e9a30c8afd092e84b3de7786b4fe5d831049fbb52a4cfb537faff",
+          "size": 5971
+        },
+        {
+          "name": "generation_config.json",
+          "url": "https://huggingface.co/TeamUNIVA/qwen3_asr_1.7b_ko/resolve/3e66f586033753589c3effeb2c8cbce46a1ddabb/generation_config.json",
+          "sha256": "02bef8c25dbbc31ec5ce7c06adb756c4ede3a6723929e35c5265046c37c5b63d",
+          "size": 143
+        },
+        {
+          "name": "merges.txt",
+          "url": "https://huggingface.co/TeamUNIVA/qwen3_asr_1.7b_ko/resolve/3e66f586033753589c3effeb2c8cbce46a1ddabb/merges.txt",
+          "sha256": "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5",
+          "size": 1671853
+        },
+        {
+          "name": "model.safetensors",
+          "url": "https://huggingface.co/TeamUNIVA/qwen3_asr_1.7b_ko/resolve/3e66f586033753589c3effeb2c8cbce46a1ddabb/model.safetensors",
+          "sha256": "eceffd53d29eba47f68da83c3c5efb312c356ceea1721b8b5129e6e1f43e49dc",
+          "size": 4698521600
+        },
+        {
+          "name": "preprocessor_config.json",
+          "url": "https://huggingface.co/TeamUNIVA/qwen3_asr_1.7b_ko/resolve/3e66f586033753589c3effeb2c8cbce46a1ddabb/preprocessor_config.json",
+          "sha256": "0443a40d411d3caad769e7b59971fa6eae75926ed4b7e337e60da909eb38c1f7",
+          "size": 357
+        },
+        {
+          "name": "special_tokens_map.json",
+          "url": "https://huggingface.co/TeamUNIVA/qwen3_asr_1.7b_ko/resolve/3e66f586033753589c3effeb2c8cbce46a1ddabb/special_tokens_map.json",
+          "sha256": "7b376c510ccf9d88bb9bbee41dfc5052122e16e0dec1124a8d8983c59259a9f3",
+          "size": 1008
+        },
+        {
+          "name": "tokenizer.json",
+          "url": "https://huggingface.co/TeamUNIVA/qwen3_asr_1.7b_ko/resolve/3e66f586033753589c3effeb2c8cbce46a1ddabb/tokenizer.json",
+          "sha256": "0499602714160467f2d68b910651d6216020689f1e016be87a2d0019ee3baeab",
+          "size": 11429499
+        },
+        {
+          "name": "tokenizer_config.json",
+          "url": "https://huggingface.co/TeamUNIVA/qwen3_asr_1.7b_ko/resolve/3e66f586033753589c3effeb2c8cbce46a1ddabb/tokenizer_config.json",
+          "sha256": "7f335cbd3b6f1036808e23613c1c1919f8d5570c11cb55420e5094e036f45669",
+          "size": 12517
+        },
+        {
+          "name": "vocab.json",
+          "url": "https://huggingface.co/TeamUNIVA/qwen3_asr_1.7b_ko/resolve/3e66f586033753589c3effeb2c8cbce46a1ddabb/vocab.json",
+          "sha256": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910",
+          "size": 2776833
+        }
+      ]
+    },
+    {
+      "id": "silero-vad",
+      "app": "redrob-cut",
+      "name": "Silero VAD",
+      "description": "Voice activity detection ONNX model from snakers4/silero-vad v6.2.3.",
+      "license": "MIT",
+      "source": "https://github.com/snakers4/silero-vad",
+      "task": "vad",
+      "runtime": "files",
+      "requires": {
+        "memory_gb": 0.1,
+        "backends": [
+          "cuda",
+          "metal",
+          "vulkan",
+          "cpu"
+        ]
+      },
+      "files": [
+        {
+          "name": "silero_vad.onnx",
+          "url": "https://github.com/snakers4/silero-vad/raw/v6.2.3/src/silero_vad/data/silero_vad.onnx",
+          "sha256": "1a153a22f4509e292a94e67d6f9b85e8deb25b4988682b7e174c65279d8788e3",
+          "size": 2327524
+        }
+      ]
+    },
+    {
+      "id": "demucs-htdemucs",
+      "app": "redrob-cut",
+      "name": "Demucs htdemucs (stem separation)",
+      "description": "Hybrid Transformer Demucs checkpoint for separating drums, bass, vocals and other stems.",
+      "license": "MIT (facebookresearch/demucs)",
+      "source": "https://github.com/facebookresearch/demucs",
+      "task": "stem-separation",
+      "runtime": "files",
+      "requires": {
+        "memory_gb": 5,
+        "backends": [
+          "cuda",
+          "metal",
+          "vulkan",
+          "cpu"
+        ]
+      },
+      "files": [
+        {
+          "name": "955717e8-8726e21a.th",
+          "url": "https://dl.fbaipublicfiles.com/demucs/hybrid_transformer/955717e8-8726e21a.th",
+          "sha256": "8726e21a993978c7ba086d3872e7608d7d5bfca646ca4aca459ffda844faa8b4",
+          "size": 84141911
+        }
+      ]
+    },
+    {
+      "id": "triposr",
+      "app": "redrob-shape",
+      "name": "TripoSR (image to 3D)",
+      "description": "Fast single-image 3D reconstruction model from Stability AI and Tripo AI.",
+      "license": "MIT",
+      "source": "https://huggingface.co/stabilityai/TripoSR",
+      "task": "image-to-3d",
+      "runtime": "files",
+      "requires": {
+        "memory_gb": 6,
+        "backends": [
+          "cuda",
+          "metal"
+        ]
+      },
+      "files": [
+        {
+          "name": "model.ckpt",
+          "url": "https://huggingface.co/stabilityai/TripoSR/resolve/5b521936b01fbe1890f6f9baed0254ab6351c04a/model.ckpt",
+          "sha256": "429e2c6b22a0923967459de24d67f05962b235f79cde6b032aa7ed2ffcd970ee",
+          "size": 1677246742
+        },
+        {
+          "name": "config.yaml",
+          "url": "https://huggingface.co/stabilityai/TripoSR/resolve/5b521936b01fbe1890f6f9baed0254ab6351c04a/config.yaml",
+          "sha256": "74ca708ce086bf68e97709ea6b3d91f14717921c04691e84043f0eb8fcc68e62",
+          "size": 987
+        }
+      ]
+    },
+    {
+      "id": "pp-ocrv5-mobile",
+      "app": "redrob-recall",
+      "name": "PP-OCRv5 mobile (detection + recognition)",
+      "description": "PaddleOCR v5 mobile text detection and recognition inference models as two tar archives.",
+      "license": "Apache-2.0",
+      "source": "https://github.com/PaddlePaddle/PaddleOCR",
+      "task": "ocr",
+      "runtime": "files",
+      "requires": {
+        "memory_gb": 3,
+        "backends": [
+          "cuda",
+          "metal",
+          "vulkan",
+          "cpu"
+        ]
+      },
+      "files": [
+        {
+          "name": "PP-OCRv5_mobile_det_infer.tar",
+          "url": "https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0.0/PP-OCRv5_mobile_det_infer.tar",
+          "sha256": "50446e5d01ac2a73d5319c89513281f6578414c888c602f9af13f93feefffc58",
+          "size": 4935680
+        },
+        {
+          "name": "PP-OCRv5_mobile_rec_infer.tar",
+          "url": "https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0.0/PP-OCRv5_mobile_rec_infer.tar",
+          "sha256": "566b9512b34e34a9f0db54d87b51fa5a0b9ed2cf1ab7e49728cc0b8b5a64f414",
+          "size": 16834560
         }
       ]
     }
