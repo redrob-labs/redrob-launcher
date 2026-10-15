@@ -50,8 +50,8 @@ libxrandr-dev libxi-dev libgl1-mesa-dev`). Packaging scripts for every platform 
 ## Branches and contributing
 
 - Default branch `develop`, release branch `main`. Branch names take a
-  `feat/ fix/ chore/ docs/ test/ refactor/ perf/ sync/ hotfix/ release/` prefix, checked by
-  `.github/workflows/gitflow.yml`.
+  `feat/ fix/ chore/ docs/ test/ refactor/ perf/ ci/ build/ sync/ hotfix/ release/` prefix, checked by
+  the shared redrob-labs gitflow workflow (one type list for every repository).
 - Upstream syncs land through `sync/upstream-<tag>` branches as merge commits.
 - Organisation rules: CONTRIBUTING.md and FORKS.md in [redrob-labs/.github](https://github.com/redrob-labs/.github).
 - Contributor guide for agents and people: [AGENTS.md](./AGENTS.md).
