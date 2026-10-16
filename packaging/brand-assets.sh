@@ -53,10 +53,8 @@ cp "$B/favicon.svg" "$A/hicolor/scalable/apps/$ID.svg"
 magick "$B/redrob-logo-primary.png" -filter Lanczos -resize x64 "PNG32:$A/redrob-logo-light.png"
 magick "$B/redrob-logo-primary-white.png" -filter Lanczos -resize x64 "PNG32:$A/redrob-logo-dark.png"
 
-# Each app's 128 px icon. Products with a mark of their own render it from the SVG master.
-marked="redrob-browser redrob-code redrob-design redrob-office"
-tile="redrob-film redrob-shape redrob-cad redrob-canvas redrob-cowork redrob-query redrob-recall"
+# Each app's 128 px icon, rendered from its SVG master.
+marked="redrob-browser redrob-cad redrob-canvas redrob-code redrob-cowork redrob-design redrob-film redrob-office redrob-query redrob-recall redrob-shape"
 for id in $marked; do resvg -w 128 -h 128 "$B/$id-icon.svg" "$APPS/$id.png"; done
-for id in $tile; do down "$B/icon-192.png" 128 "$APPS/$id.png"; done
 
 echo "brand assets written to $A and $APPS"
