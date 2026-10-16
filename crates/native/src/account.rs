@@ -368,6 +368,9 @@ struct Attempt {
 pub struct DeviceAccount {
     path: Option<PathBuf>,
     stored: Arc<Mutex<Option<Stored>>>,
+    /// The shared file as last read (modified time, size) and when that was checked, so a change
+    /// made by an app or by another launcher instance is picked up without a restart.
+    seen: Mutex<(Option<FileStamp>, Option<Instant>)>,
     attempt: Arc<Mutex<Attempt>>,
     transport: Arc<dyn Transport>,
     base: String,
@@ -376,12 +379,25 @@ pub struct DeviceAccount {
     open: Open,
 }
 
+/// How often the shared file is checked for changes made outside this launcher.
+const RECHECK_FILE: Duration = Duration::from_secs(2);
+
+/// What identifies a file's contents cheaply: its modified time and size.
+type FileStamp = (std::time::SystemTime, u64);
+
+fn file_stamp(path: &Path) -> Option<FileStamp> {
+    let m = std::fs::metadata(path).ok()?;
+    Some((m.modified().ok()?, m.len()))
+}
+
 impl DeviceAccount {
     pub fn new(path: Option<PathBuf>, transport: Arc<dyn Transport>, base: String, wake: Wake, open: Open) -> Self {
         let stored = path.as_deref().and_then(load);
+        let stamp = path.as_deref().and_then(file_stamp);
         Self {
             path,
             stored: Arc::new(Mutex::new(stored)),
+            seen: Mutex::new((stamp, Some(Instant::now()))),
             attempt: Arc::new(Mutex::new(Attempt { state: ConnectState::Idle, expires: None, cancelled: Arc::new(AtomicBool::new(false)) })),
             transport,
             base: base.trim_end_matches('/').to_string(),
@@ -402,8 +418,30 @@ impl DeviceAccount {
         Self::new(shared_dir().map(|d| d.join(ACCOUNT_FILE)), Arc::new(Https::new()), console_base(), wake, open)
     }
 
+    /// The shared key as the file has it now: re-read when the file changed since it was last
+    /// looked at (an app or another launcher instance may write or remove it; the contract says
+    /// readers read it when they need it, and the launcher is a reader too).
     fn stored(&self) -> Option<Stored> {
+        if let Some(path) = &self.path {
+            let mut seen = self.seen.lock().unwrap_or_else(PoisonError::into_inner);
+            let due = seen.1.is_none_or(|t| t.elapsed() >= RECHECK_FILE);
+            if due {
+                let stamp = file_stamp(path);
+                if stamp != seen.0 {
+                    *self.stored.lock().unwrap_or_else(PoisonError::into_inner) = load(path);
+                    seen.0 = stamp;
+                }
+                seen.1 = Some(Instant::now());
+            }
+        }
         self.stored.lock().unwrap_or_else(PoisonError::into_inner).clone()
+    }
+
+    /// After this launcher wrote or removed the file: remember its new stamp, so the next look
+    /// doesn't re-read what is already in memory.
+    fn note_written(&self) {
+        let stamp = self.path.as_deref().and_then(file_stamp);
+        *self.seen.lock().unwrap_or_else(PoisonError::into_inner) = (stamp, Some(Instant::now()));
     }
 }
 
@@ -514,6 +552,7 @@ impl AccountBackend for DeviceAccount {
             let _ = std::fs::remove_file(p);
         }
         *self.stored.lock().unwrap_or_else(PoisonError::into_inner) = None;
+        self.note_written();
     }
 
     fn app_link(
