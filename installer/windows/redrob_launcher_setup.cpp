@@ -1059,6 +1059,22 @@ static std::wstring InstallDir() {
 
 static bool Exists(const std::wstring& p) { return GetFileAttributesW(p.c_str()) != INVALID_FILE_ATTRIBUTES; }
 
+// The one subfolder of `dir` that holds `rel` (a path starting with a backslash), or empty.
+static std::wstring SingleSubfolderWith(const std::wstring& dir, const wchar_t* rel) {
+  std::wstring found;
+  WIN32_FIND_DATAW fd;
+  HANDLE find = FindFirstFileW((dir + L"\\*").c_str(), &fd);
+  if (find == INVALID_HANDLE_VALUE) return found;
+  do {
+    const std::wstring name = fd.cFileName;
+    if (name == L"." || name == L".." || !(fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) continue;
+    const std::wstring sub = dir + L"\\" + name;
+    if (Exists(sub + rel)) { found = sub; break; }
+  } while (FindNextFileW(find, &fd));
+  FindClose(find);
+  return found;
+}
+
 // Write one RCDATA resource to `path`. False if the resource is missing or the write was short.
 static bool WriteResource(HINSTANCE hinst, int id, const std::wstring& path) {
   HRSRC res = FindResourceW(hinst, MAKEINTRESOURCEW(id), RT_RCDATA);
@@ -1290,7 +1306,17 @@ DWORD SetupApp::InstallLauncher() {
                                   staging + L"\"");
   DeleteFileW(zip.c_str());
   if (tarExit != 0) { DeleteTree(staging); return kResultUnpackFailed; }
-  if (!Exists(staging + kAppExeRel)) { DeleteTree(staging); return kResultNoExe; }
+  // The portable zip wraps its files in one folder (redrob-launcher-<version>-windows-<arch>-portable\).
+  // Lift that folder's contents up so the exe sits in the install folder itself.
+  if (!Exists(staging + kAppExeRel)) {
+    const std::wstring inner = SingleSubfolderWith(staging, kAppExeRel);
+    if (inner.empty()) { DeleteTree(staging); return kResultNoExe; }
+    const std::wstring lifted = dir + L".lift";
+    DeleteTree(lifted);
+    if (!MoveFileExW(inner.c_str(), lifted.c_str(), 0)) { const DWORD err = GetLastError(); DeleteTree(staging); return err; }
+    DeleteTree(staging);
+    if (!MoveFileExW(lifted.c_str(), staging.c_str(), 0)) { const DWORD err = GetLastError(); DeleteTree(lifted); return err; }
+  }
   // The zip is the portable build; the marker beside the exe is what makes the launcher run portable
   // (settings next to itself, no self-update). An installed copy must not have it.
   DeleteFileW((staging + kPortableMarker).c_str());

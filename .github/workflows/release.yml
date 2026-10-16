@@ -131,7 +131,8 @@ jobs:
         include:
           - { arch: x64, target: x86_64-pc-windows-msvc }
           - { arch: x86, target: i686-pc-windows-msvc }
-          # Windows on ARM: cross-compiled on the x64 runner, so signing and WiX run as above.
+          # Windows on ARM: cross-compiled on the x64 runner (Rust and the setup's C++ alike), so
+          # signing runs as above.
           - { arch: arm64, target: aarch64-pc-windows-msvc }
     env:
       REDROB_LAUNCHER_VERSION: ${{ needs.version.outputs.version }}
@@ -150,11 +151,10 @@ jobs:
         if: inputs.version != ''
         shell: bash
         run: cargo xtask version set "$REDROB_LAUNCHER_VERSION"
-      - name: Install WiX
-        shell: pwsh
-        run: |
-          dotnet tool install --global wix --version 5.0.2
-          wix extension add -g WixToolset.UI.wixext/5.0.2 WixToolset.Util.wixext/5.0.2
+      # fontTools turns the design system's Pretendard woff2 into the TTF the setup embeds; without the
+      # design system checkout (private) the setup falls back to Segoe UI Variable, which is fine.
+      - name: Python for the setup build
+        run: pip install fonttools
       - name: Build and stage
         shell: pwsh
         run: ./packaging/windows/package.ps1 -Arch ${{ matrix.arch }} -BuildOnly
@@ -184,15 +184,31 @@ jobs:
           account: ${{ secrets.ARTIFACT_SIGNING_ACCOUNT }}
           cert-profile: ${{ secrets.ARTIFACT_SIGNING_CERT_PROFILE }}
 
-      - name: Package (MSI, portable zip)
+      # The setup embeds the zip and its uninstaller, so each is signed before it goes in:
+      # portable zip + uninstaller -> sign the uninstaller -> setup -> sign the setup.
+      - name: Package (portable zip, uninstaller)
         shell: pwsh
         run: ./packaging/windows/package.ps1 -Arch ${{ matrix.arch }} -SkipBuild
 
-      - name: Sign the installer
+      - name: Sign the uninstaller
         uses: redrob-labs/.github/actions/sign-windows@main
         with:
-          files: dist/release/*.msi
-          description: Redrob Launcher
+          files: target/windows-package/${{ matrix.arch }}-setup/uninstall/*.exe
+          description: Redrob Launcher Uninstaller
+          url: https://github.com/redrob-labs/redrob-launcher
+          endpoint: ${{ secrets.ARTIFACT_SIGNING_ENDPOINT }}
+          account: ${{ secrets.ARTIFACT_SIGNING_ACCOUNT }}
+          cert-profile: ${{ secrets.ARTIFACT_SIGNING_CERT_PROFILE }}
+
+      - name: Package (setup)
+        shell: pwsh
+        run: ./packaging/windows/package.ps1 -Arch ${{ matrix.arch }} -SetupOnly
+
+      - name: Sign the setup
+        uses: redrob-labs/.github/actions/sign-windows@main
+        with:
+          files: dist/release/*-setup.exe
+          description: Redrob Launcher Setup
           url: https://github.com/redrob-labs/redrob-launcher
           endpoint: ${{ secrets.ARTIFACT_SIGNING_ENDPOINT }}
           account: ${{ secrets.ARTIFACT_SIGNING_ACCOUNT }}
@@ -201,7 +217,7 @@ jobs:
       - name: Check the packages
         shell: pwsh
         run: |
-          Get-Item dist/release/redrob-launcher-*-windows-${{ matrix.arch }}.msi
+          Get-Item dist/release/redrob-launcher-*-windows-${{ matrix.arch }}-setup.exe
           Get-Item dist/release/redrob-launcher-*-windows-${{ matrix.arch }}-portable.zip
       - uses: actions/upload-artifact@v4
         with:
