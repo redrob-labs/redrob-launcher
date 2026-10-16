@@ -319,7 +319,8 @@ fn message_templates_match_real_messages() {
 #[test]
 fn complete_catalogs_translate_package_formats() {
     use redrob_launcher_core::PackageKind;
-    let kinds = [PackageKind::Setup, PackageKind::Msi, PackageKind::PortableZip, PackageKind::Dmg, PackageKind::Deb, PackageKind::Rpm, PackageKind::TarGz];
+    let kinds =
+        [PackageKind::Setup, PackageKind::Msi, PackageKind::PortableZip, PackageKind::Dmg, PackageKind::Deb, PackageKind::Rpm, PackageKind::TarGz];
     for lang in Lang::all().filter(|l| l.complete_menus()) {
         for kind in kinds {
             assert!(super::has(lang, kind.label()), "{}: {}", lang.code(), kind.label());

@@ -11,8 +11,8 @@
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::time::{Duration, Instant};
 use std::sync::{Arc, Mutex, PoisonError};
+use std::time::{Duration, Instant};
 
 use redrob_launcher_core::device::Device;
 use redrob_launcher_core::models::{Model, ModelBackend, ModelState, ModelView, Runtime, RuntimeState, SHARED_APP, Serving};
@@ -735,6 +735,7 @@ mod tests {
         // Present on disk wins over an old failure.
         std::fs::create_dir_all(root.join("m")).unwrap();
         std::fs::write(root.join("m").join("a.bin"), b"aaaa").unwrap();
+        models.invalidate(); // files written behind the launcher's back show up at the next scan (0.7 s)
         assert_eq!(models.models()[0].state, ModelState::Installed);
         models.delete("redrob-film", "m").unwrap();
         assert_eq!(models.models()[0].state, ModelState::NotDownloaded);

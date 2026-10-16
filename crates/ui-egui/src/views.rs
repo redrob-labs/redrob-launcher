@@ -7,7 +7,7 @@ use redrob_launcher_core::protocol::{Command, JobPhase};
 use redrob_launcher_core::status::AppStatus;
 use redrob_launcher_core::{AppGroup, SUITE, time};
 
-use crate::app::{Dialog, LauncherUi, TitleBar};
+use crate::app::{Dialog, LauncherUi, Page, TitleBar};
 use crate::i18n::{current, fmt, t, tn, tr_ctx};
 use crate::model::{self, AppEntry};
 use crate::settings::{Filter, SortKey, ViewMode};
@@ -87,7 +87,11 @@ impl LauncherUi {
             ui.add_space(16.0);
             widgets::tag(ui, tl!("Launcher"), t.invert_bg, t.invert_fg);
             ui.add_space(12.0);
-            widgets::hud(ui, tl!("Redrob apps"), t.muted);
+            // The two pages, as tabs: the apps, and the models they can use on this computer.
+            if widgets::nav_link(ui, tl!("Apps"), tl!("The Redrob apps"), h, self.page == Page::Apps).clicked() {
+                self.page = Page::Apps;
+            }
+            self.models_link(ui, h);
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if bar == TitleBar::Custom {
                     widgets::window_buttons(ui, h);
@@ -100,21 +104,22 @@ impl LauncherUi {
                 }
                 ui.add_space(6.0);
                 self.account_link(ui, h);
-                self.models_link(ui, h);
                 self.engine_link(ui, h);
                 ui.add_space(6.0);
                 widgets::rule(ui, h);
-                ui.add_space(6.0);
-                // Right to left: Table, then Grid, so they read Grid · Table.
-                for (mode, label, tip) in
-                    [(ViewMode::Table, tl!("Table"), tl!("Show apps as a table")), (ViewMode::Grid, tl!("Grid"), tl!("Show apps as cards"))]
-                {
-                    if widgets::nav_link(ui, label, tip, h, self.settings.view == mode).clicked() {
-                        self.settings.view = mode;
+                if self.page == Page::Apps {
+                    ui.add_space(6.0);
+                    // Right to left: Table, then Grid, so they read Grid · Table.
+                    for (mode, label, tip) in
+                        [(ViewMode::Table, tl!("Table"), tl!("Show apps as a table")), (ViewMode::Grid, tl!("Grid"), tl!("Show apps as cards"))]
+                    {
+                        if widgets::nav_link(ui, label, tip, h, self.settings.view == mode).clicked() {
+                            self.settings.view = mode;
+                        }
                     }
+                    ui.add_space(6.0);
+                    widgets::rule(ui, h);
                 }
-                ui.add_space(6.0);
-                widgets::rule(ui, h);
             });
         });
     }

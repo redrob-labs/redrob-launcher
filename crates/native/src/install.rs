@@ -1053,13 +1053,8 @@ pub mod windows {
         let _ = std::fs::remove_dir_all(staging);
         std::fs::create_dir_all(staging).map_err(|e| format!("couldn't create {} ({e})", staging.display()))?;
         let tar = std::env::var_os("SystemRoot").map_or_else(|| PathBuf::from(r"C:\Windows"), PathBuf::from).join(r"System32\tar.exe");
-        let status = process::command(tar)
-            .args(["-x", "-f"])
-            .arg(zip)
-            .arg("-C")
-            .arg(staging)
-            .status()
-            .map_err(|e| format!("couldn't start tar.exe ({e})"))?;
+        let status =
+            process::command(tar).args(["-x", "-f"]).arg(zip).arg("-C").arg(staging).status().map_err(|e| format!("couldn't start tar.exe ({e})"))?;
         if !status.success() {
             return Err("couldn't unpack the download".into());
         }
@@ -1093,7 +1088,8 @@ pub mod windows {
                 } else if let Some(cmd) = &m.uninstall_string {
                     let (exe, args) = split_command(cmd);
                     let quiet = if args.iter().any(|a| a == "--uninstall") { "--silent" } else { "/S" };
-                    let status = process::command(exe).args(&args).arg(quiet).status().map_err(|e| format!("couldn't start the uninstaller ({e})"))?;
+                    let status =
+                        process::command(exe).args(&args).arg(quiet).status().map_err(|e| format!("couldn't start the uninstaller ({e})"))?;
                     if !status.success() {
                         return Err(format!("the uninstaller exited with code {}", status.code().unwrap_or(-1)));
                     }
