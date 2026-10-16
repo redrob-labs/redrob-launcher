@@ -133,14 +133,17 @@ pub mod windows {
     /// Film kept its Install button (0.3.0).
     const PUBLISHERS: [&str; 3] = ["Redrob", "McKinley Rice, Inc.", "Redrob Labs"];
 
-    /// An MSI install found in the registry.
+    /// An install registered in Settings > Apps: a Windows Installer product (`product_code` is its
+    /// `{GUID}`) or an app's own setup (`product_code` is its key name, `uninstall_string` its
+    /// uninstaller command).
     pub struct MsiInstall {
         pub product_code: String,
         pub version: Option<redrob_launcher_core::version::Version>,
         pub exe: Option<PathBuf>,
+        pub uninstall_string: Option<String>,
     }
 
-    /// Every Windows Installer entry for `app`, newest first.
+    /// Every Settings > Apps entry for `app`, newest first.
     pub fn msi_installs(app: &CraftApp) -> Vec<MsiInstall> {
         let mut out = Vec::new();
         for (hive, flags) in [(HKEY_LOCAL_MACHINE, KEY_WOW64_64KEY), (HKEY_LOCAL_MACHINE, KEY_WOW64_32KEY), (HKEY_CURRENT_USER, 0)] {
@@ -155,7 +158,8 @@ pub mod windows {
                 let version = key.get_value::<String, _>("DisplayVersion").ok().and_then(|v| version::parse(&v));
                 let location: String = key.get_value("InstallLocation").unwrap_or_default();
                 let exe = exe_path(app, (!location.is_empty()).then(|| PathBuf::from(location)));
-                out.push(MsiInstall { product_code: code, version, exe });
+                let uninstall_string = key.get_value::<String, _>("UninstallString").ok().filter(|s| !s.trim().is_empty());
+                out.push(MsiInstall { product_code: code, version, exe, uninstall_string });
             }
         }
         out.sort_by(|a, b| match (&b.version, &a.version) {
@@ -171,8 +175,8 @@ pub mod windows {
     fn exe_path(app: &CraftApp, location: Option<PathBuf>) -> Option<PathBuf> {
         let exe = format!("{}.exe", app.id);
         let app_paths = format!(r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\{exe}");
-        for flags in [KEY_WOW64_64KEY, KEY_WOW64_32KEY] {
-            if let Ok(key) = RegKey::predef(HKEY_LOCAL_MACHINE).open_subkey_with_flags(&app_paths, KEY_READ | flags)
+        for (hive, flags) in [(HKEY_LOCAL_MACHINE, KEY_WOW64_64KEY), (HKEY_LOCAL_MACHINE, KEY_WOW64_32KEY), (HKEY_CURRENT_USER, 0)] {
+            if let Ok(key) = RegKey::predef(hive).open_subkey_with_flags(&app_paths, KEY_READ | flags)
                 && let Ok(path) = key.get_value::<String, _>("")
             {
                 let p = PathBuf::from(path.trim_matches('"'));
@@ -187,7 +191,8 @@ pub mod windows {
                 dirs.push(PathBuf::from(pf).join(app.name));
             }
         }
-        dirs.into_iter().map(|d| d.join(&exe)).find(|p| p.exists())
+        // At the folder's top (Film's MSI) or under bin\ (Canvas's setup lays its zip out that way).
+        dirs.into_iter().flat_map(|d| [d.join(&exe), d.join("bin").join(&exe)]).find(|p| p.exists())
     }
 
     pub fn detect(app: &CraftApp) -> Option<Installed> {
