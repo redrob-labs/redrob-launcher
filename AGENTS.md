@@ -124,23 +124,25 @@ Release assets (keep these names exact; the launcher's own self-update and the R
 
 | Platform | Files |
 |---|---|
-| Windows | `redrob-launcher-<ver>-windows-{x64,x86,arm64}.msi`, `…-windows-{x64,x86,arm64}-portable.zip` |
+| Windows | `redrob-launcher-<ver>-windows-{x64,x86,arm64}-setup.exe`, `…-windows-{x64,x86,arm64}-portable.zip` |
 | macOS | `redrob-launcher-<ver>-macos-universal.dmg` |
 | Linux | `redrob-launcher-<ver>-linux-{x86_64,aarch64}.{AppImage,AppImage.zsync,deb,rpm,tar.gz}`, `redrob-launcher-<ver>-linux-riscv64.{deb,rpm,tar.gz}` |
 | Web | `redrob-launcher-web-<ver>.zip` |
 
 Packaging facts the code relies on:
 
-- The Windows MSI is **per-user** (no UAC prompt), by default into
-  `%LOCALAPPDATA%\Programs\Redrob Launcher`. Double-clicked it opens a WixUI setup wizard
-  (Welcome; a folder page with a "Create a desktop shortcut" box; Ready; progress; Finish with
-  "Launch"), whose art `package.ps1` draws at build time; self-update runs it with `/passive`, no
-  wizard. The folder and the shortcut choice are recorded under
-  `HKCU\Software\Redrob\Redrob Launcher` (`InstallDir`,
-  `DesktopShortcutChoice`) and reused by the next version, and `self_update.rs` reads `InstallDir`
-  to know the running copy came from the MSI. Its shortcuts set AppUserModelID
-  `ai.redrob.launcher`, which toast notifications need. `portable.txt` beside the exe switches on portable mode
-  (`RedrobLauncherData\` next to the exe).
+- The Windows setup (`installer/windows`, a native Direct2D app ported from Redrob Canvas's; the
+  WiX MSI it replaced was dropped in 0.4.0) is **per-user** (no UAC prompt), into
+  `%LOCALAPPDATA%\Programs\Redrob Launcher`. Its first screen asks the language (English / 한국어)
+  and every later screen follows it; then a welcome screen with a "Create a desktop shortcut" box,
+  progress, done. `--silent` installs with no window: the launcher's self-update runs the new setup
+  that way after quitting. It embeds the signed portable zip and its own payload-less build as the
+  uninstaller. It records `InstallDir`, `Language` and `DesktopShortcutChoice` under
+  `HKCU\Software\Redrob\Redrob Launcher`; `self_update.rs` reads `InstallDir` to know the running
+  copy came from the setup, `language.rs` reads `Language` on the first run. Its shortcuts set
+  AppUserModelID `ai.redrob.launcher` through `IPropertyStore`, which toast notifications need.
+  `portable.txt` beside the exe switches on portable mode (`RedrobLauncherData\` next to the exe);
+  the setup deletes it from what it installs.
 - The macOS bundle is `Redrob Launcher.app` (executable `Contents/MacOS/Redrob Launcher`), a
   normal Dock app that can also sit in the menu bar: `LSUIElement` must never be set.
 - Linux: the tray uses StatusNotifierItem over D-Bus and notifications use

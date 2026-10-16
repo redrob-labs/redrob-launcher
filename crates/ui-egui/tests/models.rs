@@ -98,8 +98,8 @@ fn view(m: &Model, state: ModelState) -> ModelView {
     }
 }
 
-/// A harness with the dialog open on the given rows. The modal is at most about 60% of the window
-/// tall and kittest cannot scroll, so each test shows only the rows it clicks.
+/// A harness on the given rows; the test opens the Models page from the header. kittest cannot
+/// scroll, so the window is tall and each test shows only the rows it clicks.
 fn open(views: Vec<ModelView>) -> (Harness<'static, Option<LauncherUi>>, Rc<RefCell<State>>) {
     redrob_launcher_ui_egui::i18n::set_test_lang(redrob_launcher_ui_egui::i18n::Lang::EN);
     let state = Rc::new(RefCell::new(State { views, asked: Vec::new() }));
@@ -133,11 +133,15 @@ fn every_download_state_offers_the_right_action() {
     // A download is running, so the header says so.
     h.get_by_label("Models…").click();
     h.run_steps(12);
+    // Plain words first, the model's name small under them.
+    h.get_by_label("Subtitles for most videos, a good balance of speed and accuracy");
     h.get_by_label("Whisper base (multilingual)");
-    h.get_by_label("Natural voices (Kokoro-82M)");
-    h.get_by_label("Downloading 100 MB of 277 MB");
-    h.get_by_label("300 MB of 924 MB downloaded");
-    h.get_by_label("Not downloaded");
+    h.get_by_label("Nine natural English narration voices");
+    h.get_by_label("Speech to text");
+    h.get_by_label("Installing 100 MB of 277 MB");
+    h.get_by_label("300 MB of 924 MB installed");
+    h.get_by_label("Not installed");
+    h.get_by_label("Only show what runs on this computer");
     h.get_by_label("Apple M3 Pro, 36 GB unified memory");
     h.get_all_by_label("Runs here").next().unwrap();
     if let Some(dir) = std::env::var_os("REDROB_LAUNCHER_SNAPSHOTS") {
@@ -147,7 +151,7 @@ fn every_download_state_offers_the_right_action() {
     h.run_steps(8);
     h.get_by_label("Resume").click();
     h.run_steps(8);
-    h.get_by_label("Download").click();
+    h.get_by_label("Install").click();
     h.run_steps(8);
     h.get_by_label("Measure again").click();
     h.run_steps(8);
@@ -176,10 +180,10 @@ fn served_models_show_their_verdict_and_start_or_stop() {
     ]);
     h.get_by_label("Models").click();
     h.run_steps(12);
-    h.get_by_label("Every app");
+    h.get_all_by_label("for Every app").next().unwrap();
     h.get_by_label("llama-server is installed on first start");
     h.get_by_label("Serving at http://127.0.0.1:4100");
-    h.get_by_label("Downloaded");
+    h.get_by_label("Installed");
     h.get_by_label("Runs slowly");
     h.get_by_label("Won't run here");
     h.get_by_label("Stop").click();

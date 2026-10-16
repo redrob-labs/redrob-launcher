@@ -50,11 +50,8 @@ jobs:
           }
       - name: XML, desktop entry, AppStream
         run: |
-          xmllint --noout packaging/windows/redrob-launcher.wxs packaging/macos/*.plist* packaging/linux/*.xml*
-          # Windows Installer needs Icon ids ending in .ico or .exe, or shortcuts show a blank icon.
-          if grep -oE '<Icon Id="[^"]*"' packaging/windows/redrob-launcher.wxs | grep -vE '\.(ico|exe)"$'; then
-            echo "::error::Icon Id must end in .ico or .exe"; exit 1
-          fi
+          xmllint --noout installer/windows/redrob_launcher_setup.manifest packaging/macos/*.plist* packaging/linux/*.xml*
+          python3 -m py_compile installer/windows/build.py installer/windows/build-art.py
           desktop-file-validate packaging/linux/ai.redrob.launcher.desktop
           sed -e 's/@VERSION@/0.0.0/' -e 's/@DATE@/2026-01-01/' packaging/linux/ai.redrob.launcher.metainfo.xml.in >"$RUNNER_TEMP/ai.redrob.launcher.metainfo.xml"
           appstreamcli validate --no-net --explain "$RUNNER_TEMP/ai.redrob.launcher.metainfo.xml"

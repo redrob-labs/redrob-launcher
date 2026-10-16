@@ -80,6 +80,13 @@ pub fn install(
         }),
         #[cfg(windows)]
         PackageKind::Msi => windows::run_msi(&file, job.stop, &mut *job.phase).map(|_| None),
+        // The app's own setup (Redrob Canvas, Redrob Browser): it registers itself in Settings > Apps,
+        // where detection finds it; nothing to record.
+        #[cfg(windows)]
+        PackageKind::Setup => windows::run_setup(&file, job.stop, &mut *job.phase).map(|_| None),
+        // The portable zip, unpacked into the launcher's own apps folder and recorded, like a Linux tree.
+        #[cfg(windows)]
+        PackageKind::PortableZip => windows::install_portable(app, &file).map(|exe| Some(record(&version, kind, exe, Vec::new(), false))),
         #[cfg(target_os = "linux")]
         PackageKind::Deb | PackageKind::Rpm => linux::install_package(kind, &file, job.stop, &mut *job.phase).map(|_| None),
         #[cfg(target_os = "linux")]
@@ -173,7 +180,7 @@ pub fn available_kinds() -> Vec<PackageKind> {
     #[cfg(target_os = "macos")]
     return vec![PackageKind::Dmg];
     #[cfg(windows)]
-    return vec![PackageKind::Msi];
+    return vec![PackageKind::Setup, PackageKind::PortableZip, PackageKind::Msi];
     #[cfg(target_os = "linux")]
     return linux::available_kinds();
     #[allow(unreachable_code)]
@@ -250,7 +257,9 @@ pub fn uninstall(app: &CraftApp, installed: &Installed, record: Option<&Record>,
     }
     match installed.source {
         #[cfg(windows)]
-        InstallSource::Msi => windows::uninstall_msi(app, stop, phase),
+        InstallSource::Msi => windows::uninstall_registered(app, stop, phase),
+        #[cfg(windows)]
+        InstallSource::Launcher => windows::remove_portable(app, &path),
         #[cfg(target_os = "macos")]
         InstallSource::MacApp | InstallSource::Launcher => {
             if app.id == ENGINE_ID
@@ -1005,21 +1014,105 @@ pub mod windows {
         INSTALLER.alone(&cancelled(stop), &mut turn(phase, working), work).unwrap_or_else(|| Err(CANCELLED.into()))
     }
 
-    pub fn uninstall_msi(app: &CraftApp, stop: &Stop, phase: &mut dyn FnMut(JobPhase)) -> Result<(), String> {
+    /// Runs an app's own setup with no window. Ours take `--silent` and exit 0 on success.
+    pub fn run_setup(setup: &Path, stop: &Stop, phase: &mut dyn FnMut(JobPhase)) -> Result<(), String> {
+        in_turn(stop, phase, JobPhase::Installing, || {
+            let status = process::command(setup).arg("--silent").status().map_err(|e| format!("couldn't start the setup ({e})"))?;
+            match status.code() {
+                Some(0) => Ok(()),
+                Some(code) => Err(format!("the setup exited with code {code}")),
+                None => Err("the setup was interrupted".into()),
+            }
+        })
+    }
+
+    /// The launcher's own apps folder: `%LOCALAPPDATA%\Redrob Launcher\apps\<app>`.
+    pub fn apps_dir() -> Option<PathBuf> {
+        dirs::data_local_dir().map(|d| d.join("Redrob Launcher").join("apps"))
+    }
+
+    /// Unpacks a portable zip into `apps_dir()/<app>` (staged beside the old copy, swapped in whole)
+    /// and returns the app's exe inside it (`<app>.exe` at the top or under `bin\`).
+    pub fn install_portable(app: &CraftApp, file: &Path) -> Result<PathBuf, String> {
+        let apps = apps_dir().ok_or("no per-user data folder")?;
+        std::fs::create_dir_all(&apps).map_err(|e| format!("couldn't create {} ({e})", apps.display()))?;
+        let dest = apps.join(app.id);
+        let staging = apps.join(format!("{}.new", app.id));
+        let result = unzip(file, &staging).and_then(|top| {
+            find_binary(&top, app).ok_or_else(|| "the download doesn't contain the app".to_string())?;
+            swap_into_place(&top, &dest)
+        });
+        let _ = std::fs::remove_dir_all(&staging);
+        result?;
+        find_binary(&dest, app).ok_or_else(|| "the app's exe went missing after unpacking".to_string())
+    }
+
+    /// Unpacks `zip` into `staging` with System32's tar (bsdtar reads zip) and returns the folder
+    /// holding the files: `staging` itself, or its single top folder.
+    fn unzip(zip: &Path, staging: &Path) -> Result<PathBuf, String> {
+        let _ = std::fs::remove_dir_all(staging);
+        std::fs::create_dir_all(staging).map_err(|e| format!("couldn't create {} ({e})", staging.display()))?;
+        let tar = std::env::var_os("SystemRoot").map_or_else(|| PathBuf::from(r"C:\Windows"), PathBuf::from).join(r"System32\tar.exe");
+        let status =
+            process::command(tar).args(["-x", "-f"]).arg(zip).arg("-C").arg(staging).status().map_err(|e| format!("couldn't start tar.exe ({e})"))?;
+        if !status.success() {
+            return Err("couldn't unpack the download".into());
+        }
+        single_top_folder(staging)
+    }
+
+    /// Removes a portable install: only `apps_dir()/<app>`, and only when `exe` is inside it.
+    pub fn remove_portable(app: &CraftApp, exe: &Path) -> Result<(), String> {
+        let dir = apps_dir().ok_or("no per-user data folder")?.join(app.id);
+        if !exe.starts_with(&dir) {
+            return Err(format!("{} wasn't installed by the launcher. Remove it the way it was added.", exe.display()));
+        }
+        std::fs::remove_dir_all(&dir).map_err(|e| format!("couldn't remove {} ({e})", dir.display()))
+    }
+
+    /// Removes an app registered in Settings > Apps: a Windows Installer product by its code, or the
+    /// app's own uninstaller by its `UninstallString` (ours take `--silent`, NSIS ones `/S`).
+    pub fn uninstall_registered(app: &CraftApp, stop: &Stop, phase: &mut dyn FnMut(JobPhase)) -> Result<(), String> {
         let installs = crate::detect::windows::msi_installs(app);
         if installs.is_empty() {
-            return Err(format!("{} isn't registered with the Windows Installer", app.name));
+            return Err(format!("{} isn't registered in Settings > Apps", app.name));
         }
         in_turn(stop, phase, JobPhase::Removing, || {
             for m in installs {
-                let status = process::command(msiexec())
-                    .args(["/x", &m.product_code, "/passive", "/norestart"])
-                    .status()
-                    .map_err(|e| format!("couldn't start the Windows Installer ({e})"))?;
-                explain(status.code())?;
+                if m.product_code.starts_with('{') {
+                    let status = process::command(msiexec())
+                        .args(["/x", &m.product_code, "/passive", "/norestart"])
+                        .status()
+                        .map_err(|e| format!("couldn't start the Windows Installer ({e})"))?;
+                    explain(status.code())?;
+                } else if let Some(cmd) = &m.uninstall_string {
+                    let (exe, args) = split_command(cmd);
+                    let quiet = if args.iter().any(|a| a == "--uninstall") { "--silent" } else { "/S" };
+                    let status =
+                        process::command(exe).args(&args).arg(quiet).status().map_err(|e| format!("couldn't start the uninstaller ({e})"))?;
+                    if !status.success() {
+                        return Err(format!("the uninstaller exited with code {}", status.code().unwrap_or(-1)));
+                    }
+                } else {
+                    return Err(format!("{} has no uninstaller registered", app.name));
+                }
             }
             Ok(())
         })
+    }
+
+    /// `"C:\path with spaces\x.exe" --uninstall` -> the exe and its arguments.
+    fn split_command(cmd: &str) -> (String, Vec<String>) {
+        let cmd = cmd.trim();
+        if let Some(rest) = cmd.strip_prefix('"')
+            && let Some(end) = rest.find('"')
+        {
+            let exe = rest[..end].to_string();
+            let args = rest[end + 1..].split_whitespace().map(str::to_string).collect();
+            return (exe, args);
+        }
+        let mut parts = cmd.split_whitespace();
+        (parts.next().unwrap_or_default().to_string(), parts.map(str::to_string).collect())
     }
 }
 

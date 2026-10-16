@@ -116,6 +116,9 @@ pub struct Settings {
     /// default: the fork is a second runtime to download and keep current.
     #[serde(default)]
     pub prism_runtime: bool,
+    /// Models page: hide what this computer cannot run.
+    #[serde(default)]
+    pub models_only_runnable: bool,
     /// Linux: the package format to prefer for new installs (empty: the system's own).
     pub preferred_kinds: Vec<PackageKind>,
     /// Announcements and alerts from the release feed the user dismissed (by notice id).
@@ -182,6 +185,7 @@ impl Default for Settings {
             notify: true,
             prereleases: false,
             prism_runtime: false,
+            models_only_runnable: false,
             preferred_kinds: default_preferred_kinds(),
             dismissed_notices: std::collections::BTreeSet::new(),
             notified: BTreeMap::new(),

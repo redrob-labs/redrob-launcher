@@ -1,8 +1,8 @@
 # Windows on ARM: package the ARM64 release (cross-compiled on an x64 runner, unsigned here), then
-# install that per-user MSI on a Windows 11 ARM64 runner: once with the defaults (default folder,
-# Start Menu and desktop shortcuts) and once into a chosen folder without the desktop shortcut,
-# checking the binary is ARM64 and that each uninstall removes everything. The launcher is a GUI
-# app, so it isn't run here. Inlined rather than calling upstream's reusable workflow, so nothing
+# install that per-user setup on a Windows 11 ARM64 runner with --silent, in English and in Korean,
+# checking the binary is ARM64, the shortcuts, the recorded folder and language, the Settings > Apps
+# entry, and that the uninstaller removes everything. The launcher is a GUI app, so it isn't run
+# here; the setup is driven without its window. Inlined rather than calling upstream's reusable workflow, so nothing
 # runs here from a repository this organisation does not control.
 name: Windows ARM64
 
@@ -13,6 +13,7 @@ on:
     paths:
       - .github/workflows/windows-arm64.yml
       - packaging/windows/**
+      - installer/windows/**
   schedule:
     - cron: "47 4 * * *"
   workflow_dispatch:
@@ -41,11 +42,8 @@ jobs:
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           key: windows-arm64-package
-      - name: Install WiX
-        shell: pwsh
-        run: |
-          dotnet tool install --global wix --version 5.0.2
-          wix extension add -g WixToolset.UI.wixext/5.0.2 WixToolset.Util.wixext/5.0.2
+      - name: Python for the setup build
+        run: pip install fonttools
       - name: Build and package (unsigned)
         shell: pwsh
         env:
@@ -68,45 +66,52 @@ jobs:
         with:
           name: redrob-launcher-windows-arm64
           path: dist
-      - name: Install the MSI, check it, uninstall it
+      - name: Install with the setup, check it, uninstall it
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           $app = 'Redrob Launcher'
           $mainExeName = 'redrob-launcher.exe'
-          $msi = (Get-ChildItem dist/*.msi | Select-Object -First 1).FullName
+          $setup = (Get-ChildItem dist/*-setup.exe | Select-Object -First 1).FullName
           $startLnk = Join-Path ([Environment]::GetFolderPath('Programs')) "$app.lnk"
           $deskLnk = Join-Path ([Environment]::GetFolderPath('Desktop')) "$app.lnk"
           $key = "HKCU:\Software\Redrob\$app"
-          function Install([string[]] $props) {
-            $p = Start-Process msiexec.exe -ArgumentList (@('/i', "`"$msi`"", '/qn', '/l*v', 'install.log') + $props) -Wait -PassThru
-            if ($p.ExitCode -ne 0) { Get-Content install.log -Tail 60; throw "msiexec /i exited $($p.ExitCode)" }
+          $arp = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\RedrobLauncher'
+          $dir = Join-Path $env:LOCALAPPDATA "Programs\$app"
+          $exe = Join-Path $dir $mainExeName
+          $uninstaller = Join-Path $dir "Uninstall $app.exe"
+          function Install([string[]] $flags) {
+            $p = Start-Process $setup -ArgumentList (@('--silent') + $flags) -Wait -PassThru
+            if ($p.ExitCode -ne 0) { throw "setup --silent exited $($p.ExitCode)" }
           }
-          function Uninstall([string] $exe) {
-            $p = Start-Process msiexec.exe -ArgumentList '/x', "`"$msi`"", '/qn' -Wait -PassThru
-            if ($p.ExitCode -ne 0) { throw "msiexec /x exited $($p.ExitCode)" }
-            foreach ($left in $exe, $startLnk, $deskLnk) { if (Test-Path $left) { throw "uninstall left $left behind" } }
+          function Uninstall() {
+            $p = Start-Process $uninstaller -ArgumentList '--uninstall', '--silent' -Wait -PassThru
+            if ($p.ExitCode -ne 0) { throw "uninstaller exited $($p.ExitCode)" }
+            Start-Sleep -Seconds 5  # the uninstaller removes itself and its folder after it exits
+            foreach ($left in $exe, $startLnk, $deskLnk, $dir) { if (Test-Path $left) { throw "uninstall left $left behind" } }
             if ((Get-ItemProperty $key -ErrorAction SilentlyContinue).InstallDir) { throw "uninstall left InstallDir in $key" }
+            if (Test-Path $arp) { throw 'uninstall left the Settings > Apps entry' }
             Write-Output 'ok uninstalled'
           }
-          function Expect([bool] $ok, [string] $what) { if (-not $ok) { Get-Content install.log -Tail 60; throw $what }; Write-Output "ok $what" }
+          function Expect([bool] $ok, [string] $what) { if (-not $ok) { throw $what }; Write-Output "ok $what" }
 
-          Install @()
-          $exe = Join-Path $env:LOCALAPPDATA "Programs\$app\$mainExeName"
-          Expect (Test-Path $exe) "installed in default folder: $exe"
+          Install @('--lang', 'en')
+          Expect (Test-Path $exe) "installed in the default folder: $exe"
+          Expect (-not (Test-Path (Join-Path $dir 'portable.txt'))) 'portable.txt was dropped'
           $bytes = [System.IO.File]::ReadAllBytes($exe)
           $machine = [BitConverter]::ToUInt16($bytes, [BitConverter]::ToInt32($bytes, 0x3C) + 4)
           Expect ($machine -eq 0xAA64) "the exe is ARM64 (machine 0x$('{0:X}' -f $machine))"
           Expect (Test-Path $startLnk) "Start Menu shortcut: $startLnk"
           Expect (Test-Path $deskLnk) "desktop shortcut: $deskLnk"
-          Expect ([bool](Get-ItemProperty $key -ErrorAction SilentlyContinue).InstallDir) "install folder recorded in $key"
-          Uninstall $exe
+          Expect (Test-Path $uninstaller) "uninstaller: $uninstaller"
+          $rec = Get-ItemProperty $key
+          Expect ($rec.InstallDir -eq $dir) "install folder recorded in $key"
+          Expect ($rec.Language -eq 'en') 'language recorded: en'
+          $entry = Get-ItemProperty $arp
+          Expect ($entry.DisplayName -eq $app -and $entry.Publisher -eq 'Redrob') 'Settings > Apps entry'
+          Uninstall
 
-          $dir = Join-Path $env:LOCALAPPDATA "$app Test Folder"
-          Install @("INSTALLFOLDER=`"$dir\`"", 'INSTALLDESKTOPSHORTCUT=0')
-          $exe = Join-Path $dir $mainExeName
-          Expect (Test-Path $exe) "installed in chosen folder: $exe"
-          Expect (Test-Path $startLnk) "Start Menu shortcut: $startLnk"
-          Expect (-not (Test-Path $deskLnk)) 'no desktop shortcut when not wanted'
-          Uninstall $exe
-          Expect (-not (Test-Path $dir)) 'uninstall removed chosen folder'
+          Install @('--lang', 'ko')
+          Expect (Test-Path $exe) "installed again: $exe"
+          Expect ((Get-ItemProperty $key).Language -eq 'ko') 'language recorded: ko'
+          Uninstall

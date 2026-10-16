@@ -285,6 +285,7 @@ mod tests {
             id: "m-1".into(),
             app: "redrob".into(),
             name: "M".into(),
+            summary: String::new(),
             description: String::new(),
             license: String::new(),
             source: "https://x".into(),
