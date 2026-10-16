@@ -144,6 +144,9 @@ impl NativeBackend {
         let engine = crate::engine::Engine::desktop(shared.waker.clone());
         let backend =
             Self { shared, paths, http, source, platform: native_platform(), self_install: crate::self_update::current(), account, models, engine };
+        for (app, png) in crate::app_icons::cached(&backend.paths.icons()) {
+            backend.shared.emit(Event::Icon { app, png });
+        }
         backend.replay_cache();
         backend.detect_all();
         backend
@@ -278,6 +281,10 @@ impl NativeBackend {
                             let Some(latest) = latest else { continue };
                             if let LatestRelease::Found(r) = &latest {
                                 shared.latest.lock().unwrap_or_else(PoisonError::into_inner).insert(app.id.to_string(), r.clone());
+                                // The product's icon as this release ships it, when it changed.
+                                if let Some(png) = crate::app_icons::sync(&http, &paths.icons(), app, r) {
+                                    shared.emit(Event::Icon { app: app.id.to_string(), png });
+                                }
                             }
                             if !matches!(latest, LatestRelease::Failed(_)) {
                                 shared.answered.lock().unwrap_or_else(PoisonError::into_inner).insert(app.id.to_string());

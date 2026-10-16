@@ -64,6 +64,42 @@ fn from_manifest(app: &CraftApp, manifest: &Manifest) -> Option<Installed> {
     })
 }
 
+/// The exe names an app's Windows builds use, likeliest first. Most are `<id>.exe`; the Electron
+/// apps name theirs from their packaging config (Redrob Office's `executableName` is `redrob`,
+/// Redrob Cowork keeps the product name, `Redrob Cowork.exe`); Redrob Code's installer puts
+/// `redrob.exe` (and a `redrob-code.exe` copy) in `%LOCALAPPDATA%\Redrob\bin`; Redrob Browser is
+/// Chromium, `chrome.exe`. The product name (`Redrob Recall.exe`) is what older Tauri builds and
+/// electron-builder's default produce, so it is always a candidate.
+pub(crate) fn windows_exe_names(app: &CraftApp) -> Vec<String> {
+    let own = format!("{}.exe", app.id);
+    let named = format!("{}.exe", app.name);
+    let mut names = match app.id {
+        "redrob-code" => vec!["redrob.exe".to_string(), own],
+        "redrob-office" => vec!["redrob.exe".to_string(), own],
+        "redrob-browser" => vec!["chrome.exe".to_string(), own],
+        _ => vec![own],
+    };
+    names.push(named);
+    names
+}
+
+/// Whether a Settings > Apps `DisplayName` is `app`'s. Our own setups, the WiX MSIs and Tauri's
+/// installers write the product name as is; electron-builder's NSIS installers append the version
+/// (`Redrob Office 0.10.9`), which is why Office and Cowork showed an Install button while
+/// installed (0.4.0); Redrob Browser's entry is Chromium's, called just "Redrob". Case aside.
+#[cfg_attr(not(windows), allow(dead_code))]
+pub(crate) fn display_name_matches(app: &CraftApp, name: &str) -> bool {
+    let name = name.trim();
+    if name.eq_ignore_ascii_case(app.name) || (app.id == "redrob-browser" && name.eq_ignore_ascii_case("Redrob")) {
+        return true;
+    }
+    let Some(rest) = name.get(..app.name.len()).filter(|head| head.eq_ignore_ascii_case(app.name)).and(name.get(app.name.len()..)) else {
+        return false;
+    };
+    // `<name> <version>`: a space, then something that starts like a version number.
+    rest.strip_prefix(' ').is_some_and(|v| v.trim_start_matches('v').starts_with(|c: char| c.is_ascii_digit()))
+}
+
 /// Whether a file name is an AppImage of the app with asset stems `stems`, and the version its
 /// name gives. Matches only the names a release AppImage ends up with: the release's own
 /// (`redrob-canvas-0.6.0-linux-x86_64.AppImage`) and the bare app name Gear Lever renames it to
@@ -120,7 +156,7 @@ pub mod macos {
 
 #[cfg(windows)]
 pub mod windows {
-    use std::path::PathBuf;
+    use std::path::{Path, PathBuf};
 
     use winreg::RegKey;
     use winreg::enums::{HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, KEY_READ, KEY_WOW64_32KEY, KEY_WOW64_64KEY};
@@ -128,10 +164,17 @@ pub mod windows {
     use super::*;
 
     const UNINSTALL: &str = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall";
-    /// Publishers our installers write: the setups say "Redrob", the MSIs (Redrob Film's WiX package)
-    /// the company that signs them. Film's entry was skipped for saying the latter, so an installed
-    /// Film kept its Install button (0.3.0).
-    const PUBLISHERS: [&str; 3] = ["Redrob", "McKinley Rice, Inc.", "Redrob Labs"];
+
+    /// Whether a Settings > Apps `Publisher` is one of ours. Our setups say "Redrob"; the MSIs
+    /// (WiX) the company that signs them, "McKinley Rice, Inc."; electron-builder writes the
+    /// package author (Redrob Office: "Redrob", Redrob Cowork: "Redrob Cowork"); Tauri's NSIS
+    /// and WiX write the identifier's second segment, "redrob". Matched by prefix, case aside, so
+    /// a spelling change ("McKinley Rice Inc.") doesn't hide an installed app behind an Install
+    /// button again (Film in 0.3.0, Office / Query / Recall / Cowork in 0.4.0).
+    fn ours(publisher: &str) -> bool {
+        let p = publisher.trim().to_ascii_lowercase();
+        p.starts_with("redrob") || p.starts_with("mckinley rice")
+    }
 
     /// An install registered in Settings > Apps: a Windows Installer product (`product_code` is its
     /// `{GUID}`) or an app's own setup (`product_code` is its key name, `uninstall_string` its
@@ -143,25 +186,35 @@ pub mod windows {
         pub uninstall_string: Option<String>,
     }
 
+    /// The hives and views Settings > Apps entries live in: per-machine installs in the 64-bit and
+    /// 32-bit views of HKLM (WiX MSIs, electron-builder's `perMachine`), per-user installs in
+    /// HKCU (our setups, electron-builder's default, Tauri's `currentUser` NSIS mode).
+    const HIVES: [(winreg::HKEY, u32); 4] =
+        [(HKEY_LOCAL_MACHINE, KEY_WOW64_64KEY), (HKEY_LOCAL_MACHINE, KEY_WOW64_32KEY), (HKEY_CURRENT_USER, 0), (HKEY_CURRENT_USER, KEY_WOW64_32KEY)];
+
     /// Every Settings > Apps entry for `app`, newest first.
     pub fn msi_installs(app: &CraftApp) -> Vec<MsiInstall> {
         let mut out = Vec::new();
-        for (hive, flags) in [(HKEY_LOCAL_MACHINE, KEY_WOW64_64KEY), (HKEY_LOCAL_MACHINE, KEY_WOW64_32KEY), (HKEY_CURRENT_USER, 0)] {
+        for (hive, flags) in HIVES {
             let Ok(root) = RegKey::predef(hive).open_subkey_with_flags(UNINSTALL, KEY_READ | flags) else { continue };
             for code in root.enum_keys().flatten() {
                 let Ok(key) = root.open_subkey_with_flags(&code, KEY_READ | flags) else { continue };
                 let name: String = key.get_value("DisplayName").unwrap_or_default();
                 let publisher: String = key.get_value("Publisher").unwrap_or_default();
-                if !display_names(app).iter().any(|n| *n == name)
-                    || !PUBLISHERS.contains(&publisher.as_str())
-                    || out.iter().any(|m: &MsiInstall| m.product_code == code)
-                {
+                if !is_display_name(app, &name) || !ours(&publisher) || out.iter().any(|m: &MsiInstall| m.product_code == code) {
                     continue;
                 }
                 let version = key.get_value::<String, _>("DisplayVersion").ok().and_then(|v| version::parse(&v));
-                let location: String = key.get_value("InstallLocation").unwrap_or_default();
-                let exe = exe_path(app, (!location.is_empty()).then(|| PathBuf::from(location)));
-                let uninstall_string = key.get_value::<String, _>("UninstallString").ok().filter(|s| !s.trim().is_empty());
+                let text = |k: &str| key.get_value::<String, _>(k).ok().map(|s| s.trim().to_string()).filter(|s| !s.is_empty());
+                // Where the files are: `InstallLocation` (quoted by Tauri), else the uninstaller's
+                // folder (electron-builder records the folder elsewhere but puts `Uninstall <app>.exe`
+                // in it), and `DisplayIcon` (`<exe>,0`) names the exe itself.
+                let uninstall_string = text("UninstallString");
+                let location = text("InstallLocation")
+                    .map(|l| PathBuf::from(l.trim_matches('"')))
+                    .or_else(|| uninstall_string.as_deref().and_then(command_path).and_then(|p| p.parent().map(Path::to_path_buf)));
+                let icon = text("DisplayIcon").and_then(|i| icon_exe(app, &i));
+                let exe = icon.or_else(|| exe_path(app, location));
                 out.push(MsiInstall { product_code: code, version, exe, uninstall_string });
             }
         }
@@ -174,52 +227,71 @@ pub mod windows {
         out
     }
 
-    /// What an app's Settings > Apps entry may be called. Our own setups and MSIs use the product
-    /// name; Redrob Browser's entry is Chromium's, called just "Redrob".
-    fn display_names(app: &CraftApp) -> Vec<&'static str> {
-        match app.id {
-            "redrob-browser" => vec![app.name, "Redrob"],
-            _ => vec![app.name],
-        }
+    /// Whether a Settings > Apps `DisplayName` is this app's. Our own setups, the MSIs and Tauri
+    /// use the product name as is; electron-builder appends the version ("Redrob Office 0.10.9");
+    /// Redrob Browser's entry is Chromium's, called just "Redrob". Case aside.
+    fn is_display_name(app: &CraftApp, name: &str) -> bool {
+        super::display_name_matches(app, name)
     }
 
-    /// The exe names an app may install as. Most are `<id>.exe`; Redrob Code's installer puts
-    /// `redrob.exe` (and a `redrob-code.exe` copy) in `%LOCALAPPDATA%\Redrob\bin`; Redrob Browser is
-    /// Chromium, `chrome.exe` in `%LOCALAPPDATA%\Redrob\Application`.
-    fn exe_names(app: &CraftApp) -> Vec<String> {
-        let own = format!("{}.exe", app.id);
-        match app.id {
-            "redrob-code" => vec![own, "redrob.exe".into()],
-            "redrob-browser" => vec![own, "chrome.exe".into()],
-            _ => vec![own],
-        }
+    /// The program a command line starts: its first token, quoted or not.
+    fn command_path(command: &str) -> Option<PathBuf> {
+        let c = command.trim();
+        let path = if let Some(rest) = c.strip_prefix('"') { rest.split('"').next()? } else { c.split_whitespace().next()? };
+        (!path.is_empty()).then(|| PathBuf::from(path))
     }
 
-    /// Folders an app is known to install into besides the recorded one and Program Files.
+    /// The exe a `DisplayIcon` value points at (`"C:\...\redrob.exe",0`), when it is this app's exe
+    /// and is there.
+    fn icon_exe(app: &CraftApp, icon: &str) -> Option<PathBuf> {
+        let mut s = icon.trim();
+        if let Some(rest) = s.strip_prefix('"') {
+            s = rest.split('"').next()?;
+        } else if let Some((path, _index)) = s.rsplit_once(',') {
+            s = path;
+        }
+        let p = PathBuf::from(s.trim());
+        let name = p.file_name()?.to_str()?;
+        let ours = windows_exe_names(app).iter().any(|n| n.eq_ignore_ascii_case(name));
+        (ours && p.is_file()).then_some(p)
+    }
+
+    /// Folders an app is known to install into besides the recorded one and Program Files:
+    /// `%LOCALAPPDATA%\Programs\<name>` (electron-builder's assisted per-user installer: Office,
+    /// Cowork), `%LOCALAPPDATA%\<name>` (Tauri's `currentUser` NSIS: Recall, Query), our own setups'
+    /// folders (`%LOCALAPPDATA%\Redrob\<product>`), and the launcher's own apps folder.
     fn known_dirs(app: &CraftApp) -> Vec<PathBuf> {
         let local = std::env::var_os("LOCALAPPDATA").map(PathBuf::from);
         let home = std::env::var_os("USERPROFILE").map(PathBuf::from);
-        match app.id {
-            "redrob-code" => [local.map(|l| l.join(r"Redrob\bin")), home.map(|h| h.join(r".redrob\bin"))].into_iter().flatten().collect(),
-            "redrob-browser" => local.map(|l| l.join(r"Redrob\Application")).into_iter().collect(),
-            _ => local.map(|l| l.join("Programs").join(app.name)).into_iter().collect(),
+        let mut dirs: Vec<PathBuf> = match app.id {
+            "redrob-code" => [local.as_ref().map(|l| l.join(r"Redrob\bin")), home.map(|h| h.join(r".redrob\bin"))].into_iter().flatten().collect(),
+            "redrob-browser" => local.as_ref().map(|l| l.join(r"Redrob\Application")).into_iter().collect(),
+            _ => Vec::new(),
+        };
+        if let Some(l) = &local {
+            let short = app.name.strip_prefix("Redrob ").unwrap_or(app.name);
+            dirs.push(l.join("Programs").join(app.name));
+            dirs.push(l.join(app.name));
+            dirs.push(l.join("Redrob").join(short));
+            dirs.push(l.join("Redrob Launcher").join("apps").join(app.id));
         }
+        dirs
     }
 
     /// The app's exe: from `App Paths`, the install folder, its known folders, or Program Files.
     fn exe_path(app: &CraftApp, location: Option<PathBuf>) -> Option<PathBuf> {
-        let names = exe_names(app);
+        let names = windows_exe_names(app);
         for exe in &names {
             let app_paths = format!(r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\{exe}");
-            for (hive, flags) in [(HKEY_LOCAL_MACHINE, KEY_WOW64_64KEY), (HKEY_LOCAL_MACHINE, KEY_WOW64_32KEY), (HKEY_CURRENT_USER, 0)] {
+            for (hive, flags) in HIVES {
                 if let Ok(key) = RegKey::predef(hive).open_subkey_with_flags(&app_paths, KEY_READ | flags)
                     && let Ok(path) = key.get_value::<String, _>("")
                 {
                     let p = PathBuf::from(path.trim_matches('"'));
-                    // App Paths for a shared name (chrome.exe) may be another browser's: it must be in
-                    // one of this app's folders.
+                    // App Paths for a shared name (chrome.exe, redrob.exe) may be another app's: it
+                    // must be in one of this app's folders.
                     let ours = *exe == format!("{}.exe", app.id) || known_dirs(app).iter().any(|d| p.starts_with(d));
-                    if ours && p.exists() {
+                    if ours && p.is_file() {
                         return Some(p);
                     }
                 }
@@ -235,7 +307,17 @@ pub mod windows {
         // At the folder's top (Film's MSI) or under bin\ (Canvas's setup lays its zip out that way).
         dirs.into_iter()
             .flat_map(|d| names.iter().flat_map(move |exe| [d.join(exe), d.join("bin").join(exe)]).collect::<Vec<_>>())
-            .find(|p| p.exists())
+            .find(|p| p.is_file())
+    }
+
+    /// The exe to start for an installed app whose recorded location is stale, a folder, or a
+    /// name without a path: looked up again the way detection does.
+    pub fn resolve_exe(app: &CraftApp, location: &Path) -> Option<PathBuf> {
+        if location.is_file() {
+            return Some(location.to_path_buf());
+        }
+        let dir = location.is_dir().then(|| location.to_path_buf());
+        msi_installs(app).into_iter().find_map(|m| m.exe.filter(|e| e.is_file())).or_else(|| exe_path(app, dir))
     }
 
     pub fn detect(app: &CraftApp) -> Option<Installed> {

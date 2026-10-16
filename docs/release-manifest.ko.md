@@ -11,20 +11,23 @@ Redrob Launcher는 앱 릴리스가 무엇을 할 수 있는지, 앱의 릴리�
 GitHub Release마다 설치 파일, `SHA256SUMS.txt` 옆에 이름이 정확히 `redrob-launcher.json`인 자산 하나:
 
 ```json
-{ "schema": 1, "sharedAccount": true }
+{ "schema": 1, "sharedAccount": true, "icon": "redrob-office.png" }
 ```
 
 | 필드 | 뜻 |
 |---|---|
 | `schema` | 지금은 항상 `1`. 모르는 schema를 만난 런처는 파일을 무시합니다. |
 | `sharedAccount` | 이 릴리스가 런처의 공용 계정 파일([shared-account.ko.md](./shared-account.ko.md))을 읽으면 `true`. 런처에 로그인한 것만으로 충분하다는 뜻. 없으면 `false`. |
+| `icon` | 선택. 이 릴리스가 쓰는 앱 아이콘: **같은 릴리스**의 PNG 자산 이름(또는 그 자산의 전체 다운로드 주소). 런처는 빌드 때 넣은 아이콘 대신 이것을 보여 주므로 카탈로그가 제품 브랜딩을 따라갑니다. 정방형, 256px 이상, 1 MiB 미만. 없으면 런처 내장 아이콘. |
 
 모르는 필드는 무시하므로 schema 1은 자라도 됩니다. 파일은 작게 둡니다. 런처는 몇 KB까지만 읽습니다.
 
-업로드 단계 앞에 두는 릴리스 워크플로 한 줄:
+업로드 단계 앞에 두는 릴리스 워크플로 단계(아이콘은 설치 파일에 든 것과 같은 파일을 자산 하나로 더
+올립니다):
 
 ```sh
-printf '{ "schema": 1, "sharedAccount": true }\n' > dist/release/redrob-launcher.json
+cp assets/app-icon/256x256.png dist/release/redrob-office.png
+printf '{ "schema": 1, "sharedAccount": true, "icon": "redrob-office.png" }\n' > dist/release/redrob-launcher.json
 ```
 
 그리고 다른 자산처럼 `SHA256SUMS.txt`에 넣습니다. 런처의 할당량 없는 경로는 그 파일로 자산 이름을
@@ -39,10 +42,15 @@ printf '{ "schema": 1, "sharedAccount": true }\n' > dist/release/redrob-launcher
   표에는 읽는 것이 확인된 릴리스(Redrob CAD 0.0.3, Redrob Film 0.0.1)가 있고, 머지만 되고 릴리스 안 된
   앱은 **다음 버전부터 이 로그인을 씁니다**로 보입니다.
 - 파일이 있든 없든 앱 자신의 키가 런처 키보다 우선합니다.
+- `icon`이 같은 릴리스의 PNG 자산을 가리키면: 런처가 릴리스 확인과 함께 받아 캐시 폴더
+  (`icons/<app>.png`)에 두고, 다음 프레임부터 그리고 이후 모든 시작에서 보여 주며, 바이트가 바뀔 때만
+  교체합니다. 없거나, PNG가 아니거나, 1 MiB를 넘거나, 그 릴리스의 자산이 아니면 무시하고 내장 아이콘을
+  그대로 둡니다.
 
 파일은 릴리스 자신의 다운로드 주소
 (`https://github.com/redrob-labs/<repo>/releases/download/<tag>/redrob-launcher.json`)에서만 받습니다.
-다른 곳은 무시합니다. 런처가 이 파일을 쓰는 일은 없습니다.
+다른 곳은 무시하고, 같은 릴리스의 다운로드 링크가 아닌 `icon`도 무시합니다. 런처가 이 파일을 쓰는 일은
+없습니다.
 
 ## 자산 이름
 

@@ -160,6 +160,16 @@ impl Http {
         }
     }
 
+    /// A small binary file (an icon), at most `limit` bytes; `None` when there is no such file.
+    pub fn get_bytes(&self, url: &str, limit: u64) -> Result<Option<Vec<u8>>, String> {
+        let mut resp = self.small.get(url).call().map_err(|e| format!("couldn't reach {} ({e})", host(url)))?;
+        match resp.status().as_u16() {
+            200 => resp.body_mut().with_config().limit(limit).read_to_vec().map(Some).map_err(|e| format!("unreadable answer ({e})")),
+            404 => Ok(None),
+            s => Err(format!("{} answered HTTP {s}", host(url))),
+        }
+    }
+
     /// Where `url` redirects to, without following it.
     pub fn redirect_target(&self, url: &str) -> Result<Option<String>, String> {
         let resp = self.no_redirect.head(url).call().map_err(|e| format!("couldn't reach {} ({e})", host(url)))?;
