@@ -128,7 +128,10 @@ pub mod windows {
     use super::*;
 
     const UNINSTALL: &str = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall";
-    const PUBLISHER: &str = "Redrob";
+    /// Publishers our installers write: the setups say "Redrob", the MSIs (Redrob Film's WiX package)
+    /// the company that signs them. Film's entry was skipped for saying the latter, so an installed
+    /// Film kept its Install button (0.3.0).
+    const PUBLISHERS: [&str; 3] = ["Redrob", "McKinley Rice, Inc.", "Redrob Labs"];
 
     /// An MSI install found in the registry.
     pub struct MsiInstall {
@@ -146,7 +149,7 @@ pub mod windows {
                 let Ok(key) = root.open_subkey_with_flags(&code, KEY_READ | flags) else { continue };
                 let name: String = key.get_value("DisplayName").unwrap_or_default();
                 let publisher: String = key.get_value("Publisher").unwrap_or_default();
-                if name != app.name || publisher != PUBLISHER || out.iter().any(|m: &MsiInstall| m.product_code == code) {
+                if name != app.name || !PUBLISHERS.contains(&publisher.as_str()) || out.iter().any(|m: &MsiInstall| m.product_code == code) {
                     continue;
                 }
                 let version = key.get_value::<String, _>("DisplayVersion").ok().and_then(|v| version::parse(&v));
