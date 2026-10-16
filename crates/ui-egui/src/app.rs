@@ -68,6 +68,13 @@ pub struct LanguageChoice {
     pub apps: std::collections::BTreeMap<String, String>,
 }
 
+/// Which page the central panel shows: the apps, or the models they can use.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Page {
+    Apps,
+    Models,
+}
+
 pub(crate) struct Toast {
     pub text: String,
     pub error: bool,
@@ -83,7 +90,6 @@ pub(crate) enum Dialog {
     /// Signing in to Redrob, and which apps use it.
     Account,
     /// The apps' downloadable models.
-    Models,
     /// The shared Redrob Code engine: running or not, who uses it, start and stop.
     Engine,
 }
@@ -111,6 +117,7 @@ pub struct LauncherUi {
     pub(crate) search: String,
     pub(crate) toasts: Vec<Toast>,
     pub(crate) dialog: Option<Dialog>,
+    pub(crate) page: Page,
     started: bool,
     applied_theme: Option<theme::ThemeChoice>,
     /// Fonts registered with `set_fonts` only exist from the next frame on; drawing with the named
@@ -179,6 +186,7 @@ impl LauncherUi {
             was_focused: true,
             auto_update_attempted: std::collections::BTreeSet::new(),
             published_language: None,
+            page: Page::Apps,
         }
     }
 
@@ -583,6 +591,10 @@ impl LauncherUi {
         egui::CentralPanel::default()
             .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin { left: 20, right: 20, top: 18, bottom: 0 }))
             .show(ui, |ui| {
+                if self.page == Page::Models {
+                    self.models_page(ui);
+                    return;
+                }
                 self.toolbar(ui);
                 ui.add_space(18.0);
                 let ids = self.visible_ids();

@@ -12,6 +12,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, PoisonError};
+use std::time::{Duration, Instant};
 
 use redrob_launcher_core::device::Device;
 use redrob_launcher_core::models::{Model, ModelBackend, ModelState, ModelView, Runtime, RuntimeState, SHARED_APP, Serving};
@@ -189,7 +190,17 @@ pub struct Models {
     runtime_failed: Arc<Mutex<HashMap<Runtime, String>>>,
     runtimes_root: Option<PathBuf>,
     code_config: Option<PathBuf>,
+    /// The last answers to `models()` and `disk_free()`, with when they were made. The UI asks
+    /// every frame; the file scan (two `metadata` calls per catalogue file) and the free-space probe
+    /// (a `df`/PowerShell process) are too slow for that and made the Models page scroll in jerks.
+    /// A download in progress keeps the views fresh through its own progress (the cache is short).
+    views_cache: Mutex<Option<(Instant, Vec<ModelView>)>>,
+    disk_cache: Mutex<Option<(Instant, Option<u64>)>>,
 }
+
+/// How long `models()` reuses its last scan, and `disk_free()` its last probe.
+const VIEWS_FRESH_FOR: Duration = Duration::from_millis(700);
+const DISK_FRESH_FOR: Duration = Duration::from_secs(5);
 
 /// The device record before the probe has run: the platform, nothing measured.
 fn unmeasured() -> Device {
@@ -230,7 +241,14 @@ impl Models {
             runtime_failed: Arc::default(),
             runtimes_root: None,
             code_config: None,
+            views_cache: Mutex::new(None),
+            disk_cache: Mutex::new(None),
         }
+    }
+
+    /// Forget the cached scan: something changed on disk or in the jobs.
+    fn invalidate(&self) {
+        *self.views_cache.lock().unwrap_or_else(PoisonError::into_inner) = None;
     }
 
     /// The built-in manifest, the apps' real folders, the real runtimes folder and Redrob Code's
@@ -282,6 +300,40 @@ impl Models {
     }
 }
 
+impl Models {
+    /// The real scan behind `models()`: what is on disk, downloading, failed or served, per model.
+    fn scan(&self) -> Vec<ModelView> {
+        let jobs = self.jobs.lock().unwrap_or_else(PoisonError::into_inner);
+        let failed = self.failed.lock().unwrap_or_else(PoisonError::into_inner);
+        let servers = self.shared.servers.lock().unwrap_or_else(PoisonError::into_inner);
+        let device = self.shared.device.lock().unwrap_or_else(PoisonError::into_inner).clone();
+        self.shared
+            .models
+            .iter()
+            .map(|m| {
+                let folder = (self.shared.dir)(&m.app).map(|d| model_dir(&d, m));
+                let k = key(&m.app, &m.id);
+                let state = match (&folder, jobs.get(&k), failed.get(&k)) {
+                    (None, ..) => ModelState::NoFolder,
+                    (Some(_), Some(j), _) => ModelState::Downloading { done: j.done, total: j.total },
+                    (Some(d), None, f) => match (disk_state(d, m), f) {
+                        (ModelState::Installed, _) => ModelState::Installed,
+                        (_, Some(e)) => ModelState::Failed(e.clone()),
+                        (s, None) => s,
+                    },
+                };
+                let serving = match servers.get(&k) {
+                    None => Serving::No,
+                    Some(Serve::Starting) => Serving::Starting,
+                    Some(Serve::Running(s)) => Serving::Running { url: s.url() },
+                    Some(Serve::Failed(e)) => Serving::Failed(e.clone()),
+                };
+                ModelView { model: m.clone(), state, folder: folder.map(|d| d.display().to_string()), fit: device.fit(&m.requires), serving }
+            })
+            .collect()
+    }
+}
+
 impl Drop for Models {
     fn drop(&mut self) {
         self.stop_all();
@@ -314,37 +366,21 @@ fn free_bytes(dir: &Path) -> Option<u64> {
 
 impl ModelBackend for Models {
     fn models(&self) -> Vec<ModelView> {
-        let jobs = self.jobs.lock().unwrap_or_else(PoisonError::into_inner);
-        let failed = self.failed.lock().unwrap_or_else(PoisonError::into_inner);
-        let servers = self.shared.servers.lock().unwrap_or_else(PoisonError::into_inner);
-        let device = self.shared.device.lock().unwrap_or_else(PoisonError::into_inner).clone();
-        self.shared
-            .models
-            .iter()
-            .map(|m| {
-                let folder = (self.shared.dir)(&m.app).map(|d| model_dir(&d, m));
-                let k = key(&m.app, &m.id);
-                let state = match (&folder, jobs.get(&k), failed.get(&k)) {
-                    (None, ..) => ModelState::NoFolder,
-                    (Some(_), Some(j), _) => ModelState::Downloading { done: j.done, total: j.total },
-                    (Some(d), None, f) => match (disk_state(d, m), f) {
-                        (ModelState::Installed, _) => ModelState::Installed,
-                        (_, Some(e)) => ModelState::Failed(e.clone()),
-                        (s, None) => s,
-                    },
-                };
-                let serving = match servers.get(&k) {
-                    None => Serving::No,
-                    Some(Serve::Starting) => Serving::Starting,
-                    Some(Serve::Running(s)) => Serving::Running { url: s.url() },
-                    Some(Serve::Failed(e)) => Serving::Failed(e.clone()),
-                };
-                ModelView { model: m.clone(), state, folder: folder.map(|d| d.display().to_string()), fit: device.fit(&m.requires), serving }
-            })
-            .collect()
+        {
+            let cache = self.views_cache.lock().unwrap_or_else(PoisonError::into_inner);
+            if let Some((at, views)) = cache.as_ref()
+                && at.elapsed() < VIEWS_FRESH_FOR
+            {
+                return views.clone();
+            }
+        }
+        let views = self.scan();
+        *self.views_cache.lock().unwrap_or_else(PoisonError::into_inner) = Some((Instant::now(), views.clone()));
+        views
     }
 
     fn download(&mut self, app: &str, id: &str) {
+        self.invalidate();
         let Some(m) = self.find(app, id).cloned() else { return };
         let Some(dir) = (self.shared.dir)(app).map(|d| model_dir(&d, &m)) else { return };
         let k = key(app, id);
@@ -397,12 +433,14 @@ impl ModelBackend for Models {
     }
 
     fn pause(&mut self, app: &str, id: &str) {
+        self.invalidate();
         if let Some(j) = self.jobs.lock().unwrap_or_else(PoisonError::into_inner).get(&key(app, id)) {
             j.stop.pause();
         }
     }
 
     fn delete(&mut self, app: &str, id: &str) -> Result<(), String> {
+        self.invalidate();
         let m = self.find(app, id).cloned().ok_or("unknown model")?;
         let dir = (self.shared.dir)(app).map(|d| model_dir(&d, &m)).ok_or("the app's models folder isn't known")?;
         self.stop(app, id);
@@ -452,6 +490,7 @@ impl ModelBackend for Models {
     }
 
     fn install_runtime(&mut self, rt: Runtime) {
+        self.invalidate();
         if !rt.served() || matches!(self.runtime(rt), RuntimeState::Installed | RuntimeState::Downloading { .. } | RuntimeState::Unavailable) {
             return;
         }
@@ -483,6 +522,7 @@ impl ModelBackend for Models {
     }
 
     fn start(&mut self, app: &str, id: &str) {
+        self.invalidate();
         let Some(m) = self.find(app, id).cloned() else { return };
         let k = key(app, id);
         let fail = |servers: &Arc<Mutex<HashMap<Key, Serve>>>, e: &str| {
@@ -565,6 +605,7 @@ impl ModelBackend for Models {
     }
 
     fn stop(&mut self, app: &str, id: &str) {
+        self.invalidate();
         let k = key(app, id);
         let removed = self.shared.servers.lock().unwrap_or_else(PoisonError::into_inner).remove(&k);
         let Some(entry) = removed else { return };
@@ -581,8 +622,17 @@ impl ModelBackend for Models {
     }
 
     fn disk_free(&self) -> Option<u64> {
-        let dir = (self.shared.dir)(SHARED_APP)?;
-        free_bytes(&dir)
+        {
+            let cache = self.disk_cache.lock().unwrap_or_else(PoisonError::into_inner);
+            if let Some((at, free)) = cache.as_ref()
+                && at.elapsed() < DISK_FRESH_FOR
+            {
+                return *free;
+            }
+        }
+        let free = (self.shared.dir)(SHARED_APP).and_then(|dir| free_bytes(&dir));
+        *self.disk_cache.lock().unwrap_or_else(PoisonError::into_inner) = Some((Instant::now(), free));
+        free
     }
 }
 
@@ -596,6 +646,7 @@ mod tests {
             id: "m".into(),
             app: "redrob-film".into(),
             name: "M".into(),
+            summary: String::new(),
             description: String::new(),
             license: String::new(),
             source: "https://x".into(),
@@ -684,6 +735,7 @@ mod tests {
         // Present on disk wins over an old failure.
         std::fs::create_dir_all(root.join("m")).unwrap();
         std::fs::write(root.join("m").join("a.bin"), b"aaaa").unwrap();
+        models.invalidate(); // files written behind the launcher's back show up at the next scan (0.7 s)
         assert_eq!(models.models()[0].state, ModelState::Installed);
         models.delete("redrob-film", "m").unwrap();
         assert_eq!(models.models()[0].state, ModelState::NotDownloaded);

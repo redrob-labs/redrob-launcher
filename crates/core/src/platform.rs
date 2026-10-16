@@ -49,6 +49,9 @@ impl Arch {
 /// A package format a release ships.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum PackageKind {
+    /// Our own Windows setup (`<stem>-<version>-windows-<arch>-setup.exe`): the branded per-user
+    /// installer the launcher and the Redrob apps ship; `--silent` installs with no window.
+    Setup,
     /// Windows Installer package (installs for all users into Program Files).
     Msi,
     /// Windows zip with the exe at the top level.
@@ -65,6 +68,7 @@ pub enum PackageKind {
 impl PackageKind {
     pub fn label(self) -> &'static str {
         match self {
+            Self::Setup => "Installer (.exe)",
             Self::Msi => "Installer (.msi)",
             Self::PortableZip => "Portable (.zip)",
             Self::Dmg => "Disk image (.dmg)",
@@ -77,6 +81,7 @@ impl PackageKind {
 
     fn suffix(self) -> &'static str {
         match self {
+            Self::Setup => "-setup.exe",
             Self::Msi => ".msi",
             Self::PortableZip => "-portable.zip",
             Self::Dmg => ".dmg",
@@ -156,7 +161,7 @@ impl Platform {
     /// Every format offered as a manual download on this OS (the web build's download menu).
     pub fn download_kinds(self) -> &'static [PackageKind] {
         match self.os {
-            Os::Windows => &[PackageKind::Msi, PackageKind::PortableZip],
+            Os::Windows => &[PackageKind::Setup, PackageKind::Msi, PackageKind::PortableZip],
             Os::MacOs => &[PackageKind::Dmg],
             Os::Linux => &[PackageKind::AppImage, PackageKind::Deb, PackageKind::Rpm, PackageKind::TarGz],
         }
@@ -175,8 +180,16 @@ pub struct AssetName {
 /// Reads `<stem>-<version>-<os>-<arch>[-portable].<ext>`; `None` for checksums, zsync files, CLI
 /// and web bundles, or anything else.
 pub fn parse_asset_name(name: &str, stems: &[&str]) -> Option<AssetName> {
-    const KINDS: [PackageKind; 7] =
-        [PackageKind::PortableZip, PackageKind::TarGz, PackageKind::Msi, PackageKind::Dmg, PackageKind::AppImage, PackageKind::Deb, PackageKind::Rpm];
+    const KINDS: [PackageKind; 8] = [
+        PackageKind::Setup,
+        PackageKind::PortableZip,
+        PackageKind::TarGz,
+        PackageKind::Msi,
+        PackageKind::Dmg,
+        PackageKind::AppImage,
+        PackageKind::Deb,
+        PackageKind::Rpm,
+    ];
     let (kind, base) = KINDS.iter().find_map(|k| name.strip_suffix(k.suffix()).map(|b| (*k, b)))?;
     for stem in stems {
         let Some(rest) = base.strip_prefix(stem).and_then(|r| r.strip_prefix('-')) else { continue };
@@ -238,6 +251,8 @@ mod tests {
         assert_eq!((n.version.as_str(), n.token.as_str(), n.kind), ("0.2.0-rc.1", "windows-arm64", PackageKind::PortableZip));
         let n = parse_asset_name("redrob-docs-0.2.1-linux-x86_64.tar.gz", &["redrob-office", "redrob-docs"]).unwrap();
         assert_eq!((n.stem.as_str(), n.kind), ("redrob-docs", PackageKind::TarGz));
+        let n = parse_asset_name("redrob-launcher-0.4.0-windows-x64-setup.exe", &["redrob-launcher"]).unwrap();
+        assert_eq!((n.version.as_str(), n.token.as_str(), n.kind), ("0.4.0", "windows-x64", PackageKind::Setup));
         for other in [
             "redrob-canvas-cli-0.5.0-macos-universal.zip",
             "redrob-canvas-web-0.5.0.zip",

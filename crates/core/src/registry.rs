@@ -93,6 +93,7 @@ mod tests {
             id: id.into(),
             app: "redrob".into(),
             name: id.into(),
+            summary: String::new(),
             description: String::new(),
             license: String::new(),
             source: "https://x".into(),

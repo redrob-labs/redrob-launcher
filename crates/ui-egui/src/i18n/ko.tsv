@@ -122,6 +122,7 @@
 	The download is still here. It's checked again, then installed.	다운로드한 파일이 남아 있어요. 다시 확인한 뒤 설치해요.
 	Waiting for another app…	다른 앱을 기다리는 중…
 	Waiting for other installs…	다른 설치를 기다리는 중…
+	Installer (.exe)	설치 프로그램(.exe)
 	Installer (.msi)	설치 프로그램(.msi)
 	Portable (.zip)	포터블(.zip)
 	Disk image (.dmg)	디스크 이미지(.dmg)
@@ -437,3 +438,51 @@ month	Dec	12월
 	{runtime} is installed on first start	{runtime}은 처음 시작할 때 설치돼요
 	{runtime} ready	{runtime} 준비됨
 	{runtime}: {e}	{runtime}: {e}
+
+# Models page (purpose headings, plain summaries from assets/models/models.json).
+	The Redrob apps	Redrob 앱
+	Install what the apps need to work offline on this computer. Anything missing is done on Redrob's servers instead.	앱이 이 컴퓨터에서 오프라인으로 일하는 데 필요한 모델을 설치해요. 없는 것은 Redrob 서버에서 처리해요.
+	Only show what runs on this computer	이 컴퓨터에서 되는 것만 보기
+	for {app}	{app}용
+	Installing	설치 중
+	{done} of {total} installed	{total} 중 {done} 설치됨
+	Installing {done} of {total}	{total} 중 {done} 설치 중
+	Every file is checked against its official copy before an app uses it.	앱이 쓰기 전에 모든 파일을 원본과 대조해요.
+	Talk to an assistant inside the apps, without sending anything off this computer.	이 컴퓨터 밖으로 아무것도 보내지 않고 앱 안에서 어시스턴트와 대화해요.
+	An assistant that writes and fixes code in Redrob Code.	Redrob Code에서 코드를 쓰고 고치는 어시스턴트예요.
+	An assistant that can also look at your images.	이미지도 볼 수 있는 어시스턴트예요.
+	Turns speech in your videos into subtitles and text.	영상 속 말소리를 자막과 글로 바꿔요.
+	Reads text aloud as narration.	글을 내레이션으로 읽어 줘요.
+	Makes pictures from a description.	설명을 그림으로 만들어요.
+	Changes a picture the way you describe.	말한 대로 그림을 바꿔요.
+	Removes things from photos and fills the gap.	사진에서 물체를 지우고 빈자리를 채워요.
+	Cuts the background out of a photo.	사진에서 배경을 잘라내요.
+	Makes small images bigger and sharper.	작은 이미지를 크고 선명하게 키워요.
+	Selects an object in a picture with one click.	한 번 눌러 그림 속 물체를 선택해요.
+	Splits music into vocals, drums, bass and the rest.	음악을 보컬, 드럼, 베이스, 나머지로 나눠요.
+	Finds where people speak in a recording.	녹음에서 사람이 말하는 곳을 찾아요.
+	Turns a photo into a 3D model.	사진 한 장을 3D 모델로 만들어요.
+	Reads the text in images and scans so Redrob Recall can search it.	이미지와 스캔 속 글자를 읽어 Redrob Recall이 검색할 수 있게 해요.
+	Lets Redrob Recall search your files by meaning.	Redrob Recall이 파일을 뜻으로 검색할 수 있게 해요.
+	Fastest subtitles for clear speech	또렷한 말소리에 가장 빠른 자막
+	Subtitles for most videos, a good balance of speed and accuracy	대부분의 영상에 맞는 자막. 속도와 정확도의 균형
+	The most accurate subtitles here, about four times slower	여기서 가장 정확한 자막. 약 4배 느림
+	Nine natural English narration voices	자연스러운 영어 내레이션 목소리 아홉 가지
+	A capable assistant for chat and reasoning in every app	모든 앱에서 대화와 추론을 맡는 든든한 어시스턴트
+	A coding assistant that writes and fixes code	코드를 쓰고 고치는 코딩 어시스턴트
+	An assistant that also understands images	이미지도 이해하는 어시스턴트
+	A small, quick assistant that understands images; fits most laptops	이미지를 이해하는 작고 빠른 어시스턴트. 대부분의 노트북에서 돌아감
+	Lets Redrob Recall search your files by meaning, in many languages	Redrob Recall이 여러 언어로 파일을 뜻으로 검색하게 함
+	A full-size assistant squeezed to fit a small GPU (needs the PrismML runtime)	작은 GPU에 맞게 압축한 큰 어시스턴트 (PrismML 런타임 필요)
+	Makes pictures from a text description	글로 설명하면 그림을 만듦
+	Removes objects from photos and fills the gap	사진에서 물체를 지우고 빈자리를 채움
+	Cuts the background out of a photo	사진에서 배경을 잘라냄
+	Enlarges images four times without blur	이미지를 흐려지지 않게 4배 키움
+	Selects an object with one click	한 번 눌러 물체를 선택
+	Reads text aloud in several languages with preset voices	여러 언어의 글을 준비된 목소리로 읽어 줌
+	Korean speech to text, tuned for Korean	한국어에 맞춘 한국어 음성 인식
+	Finds where people speak in a recording	녹음에서 사람이 말하는 곳을 찾음
+	Splits a song into vocals, drums, bass and the rest	노래를 보컬, 드럼, 베이스, 나머지로 나눔
+	Turns one photo into a 3D model	사진 한 장을 3D 모델로 만듦
+	Reads the text in images and scans so Recall can search it	이미지와 스캔 속 글자를 읽어 Recall이 검색하게 함
+@plural	{n} model hidden|{n} models hidden	모델 {n}개 숨김

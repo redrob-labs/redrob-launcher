@@ -4,31 +4,34 @@
 
 .DESCRIPTION
   Produces, in $env:DIST (default: dist/release):
-    redrob-launcher-<version>-windows-<arch>.msi            per-user installer with a setup wizard (WiX v5)
     redrob-launcher-<version>-windows-<arch>-portable.zip   redrob-launcher.exe + portable.txt
-
-  The binary links the C runtime statically (+crt-static), so neither the MSI nor the portable
-  zip needs the Visual C++ redistributable. This script does not sign: the release workflow signs
-  the staged executable (after -BuildOnly) and the MSI (after -SkipBuild) with the shared
-  redrob-labs/.github/actions/sign-windows action, so the portable zip carries the signed
-  executable and the installer is signed last. A local run produces unsigned packages.
-
-  Needs: Rust (MSVC toolchain + the target), the Windows SDK (rc.exe),
-  and WiX v5: dotnet tool install --global wix --version 5.0.2
-             wix extension add -g WixToolset.UI.wixext/5.0.2 WixToolset.Util.wixext/5.0.2
+    redrob-launcher-<version>-windows-<arch>-setup.exe      the branded per-user setup (installer/windows),
+                                                            which embeds that zip and its uninstaller
+  The binary links the C runtime statically (+crt-static), so nothing needs the Visual C++
+  redistributable. This script does not sign. The release workflow runs it in three phases so every
+  binary is signed before it is embedded (redrob-labs/.github/actions/sign-windows):
+    -BuildOnly   build and stage redrob-launcher.exe              -> sign the staged exe
+    -SkipBuild   portable zip + the uninstaller (no payload)      -> sign the uninstaller
+    -SetupOnly   the setup, embedding the zip and the uninstaller -> sign the setup
+  A local run without those switches does all of it, unsigned.
+  Needs: Rust (MSVC toolchain + the target), the Windows SDK (rc.exe), Visual Studio's C++ toolset
+  for the target (installer/windows/build.py finds it with vswhere) and Python 3.
 
 .EXAMPLE
   pwsh packaging/windows/package.ps1 -Arch x64
-  pwsh packaging/windows/package.ps1 -Arch x86 -SkipBuild
-  pwsh packaging/windows/package.ps1 -Arch x64 -BuildOnly  # CI: build and stage, sign the stage, then -SkipBuild
+  pwsh packaging/windows/package.ps1 -Arch x64 -BuildOnly  # CI phase 1
+  pwsh packaging/windows/package.ps1 -Arch x64 -SkipBuild  # CI phase 2
+  pwsh packaging/windows/package.ps1 -Arch x64 -SetupOnly  # CI phase 3
   pwsh packaging/windows/package.ps1 -Arch arm64     # cross-compiled; needs the MSVC ARM64 build tools
 #>
 param(
   [ValidateSet('x64', 'x86', 'arm64')] [string] $Arch = 'x64',
   [switch] $SkipBuild,
-  [switch] $BuildOnly
+  [switch] $BuildOnly,
+  [switch] $SetupOnly
 )
-if ($SkipBuild -and $BuildOnly) { throw '-SkipBuild and -BuildOnly exclude each other' }
+if (($SkipBuild -and $BuildOnly) -or ($SetupOnly -and ($SkipBuild -or $BuildOnly))) { throw '-SkipBuild, -BuildOnly and -SetupOnly exclude each other' }
+if ($SetupOnly) { $SkipBuild = $true }
 $ErrorActionPreference = 'Stop'
 $Root = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 
@@ -52,8 +55,8 @@ if (-not $Version) {
   }
 }
 if (-not $Version) { throw 'could not read [workspace.package] version from Cargo.toml' }
-# MSI ProductVersion is numeric (major.minor.build); pre-release tags are dropped there.
-$MsiVersion = ($Version -split '-')[0]
+# The setup's VERSIONINFO is numeric (major.minor.build); pre-release tags are dropped there.
+$PlainVersion = ($Version -split '-')[0]
 
 $Target = switch ($Arch) { 'x64' { 'x86_64-pc-windows-msvc' } 'x86' { 'i686-pc-windows-msvc' } 'arm64' { 'aarch64-pc-windows-msvc' } }
 $Dist = if ($env:DIST) { $env:DIST } else { Join-Path $Root 'dist\release' }
@@ -104,114 +107,49 @@ if ($h.Machine -ne $Machine) { throw "$Exe is for machine 0x$('{0:X}' -f $h.Mach
 if ($h.Subsystem -ne 2) { throw "$Exe has PE subsystem $($h.Subsystem), expected 2 (Windows GUI)" }
 Write-Output "ok ${Exe}: $Arch, PE subsystem $($h.Subsystem)"
 
-# ---- MSI ---------------------------------------------------------------------------------------
-# The setup wizard's art, drawn here (System.Drawing) in the launcher's own style so the MSI shows
-# Redrob rather than WiX's stock bitmaps. Both must be 24-bit BMPs:
-#   - dialog, 493x312: the Welcome and Finish pages' backdrop. Their text sits on the right, so
-#     that stays white; the left panel is ours: the Redrob tile, the white lockup, a
-#     "Launcher" label and the Redrob apps' icons in a hairline grid.
-#   - banner, 493x58: across the top of the inner pages. The page title is drawn over its left
-#     side, so that stays white; the right end is a dark cell with the mark.
-# The Redrob tile and lockup are drawn as the design system ships them (assets/brand/README.md).
-function New-InstallerArt([string] $BannerOut, [string] $DialogOut) {
-  Add-Type -AssemblyName System.Drawing
-  $ink = [System.Drawing.ColorTranslator]::FromHtml('#0a0b0c')
-  $accent = [System.Drawing.ColorTranslator]::FromHtml('#2b52ff')
-  $muted = [System.Drawing.ColorTranslator]::FromHtml('#aab0bb')
-  $line = [System.Drawing.ColorTranslator]::FromHtml('#292e37')
-  # The Redrob apps, in the launcher's order (crates/core/src/catalog.rs).
-  $apps = 'redrob-film', 'redrob-shape', 'redrob-cad', 'redrob-canvas', 'redrob-design',
-    'redrob-browser', 'redrob-code', 'redrob-cowork', 'redrob-office', 'redrob-query'
-  $mark = [System.Drawing.Image]::FromFile((Join-Path $Root 'assets\app-icon\hicolor\256x256\apps\ai.redrob.launcher.png'))
-  $wordmark = [System.Drawing.Image]::FromFile((Join-Path $Root 'assets\app-icon\redrob-logo-dark.png'))
-  $icons = $apps | ForEach-Object { [System.Drawing.Image]::FromFile((Join-Path $Root "assets\app-icons\$_.png")) }
-  # The design system's label face.
-  $fonts = New-Object System.Drawing.Text.PrivateFontCollection
-  $fonts.AddFontFile((Join-Path $Root 'assets\fonts\Pretendard-Medium.ttf'))
-  $labelFont = New-Object System.Drawing.Font $fonts.Families[0], 9, ([System.Drawing.FontStyle]::Regular), ([System.Drawing.GraphicsUnit]::Pixel)
-  try {
-    foreach ($spec in @(@($BannerOut, 493, 58), @($DialogOut, 493, 312))) {
-      $bmp = New-Object System.Drawing.Bitmap $spec[1], $spec[2], ([System.Drawing.Imaging.PixelFormat]::Format24bppRgb)
-      $g = [System.Drawing.Graphics]::FromImage($bmp)
-      $panel = New-Object System.Drawing.SolidBrush $ink
-      $stripe = New-Object System.Drawing.SolidBrush $accent
-      try {
-        $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
-        $g.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
-        $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
-        $g.TextRenderingHint = [System.Drawing.Text.TextRenderingHint]::AntiAliasGridFit
-        $g.Clear([System.Drawing.Color]::White)
-        if ($spec[2] -eq 58) {
-          $g.FillRectangle($panel, 405, 0, 88, 58)
-          $g.FillRectangle($stripe, 405, 0, 2, 58)
-          $g.DrawImage($mark, 431, 11, 36, 36)
-        } else {
-          $g.FillRectangle($panel, 0, 0, 164, 312)
-          $g.FillRectangle($stripe, 162, 0, 2, 312)
-          $g.DrawImage($mark, 16, 18, 44, 44)
-          $g.DrawImage($wordmark, 22, 74, 120, [int](120 * $wordmark.Height / $wordmark.Width))
-          # "LAUNCHER" in mono capitals, spaced like the site's labels (0.15 em).
-          $brush = New-Object System.Drawing.SolidBrush $muted
-          $x = 22.0
-          foreach ($ch in 'LAUNCHER'.ToCharArray()) {
-            $g.DrawString([string]$ch, $labelFont, $brush, $x, 94, [System.Drawing.StringFormat]::GenericTypographic)
-            $x += $g.MeasureString([string]$ch, $labelFont, 100, [System.Drawing.StringFormat]::GenericTypographic).Width + 1.35
-          }
-          $brush.Dispose()
-          # The apps, three to a row, in 40 px cells divided by hairlines.
-          $pen = New-Object System.Drawing.Pen $line, 1
-          $left = 22; $top = 126; $cell = 40
-          for ($i = 0; $i -lt $icons.Count; $i++) {
-            $cx = $left + ($i % 3) * $cell
-            $cy = $top + [math]::Floor($i / 3) * $cell
-            $g.DrawRectangle($pen, $cx, $cy, $cell, $cell)
-            $g.DrawImage($icons[$i], $cx + 6, $cy + 6, $cell - 12, $cell - 12)
-          }
-          $pen.Dispose()
-        }
-      } finally { $panel.Dispose(); $stripe.Dispose(); $g.Dispose() }
-      $bmp.Save($spec[0], [System.Drawing.Imaging.ImageFormat]::Bmp)
-      $bmp.Dispose()
-    }
-  } finally {
-    $labelFont.Dispose(); $fonts.Dispose(); $mark.Dispose(); $wordmark.Dispose()
-    $icons | ForEach-Object { $_.Dispose() }
-  }
-}
-$Banner = Join-Path $Stage 'installer-banner.bmp'
-$Dialog = Join-Path $Stage 'installer-dialog.bmp'
-New-InstallerArt $Banner $Dialog
-
-$Msi = Join-Path $Dist "$Pkg-$Version-windows-$Arch.msi"
-& (Join-Path $PSScriptRoot 'check-icons.ps1')
-Invoke-Native 'wix build' {
-  wix build (Join-Path $PSScriptRoot "$Pkg.wxs") -arch $Arch `
-    -ext WixToolset.UI.wixext -ext WixToolset.Util.wixext `
-    -culture en-US -loc (Join-Path $PSScriptRoot "$Pkg.en-us.wxl") `
-    -d "Version=$MsiVersion" -d "DisplayVersion=$Version" -d "BinDir=$Stage" -d "IconPath=$(Join-Path $Root "assets\app-icon\$Pkg.ico")" `
-    -d "BannerBmp=$Banner" -d "DialogBmp=$Dialog" `
-    -o $Msi
-}
-Invoke-Native 'MSI shortcut icon validation (ICE50)' {
-  wix msi validate $Msi -ice ICE50 -intermediateFolder (Join-Path $Stage 'msi-validation')
-}
-# wix writes its debug symbols (.wixpdb) next to the MSI; keep them out of the release assets.
-Remove-Item -Force -ErrorAction SilentlyContinue ([IO.Path]::ChangeExtension($Msi, '.wixpdb'))
-
 # ---- portable zip ------------------------------------------------------------------------------
 $Portable = Join-Path $TargetDir "windows-package\$Pkg-$Version-windows-$Arch-portable"
-Remove-Item -Recurse -Force $Portable -ErrorAction SilentlyContinue
-New-Item -ItemType Directory -Force -Path $Portable | Out-Null
-Copy-Item (Join-Path $Stage $Exe) $Portable
-foreach ($f in 'README.md', 'LICENSE-MIT', 'LICENSE-APACHE', 'NOTICE', 'ATTRIBUTION.md') {
-  $p = Join-Path $Root $f
-  if (Test-Path $p) { Copy-Item $p $Portable }
-}
-# portable.txt beside redrob-launcher.exe switches on portable mode: settings and the download
-# cache go to RedrobLauncherData\ next to the exe instead of %APPDATA%.
-Copy-Item (Join-Path $PSScriptRoot 'portable.txt') $Portable
 $Zip = Join-Path $Dist "$Pkg-$Version-windows-$Arch-portable.zip"
-Remove-Item -Force $Zip -ErrorAction SilentlyContinue
-Compress-Archive -Path $Portable -DestinationPath $Zip
+if (-not $SetupOnly) {
+  Remove-Item -Recurse -Force $Portable -ErrorAction SilentlyContinue
+  New-Item -ItemType Directory -Force -Path $Portable | Out-Null
+  Copy-Item (Join-Path $Stage $Exe) $Portable
+  foreach ($f in 'README.md', 'LICENSE-MIT', 'LICENSE-APACHE', 'NOTICE', 'ATTRIBUTION.md') {
+    $p = Join-Path $Root $f
+    if (Test-Path $p) { Copy-Item $p $Portable }
+  }
+  # portable.txt beside redrob-launcher.exe switches on portable mode: settings and the download
+  # cache go to RedrobLauncherData\ next to the exe instead of %APPDATA%.
+  Copy-Item (Join-Path $PSScriptRoot 'portable.txt') $Portable
+  Remove-Item -Force $Zip -ErrorAction SilentlyContinue
+  Compress-Archive -Path $Portable -DestinationPath $Zip
 
-Get-Item $Msi, $Zip | Format-Table Name, Length
+}
+if (-not (Test-Path $Zip)) { throw "no portable zip at $Zip; run with -SkipBuild first" }
+
+# ---- setup (installer/windows) -----------------------------------------------------------------
+# Phase 2 (-SkipBuild) builds the uninstaller alone so the workflow can sign it; phase 3 (-SetupOnly)
+# embeds the signed uninstaller and the zip into the setup. A plain local run does both at once.
+$Installer = Join-Path $Root 'installer\windows\build.py'
+$SetupWork = Join-Path $TargetDir "windows-package\$Arch-setup"
+$Uninstaller = Join-Path $SetupWork 'uninstall\Uninstall Redrob Launcher.exe'
+$SetupName = "$Pkg-$Version-windows-$Arch-setup.exe"
+$Setup = Join-Path $Dist $SetupName
+# The python on PATH (the runners' actions/setup-python or the Store one); -u so its output reaches the
+# log as it happens.
+Invoke-Native 'python' { python --version }
+if (-not $SetupOnly) {
+  Remove-Item -Recurse -Force $SetupWork -ErrorAction SilentlyContinue
+  Invoke-Native 'setup: uninstaller' { python -u $Installer --out $SetupWork --arch $Arch --version $PlainVersion --uninstaller-only }
+  if (-not (Test-Path $Uninstaller)) { throw "build.py exited 0 but wrote no $Uninstaller" }
+}
+if ($SetupOnly -or -not $SkipBuild) {
+  if (-not (Test-Path $Uninstaller)) { throw "no uninstaller at $Uninstaller; run with -SkipBuild first" }
+  Invoke-Native 'setup' { python -u $Installer --out $SetupWork --arch $Arch --version $PlainVersion --payload $Zip --uninstaller $Uninstaller --name $SetupName }
+  Move-Item -Force (Join-Path $SetupWork $SetupName) $Setup
+  $h = Get-PeHeader $Setup
+  if ($h.Machine -ne $Machine) { throw "setup is for machine 0x$('{0:X}' -f $h.Machine), expected 0x$('{0:X}' -f $Machine) ($Arch)" }
+  Get-Item $Zip, $Setup | Format-Table Name, Length
+} else {
+  Get-Item $Zip, $Uninstaller | Format-Table Name, Length
+}

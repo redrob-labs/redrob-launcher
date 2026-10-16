@@ -106,6 +106,10 @@ pub struct Model {
     /// The app that uses it (`redrob-film`), or `redrob` for a shared one.
     pub app: String,
     pub name: String,
+    /// One plain sentence for someone who does not know models: what this gives them.
+    #[serde(default)]
+    pub summary: String,
+    /// The technical description: parameters, quantization, origin.
     pub description: String,
     pub license: String,
     /// The model's page, for its card and licence.
