@@ -195,8 +195,8 @@ mod tests {
 
     #[test]
     fn a_release_manifest_outranks_the_table() {
-        let shared = Some(crate::release::Manifest { schema: 1, shared_account: true });
-        let not = Some(crate::release::Manifest { schema: 1, shared_account: false });
+        let shared = Some(crate::release::Manifest { schema: 1, shared_account: true, icon: None });
+        let not = Some(crate::release::Manifest { schema: 1, shared_account: false, icon: None });
         // Office is "unreleased" in the table, but its latest release says it reads the file.
         let r = release("0.9.1", shared.clone());
         assert_eq!(link_for("redrob-office", None, None, false, Some(&r)), AppLink::Shared);

@@ -166,6 +166,13 @@ pub enum Event {
         app: String,
         installed: Option<Installed>,
     },
+    /// The app's current icon, as its latest release ships it (`Manifest::icon`): PNG bytes, from
+    /// the launcher's cache at start and again whenever a check finds a changed one. The UI shows
+    /// it in place of the built-in icon.
+    Icon {
+        app: String,
+        png: Vec<u8>,
+    },
     Progress {
         app: String,
         phase: JobPhase,

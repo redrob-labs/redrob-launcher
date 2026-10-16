@@ -120,14 +120,82 @@ pub fn spawn_detached(mut cmd: Command) -> Result<(), String> {
     Ok(())
 }
 
-/// Starts an app binary from its own folder.
+/// Starts an app binary from its own folder, as a windowed app: on Windows with no console attached
+/// (a console-subsystem build like Redrob Shape's would otherwise open a console window behind it,
+/// and closing that window would end the app) and in its own process group, so nothing the
+/// launcher does reaches it.
 pub fn launch_binary(exe: &Path, args: &[&str]) -> Result<(), String> {
     let mut cmd = command(exe);
     cmd.args(args);
     if let Some(dir) = exe.parent() {
         cmd.current_dir(dir);
     }
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        cmd.creation_flags(CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP);
+    }
     spawn_detached(cmd)
+}
+
+/// Starts a terminal program (Redrob Code) where the person can see it: in a new console window
+/// on Windows, in Terminal on macOS, in the desktop's terminal emulator on Linux. It starts in the
+/// home folder, the way a shell would, not in the app's install folder.
+pub fn launch_in_terminal(exe: &Path) -> Result<(), String> {
+    let home = dirs::home_dir();
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NEW_CONSOLE: u32 = 0x0000_0010;
+        const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
+        // Not `command()`: that hides the console, which is the whole point here. The child's
+        // standard handles are left alone so they attach to the new console.
+        let mut cmd = Command::new(exe);
+        cmd.creation_flags(CREATE_NEW_CONSOLE | CREATE_NEW_PROCESS_GROUP);
+        if let Some(h) = &home {
+            cmd.current_dir(h);
+        }
+        let mut child = cmd.spawn().map_err(|e| format!("couldn't start it ({e})"))?;
+        std::thread::spawn(move || {
+            let _ = child.wait();
+        });
+        return Ok(());
+    }
+    #[cfg(target_os = "macos")]
+    {
+        let mut cmd = command("open");
+        cmd.arg("-a").arg("Terminal").arg(exe);
+        if let Some(h) = &home {
+            cmd.current_dir(h);
+        }
+        return spawn_detached(cmd);
+    }
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        // The desktop's terminal, in the order the common ones are found; each takes the program
+        // to run after its own flag.
+        const TERMINALS: [(&str, &[&str]); 7] = [
+            ("x-terminal-emulator", &["-e"]),
+            ("gnome-terminal", &["--"]),
+            ("konsole", &["-e"]),
+            ("xfce4-terminal", &["-x"]),
+            ("kitty", &[]),
+            ("alacritty", &["-e"]),
+            ("xterm", &["-e"]),
+        ];
+        let on_path = |name: &str| std::env::var_os("PATH").and_then(|p| std::env::split_paths(&p).map(|d| d.join(name)).find(|p| p.is_file()));
+        let (term, flags) = TERMINALS.iter().find_map(|(t, f)| on_path(t).map(|p| (p, *f))).ok_or("no terminal emulator was found")?;
+        let mut cmd = command(term);
+        cmd.args(flags).arg(exe);
+        if let Some(h) = &home {
+            cmd.current_dir(h);
+        }
+        return spawn_detached(cmd);
+    }
+    #[allow(unreachable_code)]
+    Err("terminal programs can't be started on this platform".into())
 }
 
 /// Opens a file, folder or URL with the system's default handler.

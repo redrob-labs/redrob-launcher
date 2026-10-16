@@ -317,6 +317,8 @@ impl LauncherUi {
                 }
                 true
             }
+            // The product's icon as its latest release ships it; a repaint shows it.
+            Event::Icon { app, png } => crate::icons::set_fetched(&app, png),
             Event::Progress { app, phase } => {
                 if app == redrob_launcher_core::catalog::LAUNCHER_ID {
                     self.launcher_job = Some(phase);

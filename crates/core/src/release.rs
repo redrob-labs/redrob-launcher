@@ -52,6 +52,28 @@ pub struct Manifest {
     /// The app reads the launcher's shared account file (`docs/shared-account.md`): signing in
     /// to the launcher is all it needs.
     pub shared_account: bool,
+    /// The app's icon as it looks in this release: the name of a PNG asset of the same release
+    /// (`redrob-office.png`), or that asset's full download URL. The launcher shows it in place of
+    /// the icon it was built with, so the catalog keeps up with a product's branding. Square,
+    /// 256 px or more, under 1 MiB. `None`: the built-in icon.
+    pub icon: Option<String>,
+}
+
+/// The largest icon the launcher downloads from a release manifest, in bytes.
+pub const MAX_ICON_BYTES: u64 = 1 << 20;
+
+impl Manifest {
+    /// The download URL of this manifest's icon within `release`, when it names one that is really
+    /// an asset of that release: a bare asset name is looked up, a URL must be one of the release's
+    /// own download links. Anything else is ignored, so a manifest can't make the launcher fetch
+    /// from elsewhere.
+    pub fn icon_url(&self, release: &Release) -> Option<String> {
+        let icon = self.icon.as_deref()?.trim();
+        if icon.is_empty() || !icon.to_ascii_lowercase().ends_with(".png") {
+            return None;
+        }
+        release.assets.iter().find(|a| a.name == icon || a.url == icon).map(|a| a.url.clone())
+    }
 }
 
 /// Reads a release's `redrob-launcher.json`. Untrusted input: only the known fields, bounded by
@@ -236,7 +258,7 @@ mod tests {
     #[test]
     fn reads_the_release_manifest() {
         let m = parse_manifest(r#"{"schema": 1, "sharedAccount": true, "somethingNewer": 3}"#).unwrap();
-        assert_eq!(m, Manifest { schema: 1, shared_account: true });
+        assert_eq!(m, Manifest { schema: 1, shared_account: true, icon: None });
         // Fields left out read as false; a schema this launcher does not know is refused, not guessed.
         assert!(!parse_manifest(r#"{"schema": 1}"#).unwrap().shared_account);
         assert!(parse_manifest(r#"{"schema": 2, "sharedAccount": true}"#).is_err());

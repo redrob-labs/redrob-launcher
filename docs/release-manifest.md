@@ -12,21 +12,24 @@ One asset named exactly `redrob-launcher.json` on every GitHub Release, next to 
 `SHA256SUMS.txt`:
 
 ```json
-{ "schema": 1, "sharedAccount": true }
+{ "schema": 1, "sharedAccount": true, "icon": "redrob-office.png" }
 ```
 
 | Field | Meaning |
 |---|---|
 | `schema` | Always `1` for now. A launcher that does not know the schema ignores the file. |
 | `sharedAccount` | `true` when this release reads the launcher's shared account file ([shared-account.md](./shared-account.md)): signing in to the launcher is all it needs. Missing reads as `false`. |
+| `icon` | Optional. The app's icon as this release ships it: the name of a PNG asset of the **same release** (or that asset's full download URL). The launcher shows it in place of the icon it was built with, so the catalog keeps up with the product's branding. Square, 256 px or more, under 1 MiB. Missing: the launcher's built-in icon. |
 
 Unknown fields are ignored, so schema 1 can grow. Keep the file small; the launcher reads at most a
 few kilobytes of it.
 
-A release workflow step that produces it, before the upload step:
+A release workflow step that produces it, before the upload step (the icon is the same file the
+app's installers carry, uploaded as one more asset):
 
 ```sh
-printf '{ "schema": 1, "sharedAccount": true }\n' > dist/release/redrob-launcher.json
+cp assets/app-icon/256x256.png dist/release/redrob-office.png
+printf '{ "schema": 1, "sharedAccount": true, "icon": "redrob-office.png" }\n' > dist/release/redrob-launcher.json
 ```
 
 Then list it in `SHA256SUMS.txt` like every other asset, so the launcher's quota-free path (which
@@ -43,10 +46,15 @@ reads the sums file to learn the asset names) sees it too.
   file -- Redrob CAD 0.0.3 and Redrob Film 0.0.1 -- and shows **Next release uses this sign-in** for
   apps whose change is merged but not released.
 - The app's own key always wins over the launcher's, with or without the file.
+- `icon` names a PNG asset of the same release: the launcher downloads it with the release check,
+  keeps it in its cache folder (`icons/<app>.png`), shows it from the next paint and at every later
+  start, and replaces it only when the bytes change. An icon that is missing, not a PNG, over 1 MiB
+  or not an asset of that release is ignored and the built-in icon stays.
 
 The file is fetched only from the release's own download URL
 (`https://github.com/redrob-labs/<repo>/releases/download/<tag>/redrob-launcher.json`); anything else
-is ignored. It is never written by the launcher.
+is ignored, and so is an `icon` that is not one of the same release's download links. It is never
+written by the launcher.
 
 ## Asset names
 

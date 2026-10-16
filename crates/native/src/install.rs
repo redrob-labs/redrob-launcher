@@ -305,6 +305,13 @@ fn remove_appimage(app: &CraftApp, path: &Path, record: Option<&Record>) -> Resu
     Ok(())
 }
 
+/// Apps that run in a terminal rather than in a window of their own. Redrob Code is a terminal
+/// program: started the way the windowed apps are (no console attached, on Windows), it runs
+/// invisibly and "Open" looks like it did nothing (0.4.0).
+fn runs_in_terminal(app: &CraftApp) -> bool {
+    app.id == "redrob-code"
+}
+
 /// Starts an installed app.
 pub fn launch(app: &CraftApp, installed: &Installed) -> Result<(), String> {
     let path = Path::new(&installed.location);
@@ -312,13 +319,25 @@ pub fn launch(app: &CraftApp, installed: &Installed) -> Result<(), String> {
         InstallSource::MacApp => process::open(path.as_os_str()),
         _ if cfg!(target_os = "macos") && path.extension().is_some_and(|e| e == "app") => process::open(path.as_os_str()),
         _ => {
-            if !path.exists() {
-                return Err(format!("{} isn't where it was installed ({})", app.name, path.display()));
-            }
-            process::launch_binary(path, &[])
+            let exe = launch_path(app, path)?;
+            if runs_in_terminal(app) { process::launch_in_terminal(&exe) } else { process::launch_binary(&exe, &[]) }
         }
     }
     .map_err(|e| format!("Couldn't open {}: {e}", app.name))
+}
+
+/// The file to start for `installed`: its recorded location when that is a file; on Windows,
+/// where the location is a folder, a stale path or just the app's name (a Settings > Apps entry
+/// whose exe wasn't found at detection time), the exe looked up again now.
+fn launch_path(app: &CraftApp, path: &Path) -> Result<PathBuf, String> {
+    #[cfg(windows)]
+    if let Some(exe) = crate::detect::windows::resolve_exe(app, path) {
+        return Ok(exe);
+    }
+    if path.is_file() {
+        return Ok(path.to_path_buf());
+    }
+    Err(format!("{} isn't where it was installed ({})", app.name, path.display()))
 }
 
 /// Moves `staged` into place at `dest`, keeping the old copy until the new one is there.
@@ -354,11 +373,13 @@ fn single_top_folder(dir: &Path) -> Result<PathBuf, String> {
     }
 }
 
-/// The app binary inside an unpacked archive: `bin/<id>`, `<id>` or `<id>.exe`.
+/// The app binary inside an unpacked archive: `bin/<id>` or `<id>` on Unix; on Windows any of the
+/// exe names the app's builds use (`redrob-canvas.exe`, Office's `redrob.exe`, Cowork's
+/// `Redrob Cowork.exe`), at the top or under `bin\`.
 #[allow(dead_code)]
 fn find_binary(root: &Path, app: &CraftApp) -> Option<PathBuf> {
-    let exe = if cfg!(windows) { format!("{}.exe", app.id) } else { app.id.to_string() };
-    [root.join("bin").join(&exe), root.join(&exe)].into_iter().find(|p| p.is_file())
+    let names = if cfg!(windows) { crate::detect::windows_exe_names(app) } else { vec![app.id.to_string()] };
+    names.iter().flat_map(|exe| [root.join("bin").join(exe), root.join(exe)]).find(|p| p.is_file())
 }
 
 /// Finds a program on `PATH`.
