@@ -9,7 +9,8 @@ Verbatim copies of the Redrob design system's shipped files (`redrob-design-syst
 | `favicon-*.png`, `icon-192.png`, `icon-512.png`, `favicon.ico`, `favicon.svg` | `Favicons/` | The launcher's app icon and tray icon; the tile of every app without a product mark |
 | `symbol-white-*.png` | `Favicons/` | The symbol alone on transparent, for a dark ground that is not Redrob Blue |
 | `redrob-logo-primary.png`, `redrob-logo-primary-white.png` | `Logos/` | The header lockup: dark wordmark on light grounds, white wordmark on dark grounds |
-| `redrob-{browser,code,design,office}-icon.svg` | `Products/` | The four products that have a mark of their own |
+| `redrob-{browser,code,design,office}-icon.svg` | `Products/` | The four products whose mark the design system ships |
+| `redrob-{canvas,film,cad,shape,cowork,recall,query}-icon.svg` | here (see below) | The seven Labs products |
 
 Rules that bind here (design system `10-logo.md`, `Logos/README.md`, `Products/README.md`):
 
@@ -20,6 +21,18 @@ Rules that bind here (design system `10-logo.md`, `Logos/README.md`, `Products/R
   size is the next larger file resized down. Nothing is upscaled, so no icon here is larger than 512.
 - The lockup variant is picked by ground; it is never tinted to fit one.
 
-Redrob Film, Shape, CAD, Canvas, IDE, Cowork, Query and Recall have no product mark in the
-design system yet, so they carry the Redrob tile. When a mark is added to `Products/`, copy its SVG
-here, add it to `SHA256SUMS` and to `packaging/brand-assets.sh`, and rerun the script.
+The Labs products (Canvas, Film, CAD, Shape, Cowork, Recall, Query) have no mark in the design
+system yet. Their masters live here, built from the shipped files only: the `Products/` tile path
+and the `Products/` white symbol, verbatim, on a tile color of their own. The doorway is left
+empty; the tile color alone tells them apart. If the design system later ships a mark for one of
+them, that file replaces the one here (update `SHA256SUMS`, rerun the script).
+
+| File | Tile |
+|---|---|
+| `redrob-canvas-icon.svg` | #8944FF |
+| `redrob-film-icon.svg` | #17181B |
+| `redrob-cad-icon.svg` | #2F8DFF |
+| `redrob-shape-icon.svg` | #C9A400 |
+| `redrob-cowork-icon.svg` | #7FB800 |
+| `redrob-recall-icon.svg` | #0F7F8F |
+| `redrob-query-icon.svg` | #8C2F8C |
