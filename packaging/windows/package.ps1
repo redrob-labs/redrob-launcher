@@ -135,15 +135,17 @@ $SetupWork = Join-Path $TargetDir "windows-package\$Arch-setup"
 $Uninstaller = Join-Path $SetupWork 'uninstall\Uninstall Redrob Launcher.exe'
 $SetupName = "$Pkg-$Version-windows-$Arch-setup.exe"
 $Setup = Join-Path $Dist $SetupName
-$Py = if (Get-Command py -ErrorAction SilentlyContinue) { 'py' } else { 'python' }
-$PyArgs = if ($Py -eq 'py') { @('-3') } else { @() }
+# The python on PATH (the runners' actions/setup-python or the Store one); -u so its output reaches the
+# log as it happens.
+Invoke-Native 'python' { python --version }
 if (-not $SetupOnly) {
   Remove-Item -Recurse -Force $SetupWork -ErrorAction SilentlyContinue
-  Invoke-Native 'setup: uninstaller' { & $Py @PyArgs $Installer --out $SetupWork --arch $Arch --version $PlainVersion --uninstaller-only }
+  Invoke-Native 'setup: uninstaller' { python -u $Installer --out $SetupWork --arch $Arch --version $PlainVersion --uninstaller-only }
+  if (-not (Test-Path $Uninstaller)) { throw "build.py exited 0 but wrote no $Uninstaller" }
 }
 if ($SetupOnly -or -not $SkipBuild) {
   if (-not (Test-Path $Uninstaller)) { throw "no uninstaller at $Uninstaller; run with -SkipBuild first" }
-  Invoke-Native 'setup' { & $Py @PyArgs $Installer --out $SetupWork --arch $Arch --version $PlainVersion --payload $Zip --uninstaller $Uninstaller --name $SetupName }
+  Invoke-Native 'setup' { python -u $Installer --out $SetupWork --arch $Arch --version $PlainVersion --payload $Zip --uninstaller $Uninstaller --name $SetupName }
   Move-Item -Force (Join-Path $SetupWork $SetupName) $Setup
   $h = Get-PeHeader $Setup
   if ($h.Machine -ne $Machine) { throw "setup is for machine 0x$('{0:X}' -f $h.Machine), expected 0x$('{0:X}' -f $Machine) ($Arch)" }

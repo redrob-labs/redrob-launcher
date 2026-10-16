@@ -208,7 +208,7 @@ def main() -> None:
         exe = compile_app(env, out, args.name, font, args.version, payload=payload, uninstaller=uninstaller, machine=machine)
     else:
         exe = compile_app(env, out, args.name, font, args.version, payload=None, uninstaller=None, machine=machine)
-    print(f"\nbuilt {exe}  {exe.stat().st_size // 1024} KB  (payload: {'yes' if args.payload else 'none'})")
+    print(f"\nbuilt {exe}  {exe.stat().st_size // 1024} KB  (payload: {'yes' if args.payload else 'none'})", flush=True)
 
 
 if __name__ == "__main__":
