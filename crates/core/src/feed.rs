@@ -99,6 +99,9 @@ pub struct Notice {
 }
 
 /// What the feed says about one app, once checked.
+// A `Release` (with its manifest) is a few hundred bytes; the answer is returned once per app and
+// never stored, so boxing it would cost an allocation to save nothing.
+#[allow(clippy::large_enum_variant)]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum FeedAnswer {
     /// Fresh: the app's latest release, or `None` when it has none.
