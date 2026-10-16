@@ -15,7 +15,7 @@ use crate::theme::{self, Tokens, rgb, tint};
 use crate::widgets::{self, Cell, Kind};
 
 /// Translate a relative timestamp ("just now", "5 min ago", …) into the current language.
-fn ago_text(secs: i64, now: i64) -> String {
+pub(crate) fn ago_text(secs: i64, now: i64) -> String {
     match time::ago_kind(secs, now) {
         time::TimeAgo::JustNow => t("just now").to_string(),
         time::TimeAgo::Minutes(n) => tn(n, "{n} min ago", "{n} min ago"),

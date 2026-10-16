@@ -29,6 +29,10 @@ impl LauncherUi {
             Dialog::Engine => modal.show(ctx, |ui| close = self.engine_dialog(ui)),
         };
         if close || response.should_close() {
+            if matches!(dialog, Dialog::Settings) {
+                // The next open reads the engine's channel files again.
+                self.channels.reset();
+            }
             self.dialog = None;
         }
     }
@@ -170,10 +174,54 @@ impl LauncherUi {
     }
 
     fn settings_dialog(&mut self, ui: &mut egui::Ui, host: &mut dyn Host) -> bool {
-        let t = Tokens::get(ui.ctx());
         // Wide enough for the community buttons and every social icon on one row.
         ui.set_width(520.0);
         Self::title(ui, Some(crate::icons::redrob_mark()), tl!("Settings"), &format!("Redrob Launcher {}", env!("CARGO_PKG_VERSION")));
+        // Channels and Apps need the engine's files and daemon: desktop only.
+        if self.backend.channels().is_some() {
+            use crate::channels::SettingsTab;
+            let mut tab = self.settings_tab;
+            widgets::cells(
+                ui,
+                &mut tab,
+                &[
+                    (SettingsTab::General, Cell { label: tl!("General"), tip: tl!("Language, updates, appearance"), count: None }),
+                    (SettingsTab::Channels, Cell { label: tl!("Channels"), tip: tl!("Talk to the engine from Slack, Telegram, Discord or WhatsApp"), count: None }),
+                    (SettingsTab::Apps, Cell { label: tl!("Apps"), tip: tl!("Redrob apps bridged to the engine right now"), count: None }),
+                ],
+            );
+            self.settings_tab = tab;
+            ui.add_space(10.0);
+            match tab {
+                SettingsTab::General => self.settings_general(ui, host),
+                SettingsTab::Channels => {
+                    egui::ScrollArea::vertical().max_height(ui.ctx().content_rect().height() * 0.62).show(ui, |ui| {
+                        ui.set_width(ui.available_width());
+                        self.channels_tab(ui);
+                    });
+                }
+                SettingsTab::Apps => self.apps_tab(ui),
+            }
+        } else {
+            self.settings_general(ui, host);
+        }
+
+        ui.add_space(24.0);
+        let mut close = false;
+        ui.horizontal(|ui| {
+            if self.caps.manage_apps && widgets::button(ui, tl!("Quit Redrob Launcher"), Kind::Secondary, 0.0).clicked() {
+                host.quit();
+            }
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                close = widgets::button(ui, tl!("Done"), Kind::Primary, 90.0).clicked();
+            });
+        });
+        close
+    }
+
+    /// The General page of Settings: language, updates, Linux packages, background, appearance.
+    fn settings_general(&mut self, ui: &mut egui::Ui, host: &mut dyn Host) {
+        let t = Tokens::get(ui.ctx());
         let section = |ui: &mut egui::Ui, s: &str| {
             ui.add_space(14.0);
             widgets::hud(ui, s, t.faint);
@@ -318,17 +366,5 @@ impl LauncherUi {
             widgets::cells(ui, &mut theme_choice, &ThemeChoice::ALL.map(|c| (c, Cell { label: c.label(), tip: c.label(), count: None })));
         });
         self.settings.theme = theme_choice;
-
-        ui.add_space(24.0);
-        let mut close = false;
-        ui.horizontal(|ui| {
-            if self.caps.manage_apps && widgets::button(ui, tl!("Quit Redrob Launcher"), Kind::Secondary, 0.0).clicked() {
-                host.quit();
-            }
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                close = widgets::button(ui, tl!("Done"), Kind::Primary, 90.0).clicked();
-            });
-        });
-        close
     }
 }

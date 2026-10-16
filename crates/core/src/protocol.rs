@@ -238,4 +238,9 @@ pub trait Backend {
     fn engine(&mut self) -> Option<&mut dyn crate::engine::EngineBackend> {
         None
     }
+    /// The engine's chat channels and bridged apps, where the backend can reach its files and
+    /// the daemon (desktop only).
+    fn channels(&mut self) -> Option<&mut dyn crate::channels::ChannelsBackend> {
+        None
+    }
 }
