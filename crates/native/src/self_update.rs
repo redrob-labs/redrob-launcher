@@ -9,7 +9,7 @@
 //! | Installed as | Swap |
 //! |---|---|
 //! | macOS `.app` | copy the new bundle from the DMG over this one (fine while running), reopen it |
-//! | Windows MSI (per-user, any folder) | after exit, run the new MSI (it reinstalls into the same folder), then start the exe |
+//! | Windows setup (per-user, `installer/windows`) | after exit, run the new `-setup.exe --silent` (it reinstalls into the same folder), then start the exe |
 //! | Windows portable zip | after exit, unzip over this folder (settings in `RedrobLauncherData` stay) |
 //! | Linux AppImage | rename the new AppImage over this one (fine while running), start it |
 //! | Linux `.deb` / `.rpm` | the system package manager, with the password prompt; then restart |
@@ -37,8 +37,9 @@ use crate::process;
 pub enum Install {
     /// The `Redrob Launcher.app` bundle.
     MacApp(PathBuf),
-    /// The per-user Windows Installer package; the exe.
-    Msi(PathBuf),
+    /// Our per-user Windows setup (`installer/windows`); the exe. Updated by running the new
+    /// setup with `--silent` once this process has exited.
+    Setup(PathBuf),
     /// The Windows portable zip; the exe (with `portable.txt` beside it).
     Portable(PathBuf),
     /// The AppImage file.
@@ -51,7 +52,7 @@ impl Install {
     fn kind(&self) -> PackageKind {
         match self {
             Self::MacApp(_) => PackageKind::Dmg,
-            Self::Msi(_) => PackageKind::Msi,
+            Self::Setup(_) => PackageKind::Setup,
             Self::Portable(_) => PackageKind::PortableZip,
             Self::AppImage(_) => PackageKind::AppImage,
             Self::Package(kind, _) => *kind,
@@ -106,17 +107,18 @@ fn detect(exe: &Path) -> Option<Install> {
     if dir.join("portable.txt").is_file() {
         return Some(Install::Portable(exe.to_path_buf()));
     }
-    // The MSI installs per user, into the folder chosen in its wizard (which it records in the
-    // registry) or by default %LOCALAPPDATA%\Programs\Redrob Launcher.
+    // The setup installs per user into %LOCALAPPDATA%\Programs\Redrob Launcher and records the folder
+    // in the registry (the MSI through 0.3.0 did the same, so an MSI install is detected the same way).
     let canonical = |p: PathBuf| p.canonicalize().unwrap_or(p);
-    let recorded = msi_install_dir().map(canonical);
+    let recorded = setup_install_dir().map(canonical);
     let default = dirs::data_local_dir().map(|d| canonical(d.join("Programs").join(LAUNCHER.name)));
-    [recorded, default].into_iter().flatten().any(|d| d == dir).then(|| Install::Msi(exe.to_path_buf()))
+    [recorded, default].into_iter().flatten().any(|d| d == dir).then(|| Install::Setup(exe.to_path_buf()))
 }
 
-/// The folder the MSI installed into, as it records it (`packaging/windows/redrob-launcher.wxs`).
+/// The folder the setup installed into, as it records it (`installer/windows/redrob_launcher_setup.cpp`,
+/// `RecordChoices`).
 #[cfg(windows)]
-fn msi_install_dir() -> Option<PathBuf> {
+fn setup_install_dir() -> Option<PathBuf> {
     use winreg::RegKey;
     use winreg::enums::HKEY_CURRENT_USER;
     let key = RegKey::predef(HKEY_CURRENT_USER).open_subkey(r"Software\Redrob\Redrob Launcher").ok()?;
@@ -197,11 +199,11 @@ pub fn update(
             relaunch_after_exit(pid, &[exe.as_os_str()])
         }
         #[cfg(windows)]
-        Install::Msi(exe) => windows_helper(
+        Install::Setup(exe) => windows_helper(
             pid,
             &format!(
-                "Start-Process -FilePath (Join-Path $env:SystemRoot 'System32\\msiexec.exe') -ArgumentList '/i',{},'/passive','/norestart' -Wait; Remove-Item -LiteralPath {} -ErrorAction SilentlyContinue",
-                ps_quote_arg(&file),
+                "Start-Process -FilePath {} -ArgumentList '--silent' -Wait; Remove-Item -LiteralPath {} -ErrorAction SilentlyContinue",
+                ps_quote(&file),
                 ps_quote(&file)
             ),
             exe,
@@ -278,12 +280,6 @@ fn windows_helper(pid: u32, step: &str, exe: &Path) -> Result<(), String> {
 #[cfg_attr(not(windows), allow(dead_code))]
 fn ps_quote(path: &Path) -> String {
     format!("'{}'", path.display().to_string().replace('\'', "''"))
-}
-
-/// A PowerShell literal for an msiexec argument: the path in double quotes, as msiexec expects.
-#[cfg_attr(not(windows), allow(dead_code))]
-fn ps_quote_arg(path: &Path) -> String {
-    format!("'\"{}\"'", path.display().to_string().replace('\'', "''"))
 }
 
 #[cfg(test)]
@@ -376,9 +372,8 @@ mod tests {
 
     #[test]
     fn powershell_quoting_survives_apostrophes() {
-        let p = Path::new(r"C:\Users\O'Brien\AppData\Local\Redrob Launcher\x.msi");
-        assert_eq!(ps_quote(p), r"'C:\Users\O''Brien\AppData\Local\Redrob Launcher\x.msi'");
-        assert_eq!(ps_quote_arg(p), r#"'"C:\Users\O''Brien\AppData\Local\Redrob Launcher\x.msi"'"#);
+        let p = Path::new(r"C:\Users\O'Brien\AppData\Local\Redrob Launcher\x-setup.exe");
+        assert_eq!(ps_quote(p), r"'C:\Users\O''Brien\AppData\Local\Redrob Launcher\x-setup.exe'");
     }
 
     #[test]
@@ -391,7 +386,7 @@ mod tests {
     fn the_launcher_picks_its_own_release_files() {
         let names = [
             "redrob-launcher-0.2.0-macos-universal.dmg",
-            "redrob-launcher-0.2.0-windows-x64.msi",
+            "redrob-launcher-0.2.0-windows-x64-setup.exe",
             "redrob-launcher-0.2.0-windows-x64-portable.zip",
             "redrob-launcher-0.2.0-linux-x86_64.AppImage",
             "redrob-launcher-0.2.0-linux-x86_64.deb",
@@ -407,7 +402,7 @@ mod tests {
         use redrob_launcher_core::{Arch, Os};
         let pick = |os, kind| pick_asset(&release, &[LAUNCHER.id], Platform { os, arch: Arch::X64 }, &[kind]).map(|(a, _)| a.name.clone());
         assert_eq!(pick(Os::MacOs, Install::MacApp(PathBuf::new()).kind()).as_deref(), Some(names[0]));
-        assert_eq!(pick(Os::Windows, Install::Msi(PathBuf::new()).kind()).as_deref(), Some(names[1]));
+        assert_eq!(pick(Os::Windows, Install::Setup(PathBuf::new()).kind()).as_deref(), Some(names[1]));
         assert_eq!(pick(Os::Windows, Install::Portable(PathBuf::new()).kind()).as_deref(), Some(names[2]));
         assert_eq!(pick(Os::Linux, Install::AppImage(PathBuf::new()).kind()).as_deref(), Some(names[3]));
         assert_eq!(pick(Os::Linux, Install::Package(PackageKind::Deb, PathBuf::new()).kind()).as_deref(), Some(names[4]));
