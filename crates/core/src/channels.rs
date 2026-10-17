@@ -13,17 +13,18 @@ use std::path::{Path, PathBuf};
 use serde::Deserialize;
 use serde_json::{Map, Value};
 
-/// The four channels the engine knows, in the order the Settings page shows them.
+/// The four channels the engine knows, in the order the Settings page shows them: the one that
+/// needs no token first.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ChannelName {
-    Telegram,
-    Slack,
-    Discord,
     WhatsApp,
+    Telegram,
+    Discord,
+    Slack,
 }
 
 impl ChannelName {
-    pub const ALL: [Self; 4] = [Self::Telegram, Self::Slack, Self::Discord, Self::WhatsApp];
+    pub const ALL: [Self; 4] = [Self::WhatsApp, Self::Telegram, Self::Discord, Self::Slack];
 
     /// The name in `channels.json` and on the `redrob channels` command line.
     pub fn id(self) -> &'static str {
@@ -50,14 +51,24 @@ impl ChannelName {
     }
 
     /// The secret key names this channel reads from `secrets.json` (CHANNELS.md, "Secret key names").
+    /// Discord's `applicationId` is not a secret the engine reads; the launcher keeps it there so
+    /// the "Invite the bot" link can be built without another file.
     pub fn secret_keys(self) -> &'static [&'static str] {
         match self {
             Self::Slack => &["botToken", "appToken"],
-            Self::Telegram | Self::Discord => &["botToken"],
+            Self::Discord => &["botToken", DISCORD_APPLICATION_ID_KEY],
+            Self::Telegram => &["botToken"],
             Self::WhatsApp => &[],
         }
     }
 }
+
+/// The secrets key under which the launcher keeps the Discord application id.
+pub const DISCORD_APPLICATION_ID_KEY: &str = "applicationId";
+
+/// How long a freshly enabled bot with nobody allowed waits for its first message, which makes
+/// the sender its owner (the engine's `ChannelConfig.claimUntil`).
+pub const CLAIM_WINDOW_MS: u64 = 15 * 60 * 1000;
 
 /// One channel's entry in `channels.json`, the two fields the launcher edits.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -120,6 +131,15 @@ impl ChannelsFile {
         let Some(entry) = object_entry(channels, name.id()) else { return };
         entry.insert("enabled".into(), Value::Bool(config.enabled));
         entry.insert("allowlist".into(), Value::Array(config.allowlist.iter().map(|s| Value::String(s.clone())).collect()));
+    }
+
+    /// Opens the ownership claim window for `name` until `until_ms` (Unix milliseconds): the first
+    /// person to message the bot before then becomes its owner. The engine's `redrob channels
+    /// enable` does the same; writing it here too covers an engine that is not running.
+    pub fn open_claim(&mut self, name: ChannelName, until_ms: u64) {
+        let Some(channels) = object_entry(&mut self.root, "channels") else { return };
+        let Some(entry) = object_entry(channels, name.id()) else { return };
+        entry.insert("claimUntil".into(), Value::from(until_ms));
     }
 
     /// The document as the engine reads it, pretty-printed with a trailing newline.
@@ -300,8 +320,25 @@ settings:
   token_rotation_enabled: false
 ";
 
-/// Discord's Developer Portal, where the bot and its token are made.
-pub const DISCORD_DEVELOPER_PORTAL_URL: &str = "https://discord.com/developers/applications";
+/// Discord's Developer Portal, opened straight on the "new application" dialog.
+pub const DISCORD_NEW_APP_URL: &str = "https://discord.com/developers/applications?new_application=true";
+
+/// Telegram's BotFather, which makes bots and hands out their tokens.
+pub const TELEGRAM_BOTFATHER_URL: &str = "https://t.me/BotFather";
+
+/// Discord's permissions bitfield the Redrob bot asks for when invited: View Channels, Send
+/// Messages, Read Message History.
+pub const DISCORD_INVITE_PERMISSIONS: u64 = 68608;
+
+/// The link that adds the Discord bot of application `app_id` to a server the person manages.
+/// `None` when the id is empty or not a Discord snowflake (digits only).
+pub fn discord_invite_url(app_id: &str) -> Option<String> {
+    let id = app_id.trim();
+    if id.is_empty() || !id.bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    Some(format!("https://discord.com/oauth2/authorize?client_id={id}&scope=bot&permissions={DISCORD_INVITE_PERMISSIONS}"))
+}
 
 /// The api.slack.com "create an app" page with the manifest pre-filled
 /// (`redrob channels slack-manifest --url`).
@@ -355,6 +392,11 @@ pub struct ChannelStatus {
     /// Whether this build of the engine has a transport for the channel.
     pub available: bool,
     pub last_error: Option<String>,
+    /// The platform id of the person who owns this bot (the first to message it while the claim
+    /// window was open, or the first allowlisted id); `None` while nobody does.
+    pub owner: Option<String>,
+    /// Whether the bot is waiting for its first message to pick an owner.
+    pub claim_open: bool,
 }
 
 /// `GET /channels/status`.

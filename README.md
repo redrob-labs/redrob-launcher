@@ -32,9 +32,11 @@ Redrob Launcher is one place to install, update, sign in and connect every Redro
   to reach that one daemon, pinned to the engine release it ships with ([docs/engine.md](docs/engine.md)).
 
 - Channels: turns on a chat channel for that engine from Settings > Channels, so a person talks to
-  it from Telegram, Slack, Discord or WhatsApp on their phone. One card per channel: on/off, the
-  bot token, your own id for the allowlist, a connection dot from the running engine, and the
-  WhatsApp QR code to scan. Save writes the engine's `channels.json` and `channels/secrets.json`,
+  it from WhatsApp, Telegram, Discord or Slack on their phone. One card per channel, a three-step
+  wizard: a button opens the platform's "create a bot" page, the token goes in a field, and the
+  first message sent to the bot makes its sender the owner (no ids to look up; the allowlist
+  waits under Advanced). WhatsApp only shows a QR code to scan. A status line follows the running
+  engine's `/channels/status`. Save writes the engine's `channels.json` and `channels/secrets.json`,
   turns the channel on through `redrob channels enable` (which registers the engine to start at
   login) and reloads the daemon. Settings > Apps lists the Redrob apps bridged to the engine right
   now, with their tools and last heartbeat.

@@ -29,9 +29,11 @@ English: [README.md](./README.md)
   앱들이 그 데몬 하나에 닿는 데 쓰는 Rust 크레이트 `redrob-engine-client`를 엔진 릴리즈 태그에 고정해 사용합니다
   ([docs/engine.md](docs/engine.md)).
 
-- 채널: 설정 > 채널에서 그 엔진의 채팅 채널을 켜서 휴대폰의 Telegram·Slack·Discord·WhatsApp에서 엔진과
-  대화합니다. 채널마다 카드 하나: 켜기/끄기, 봇 토큰, 허용 목록에 들어갈 내 ID, 실행 중인 엔진이 알려 주는
-  연결 상태 점, 스캔할 WhatsApp QR 코드. 저장하면 엔진의 `channels.json`과 `channels/secrets.json`을 쓰고,
+- 채널: 설정 > 채널에서 그 엔진의 채팅 채널을 켜서 휴대폰의 WhatsApp·Telegram·Discord·Slack에서 엔진과
+  대화합니다. 채널마다 카드 하나, 세 단계 안내: 버튼이 플랫폼의 "봇 만들기" 페이지를 열고, 받은 토큰을
+  칸에 붙여 넣고, 봇에게 가장 먼저 메시지를 보낸 사람이 주인이 됩니다(찾아 적을 ID가 없고, 허용 목록은
+  고급 아래에 있습니다). WhatsApp은 스캔할 QR 코드만 보여 줍니다. 상태 줄은 실행 중인 엔진의
+  `/channels/status`를 따라갑니다. 저장하면 엔진의 `channels.json`과 `channels/secrets.json`을 쓰고,
   `redrob channels enable`로 채널을 켠 뒤(엔진이 로그인 시 시작하도록 등록됩니다) 데몬을 다시 읽게 합니다.
   설정 > 앱은 지금 엔진에 연결된 레드롭 앱을 도구와 마지막 하트비트와 함께 보여 줍니다.
 
