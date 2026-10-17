@@ -118,6 +118,10 @@ pub struct LauncherUi {
     pub(crate) toasts: Vec<Toast>,
     pub(crate) dialog: Option<Dialog>,
     pub(crate) page: Page,
+    /// Which page of the Settings dialog is open.
+    pub(crate) settings_tab: crate::channels::SettingsTab,
+    /// Settings > Channels, as edited.
+    pub(crate) channels: crate::channels::ChannelsPanel,
     started: bool,
     applied_theme: Option<theme::ThemeChoice>,
     /// Fonts registered with `set_fonts` only exist from the next frame on; drawing with the named
@@ -177,6 +181,8 @@ impl LauncherUi {
             search: String::new(),
             toasts: Vec::new(),
             dialog: None,
+            settings_tab: crate::channels::SettingsTab::default(),
+            channels: crate::channels::ChannelsPanel::default(),
             started: false,
             applied_theme: None,
             fonts_ready: false,
