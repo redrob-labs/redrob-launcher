@@ -186,7 +186,10 @@ impl LauncherUi {
                 &mut tab,
                 &[
                     (SettingsTab::General, Cell { label: tl!("General"), tip: tl!("Language, updates, appearance"), count: None }),
-                    (SettingsTab::Channels, Cell { label: tl!("Channels"), tip: tl!("Talk to the engine from Slack, Telegram, Discord or WhatsApp"), count: None }),
+                    (
+                        SettingsTab::Channels,
+                        Cell { label: tl!("Channels"), tip: tl!("Talk to the engine from Slack, Telegram, Discord or WhatsApp"), count: None },
+                    ),
                     (SettingsTab::Apps, Cell { label: tl!("Apps"), tip: tl!("Redrob apps bridged to the engine right now"), count: None }),
                 ],
             );

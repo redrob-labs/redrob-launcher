@@ -66,20 +66,14 @@ fn read_json<T: DeserializeOwned>(path: &str, mut response: ureq::http::Response
 }
 
 fn get_json<T: DeserializeOwned>(record: &engine::Record, path: &str) -> Result<T, String> {
-    let response = agent()
-        .get(&url(record, path))
-        .header("Authorization", &engine::authorization(&record.secret))
-        .call()
-        .map_err(|e| e.to_string())?;
+    let response =
+        agent().get(&url(record, path)).header("Authorization", &engine::authorization(&record.secret)).call().map_err(|e| e.to_string())?;
     read_json(path, response)
 }
 
 fn post_json<T: DeserializeOwned>(record: &engine::Record, path: &str) -> Result<T, String> {
-    let response = agent()
-        .post(&url(record, path))
-        .header("Authorization", &engine::authorization(&record.secret))
-        .send_empty()
-        .map_err(|e| e.to_string())?;
+    let response =
+        agent().post(&url(record, path)).header("Authorization", &engine::authorization(&record.secret)).send_empty().map_err(|e| e.to_string())?;
     read_json(path, response)
 }
 
@@ -364,4 +358,3 @@ impl ChannelsBackend for Channels {
         self.whatsapp.invalidate();
     }
 }
-

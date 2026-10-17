@@ -8,8 +8,7 @@
 
 use egui::{Color32, RichText, vec2};
 use redrob_launcher_core::channels::{
-    Apps, ChannelDraft, ChannelName, DISCORD_DEVELOPER_PORTAL_URL, Live, Loaded, SaveOutcome, SaveState, WhatsAppPairing,
-    slack_manifest_url,
+    Apps, ChannelDraft, ChannelName, DISCORD_DEVELOPER_PORTAL_URL, Live, Loaded, SaveOutcome, SaveState, WhatsAppPairing, slack_manifest_url,
 };
 use redrob_launcher_core::engine::app_display_name;
 
@@ -199,7 +198,11 @@ impl LauncherUi {
         let whatsapp = be.whatsapp();
         let mut ask: Option<Ask> = None;
 
-        help(ui, &t, tl!("Talk to your Redrob Code engine from a chat app on your phone. Turn a channel on, paste its bot token, add your own id, and save."));
+        help(
+            ui,
+            &t,
+            tl!("Talk to your Redrob Code engine from a chat app on your phone. Turn a channel on, paste its bot token, add your own id, and save."),
+        );
         if matches!(live, Live::NoEngine) {
             ui.add_space(4.0);
             help(ui, &t, tl!("The engine is not running: changes are saved and take effect when it starts."));
@@ -422,7 +425,13 @@ impl LauncherUi {
             widgets::hud(ui, tl!("Start at login:"), t.faint);
             widgets::hud(ui, if autostart { tl!("on") } else { tl!("off") }, if autostart { t.good } else { t.muted });
         });
-        help(ui, &t, tl!("A bot that is on must survive a reboot, so the engine registers itself to start at login while any channel is on, and removes that when the last one is turned off."));
+        help(
+            ui,
+            &t,
+            tl!(
+                "A bot that is on must survive a reboot, so the engine registers itself to start at login while any channel is on, and removes that when the last one is turned off."
+            ),
+        );
         // The dots follow the engine; look again every few seconds while the page is open.
         ui.ctx().request_repaint_after(std::time::Duration::from_secs(3));
 
