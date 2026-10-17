@@ -486,3 +486,66 @@ month	Dec	12월
 	Turns one photo into a 3D model	사진 한 장을 3D 모델로 만듦
 	Reads the text in images and scans so Recall can search it	이미지와 스캔 속 글자를 읽어 Recall이 검색하게 함
 @plural	{n} model hidden|{n} models hidden	모델 {n}개 숨김
+# Settings > Channels and Settings > Apps.
+	General	일반
+	Language, updates, appearance	언어, 업데이트, 모양
+	Channels	채널
+	Talk to the engine from Slack, Telegram, Discord or WhatsApp	Slack, Telegram, Discord, WhatsApp에서 엔진과 대화
+	Redrob apps bridged to the engine right now	지금 엔진에 연결된 Redrob 앱
+	This build can't reach the engine's files.	이 빌드는 엔진의 파일에 접근할 수 없어요.
+	This build can't reach the engine.	이 빌드는 엔진에 접근할 수 없어요.
+	Reading the engine's settings…	엔진 설정을 읽는 중…
+	Talk to your Redrob Code engine from a chat app on your phone. Turn a channel on, paste its bot token, add your own id, and save.	휴대폰의 채팅 앱에서 Redrob Code 엔진과 대화해요. 채널을 켜고 봇 토큰을 붙여 넣고 내 아이디를 추가한 뒤 저장하세요.
+	The engine is not running: changes are saved and take effect when it starts.	엔진이 실행 중이 아니에요. 변경 사항은 저장되고 엔진이 시작될 때 적용돼요.
+	Engine not running	엔진 꺼짐
+	Enabled, not connected yet	켜져 있지만 아직 연결되지 않음
+	Not connected: {e}	연결 안 됨: {e}
+	Off	끄기
+	On	켜기
+	Start this bot with the engine	엔진과 함께 이 봇을 시작해요
+	Stop this bot	이 봇을 멈춰요
+	Bot token	봇 토큰
+	Open @BotFather in Telegram, send /newbot, paste the token here	Telegram에서 @BotFather를 열고 /newbot을 보낸 뒤 받은 토큰을 여기에 붙여 넣으세요
+	Your Telegram user id	내 Telegram 사용자 ID
+	Send /start to @userinfobot to see it	@userinfobot에 /start를 보내면 확인할 수 있어요
+	Create the Slack app	Slack 앱 만들기
+	Opens api.slack.com with the Redrob bot's manifest filled in. Install the app to your workspace, then copy its two tokens here.	Redrob 봇 매니페스트가 채워진 api.slack.com을 열어요. 워크스페이스에 앱을 설치한 뒤 토큰 두 개를 여기에 복사하세요.
+	Bot token (xoxb-…)	봇 토큰 (xoxb-…)
+	App token (xapp-…)	앱 토큰 (xapp-…)
+	Bot token: OAuth & Permissions. App token: Basic Information > App-Level Tokens, with connections:write.	봇 토큰: OAuth & Permissions. 앱 토큰: Basic Information > App-Level Tokens에서 connections:write 권한으로 만들어요.
+	Your Slack member id	내 Slack 멤버 ID
+	Your profile > ⋯ > Copy member ID	내 프로필 > ⋯ > Copy member ID
+	Open the Developer Portal	Developer Portal 열기
+	New Application > Bot > Reset Token. On the same page, turn on Message Content Intent under Privileged Gateway Intents, or the bot sees empty messages.	New Application > Bot > Reset Token. 같은 페이지의 Privileged Gateway Intents에서 Message Content Intent를 켜야 해요. 끄면 봇에게 빈 메시지만 보여요.
+	Your Discord user id	내 Discord 사용자 ID
+	Settings > Advanced > Developer Mode, then right-click your name > Copy User ID	설정 > 고급 > 개발자 모드를 켠 뒤 내 이름을 오른쪽 클릭 > Copy User ID
+	Paired	연결됨
+	Unlink this phone? The engine shows a new QR code.	이 휴대폰 연결을 해제할까요? 엔진이 새 QR 코드를 보여 줘요.
+	Unlink	연결 해제
+	Scan with WhatsApp > Linked devices	WhatsApp > 연결된 기기에서 스캔하세요
+	The code changes every so often; this picture follows it.	코드는 가끔 바뀌고 이 그림도 따라 바뀌어요.
+	Not paired. Save with the channel on and a QR code appears here.	연결되지 않았어요. 채널을 켠 채 저장하면 여기에 QR 코드가 나타나요.
+	Not paired. Turn the channel on, save, and scan the QR code that appears here while the engine runs.	연결되지 않았어요. 채널을 켜고 저장한 뒤, 엔진이 실행 중일 때 여기에 나타나는 QR 코드를 스캔하세요.
+	Your phone number (digits only)	내 전화번호 (숫자만)
+	Country code first, no plus sign or spaces	국가 번호부터, + 기호나 공백 없이
+	This uses an unofficial WhatsApp client. WhatsApp may ban the account it is paired with.	비공식 WhatsApp 클라이언트를 사용해요. WhatsApp이 연결된 계정을 차단할 수 있어요.
+	Also allowed	함께 허용된 ID
+	Remove	제거
+	Another id to allow	허용할 다른 ID
+	Allow another	다른 ID 허용
+	Nobody can talk to it until you add your id	내 ID를 추가하기 전까지는 아무도 말을 걸 수 없어요
+	Save	저장
+	Saving…	저장 중…
+	Saved - engine reloaded	저장됨 - 엔진이 다시 읽었어요
+	Saved - takes effect when the engine starts	저장됨 - 엔진이 시작될 때 적용돼요
+	Start at login:	로그인 시 시작:
+	on	켜짐
+	off	꺼짐
+	A bot that is on must survive a reboot, so the engine registers itself to start at login while any channel is on, and removes that when the last one is turned off.	켜져 있는 봇은 재부팅 뒤에도 살아 있어야 하므로, 채널이 하나라도 켜져 있으면 엔진이 로그인 시 시작하도록 스스로 등록하고, 마지막 채널이 꺼지면 등록을 지워요.
+	Redrob apps that are open and bridged to the engine, so a prompt anywhere can use their tools.	열려 있고 엔진에 연결된 Redrob 앱이에요. 어디서든 프롬프트가 이 앱들의 도구를 쓸 수 있어요.
+	Apps appear here once the engine is running and one of them connects.	엔진이 실행되고 앱이 연결되면 여기에 나타나요.
+	No app is connected to the engine. Open a Redrob app and it appears here.	엔진에 연결된 앱이 없어요. Redrob 앱을 열면 여기에 나타나요.
+	Version	버전
+	Tools	도구
+	Last seen	마지막 확인
+@plural	{n} tool|{n} tools	도구 {n}개

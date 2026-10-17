@@ -31,6 +31,14 @@ Redrob Launcher is one place to install, update, sign in and connect every Redro
   attached, and Start / Stop / Restart. Uses `redrob-engine-client`, the Rust crate the apps use
   to reach that one daemon, pinned to the engine release it ships with ([docs/engine.md](docs/engine.md)).
 
+- Channels: turns on a chat channel for that engine from Settings > Channels, so a person talks to
+  it from Telegram, Slack, Discord or WhatsApp on their phone. One card per channel: on/off, the
+  bot token, your own id for the allowlist, a connection dot from the running engine, and the
+  WhatsApp QR code to scan. Save writes the engine's `channels.json` and `channels/secrets.json`,
+  turns the channel on through `redrob channels enable` (which registers the engine to start at
+  login) and reloads the daemon. Settings > Apps lists the Redrob apps bridged to the engine right
+  now, with their tools and last heartbeat.
+
 - Downloads the local models every Redrob app can use: chat, coding and vision LLMs, Canvas's
   image models (our own Redrob Image, LaMa inpainting, background removal, upscaling, selection),
   Cut's speech models and voices, Shape's image-to-3D and Recall's OCR. Measures this computer

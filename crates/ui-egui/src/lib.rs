@@ -18,6 +18,7 @@ macro_rules! tl {
 
 mod account;
 mod app;
+mod channels;
 #[cfg(not(target_arch = "wasm32"))]
 mod cjk_font;
 mod dialogs;

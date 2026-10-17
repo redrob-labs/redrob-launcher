@@ -100,6 +100,8 @@ pub struct NativeBackend {
     models: crate::models::Models,
     /// The shared Redrob Code engine.
     engine: crate::engine::Engine,
+    /// The engine's chat channels and bridged apps.
+    channels: crate::channels::Channels,
 }
 
 impl NativeBackend {
@@ -142,8 +144,19 @@ impl NativeBackend {
         let account = crate::account::DeviceAccount::desktop(shared.waker.clone());
         let models = crate::models::Models::desktop(http.clone(), shared.waker.clone());
         let engine = crate::engine::Engine::desktop(shared.waker.clone());
-        let backend =
-            Self { shared, paths, http, source, platform: native_platform(), self_install: crate::self_update::current(), account, models, engine };
+        let channels = crate::channels::Channels::desktop(shared.waker.clone());
+        let backend = Self {
+            shared,
+            paths,
+            http,
+            source,
+            platform: native_platform(),
+            self_install: crate::self_update::current(),
+            account,
+            models,
+            engine,
+            channels,
+        };
         for (app, png) in crate::app_icons::cached(&backend.paths.icons()) {
             backend.shared.emit(Event::Icon { app, png });
         }
@@ -980,6 +993,10 @@ impl Backend for NativeBackend {
     fn engine(&mut self) -> Option<&mut dyn redrob_launcher_core::engine::EngineBackend> {
         Some(&mut self.engine)
     }
+
+    fn channels(&mut self) -> Option<&mut dyn redrob_launcher_core::channels::ChannelsBackend> {
+        Some(&mut self.channels)
+    }
 }
 
 /// The launcher's own download for this machine, for "a new launcher is available".
@@ -1239,7 +1256,19 @@ mod tests {
         );
         let models = crate::models::Models::new(Vec::new(), None, Arc::new(|| {}), Arc::new(|_: &str| None));
         let engine = crate::engine::Engine::desktop(Arc::new(|| {}));
-        NativeBackend { shared, paths: Paths::under(root), http: None, source, platform: Some(platform), self_install: None, account, models, engine }
+        let channels = crate::channels::Channels::desktop(Arc::new(|| {}));
+        NativeBackend {
+            shared,
+            paths: Paths::under(root),
+            http: None,
+            source,
+            platform: Some(platform),
+            self_install: None,
+            account,
+            models,
+            engine,
+            channels,
+        }
     }
 
     /// Reports again, and returns what the UI was last told about a kept download.
