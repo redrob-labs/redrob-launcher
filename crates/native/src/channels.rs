@@ -229,7 +229,12 @@ impl Channels {
         let mut config = chan::read_config(&home)?;
         let mut secrets = chan::read_secrets(&home)?;
         for (name, draft) in &drafts {
-            let allowlist = draft.allowlist.iter().map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
+            let allowlist: Vec<String> = draft.allowlist.iter().map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
+            // Turned on with nobody allowed: the first person to message the bot becomes its owner,
+            // the same window `redrob channels enable` opens.
+            if draft.enabled && allowlist.is_empty() && toggled.contains(name) {
+                config.open_claim(*name, now_ms() + chan::CLAIM_WINDOW_MS);
+            }
             config.set(*name, &ChannelConfig { enabled: draft.enabled, allowlist });
             for (key, value) in &draft.secrets {
                 secrets.set(*name, key, value.trim());
