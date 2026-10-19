@@ -20,6 +20,7 @@ pub mod feed_throttle;
 pub mod http;
 pub mod install;
 pub mod language;
+pub mod log_file;
 pub mod login;
 pub mod manifest;
 pub mod models;

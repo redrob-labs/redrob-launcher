@@ -30,7 +30,10 @@ const SETTINGS_KEY: &str = "settings";
 type Wake = Arc<OnceLock<Box<dyn Fn() + Send + Sync>>>;
 
 fn main() -> ExitCode {
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
+        .target(env_logger::Target::Pipe(Box::new(redrob_launcher_native::log_file::Tee(redrob_launcher_native::log_file::open()))))
+        .init();
+    log::info!("Redrob Launcher {} starting", env!("CARGO_PKG_VERSION"));
     // Detect system language in the background so the first frame can use it.
     redrob_launcher_ui_egui::i18n::detect_system_lang_in_background();
     let args: Vec<String> = std::env::args().skip(1).collect();
