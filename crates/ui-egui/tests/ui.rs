@@ -900,9 +900,13 @@ fn the_rate_limit_notice_never_runs_under_the_footer_links() {
         // Cut short in a narrow window, but enough of it left to read.
         assert!(notice.width() >= 120.0 && notice.right() <= width, "{width}: notice {notice:?}");
         // Everything on the footer's right: the two links and (when there's room) the platform.
+        // Only the footer's 34 px band: a card's own links can scroll to just above it.
+        let footer_top = 900.0 - 34.0;
         let mut right = Vec::new();
         for label in ["Website", "GitHub"] {
-            right.extend(h.query_all_by_label(label).map(|n| n.rect()).filter(|r| (r.center().y - notice.center().y).abs() < 12.0));
+            right.extend(
+                h.query_all_by_label(label).map(|n| n.rect()).filter(|r| (r.center().y - notice.center().y).abs() < 12.0 && r.top() >= footer_top),
+            );
         }
         assert_eq!(right.len(), 2, "{width}: {right:?}");
         let platform = h.query_by_label_contains("Installing for").map(|n| n.rect());
