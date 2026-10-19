@@ -544,6 +544,46 @@ fn pages_lead_back_to_apps_by_the_back_button_and_escape() {
 }
 
 #[test]
+fn the_theme_switch_options_are_big_enough_to_hit_and_switch_the_theme() {
+    for width in [1180.0, 600.0] {
+        let mut h = harness_sized(width);
+        h.run_steps(6);
+        let options: Vec<egui::Rect> = h.query_all(egui_kittest::kittest::by().role(egui::accesskit::Role::RadioButton)).map(|n| n.rect()).collect();
+        assert_eq!(options.len(), 3, "{width}: System, Light, Dark");
+        for r in &options {
+            assert!(r.width() >= 32.0 && r.height() >= 32.0, "{width}: a theme option's target is only {r:?}");
+        }
+        // Neighbouring targets never overlap.
+        for (a, b) in options.iter().zip(options.iter().skip(1)) {
+            assert!(a.intersect(*b).area() <= 0.5, "{width}: {a:?} overlaps {b:?}");
+        }
+        h.get_by_label("Light").click();
+        h.run_steps(3);
+        assert_eq!(h.state().as_ref().unwrap().settings.theme, redrob_launcher_ui_egui::theme::ThemeChoice::Light, "{width}");
+    }
+}
+
+/// The default harness at `width` x 900.
+fn harness_sized(width: f32) -> Harness<'static, Option<LauncherUi>> {
+    let mut backend = Some(Fake { events: events(), sent: Rc::new(RefCell::new(Vec::new())), manage: true, clock: Rc::new(Cell::new(NOW)) });
+    redrob_launcher_ui_egui::i18n::set_test_lang(redrob_launcher_ui_egui::i18n::Lang::EN);
+    Harness::builder().with_size(egui::vec2(width, 900.0)).build_ui_state(
+        move |ui, state: &mut Option<LauncherUi>| {
+            if state.is_none()
+                && let Some(b) = backend.take()
+            {
+                *state = Some(LauncherUi::new(ui.ctx(), Box::new(b), Settings { notify: false, ..Settings::default() }));
+            }
+            if let Some(l) = state.as_mut() {
+                l.logic(&ui.ctx().clone(), &mut NoHost);
+                l.ui(ui, &mut NoHost);
+            }
+        },
+        None,
+    )
+}
+
+#[test]
 fn settings_link_to_redrob() {
     let (mut h, _) = harness(ViewMode::Grid, egui::Theme::Dark, true);
     h.run_steps(6);

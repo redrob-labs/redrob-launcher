@@ -801,21 +801,27 @@ pub fn account_row(ui: &mut Ui, name: &str, meta: &str, initial: Option<char>, c
 pub fn theme_switch(ui: &mut Ui, value: &mut theme::ThemeChoice, vertical: bool) -> bool {
     use theme::ThemeChoice;
     let t = Tokens::get(ui.ctx());
+    // 28 px circles (DS ThemeSwitch), each with a larger target: 32 along the row (neighbours'
+    // targets meet, never overlap) and 36 across it (Cowork's 36 px hit target).
     const OPT: f32 = 28.0;
     const PAD: f32 = 2.0;
+    const GAP: f32 = 4.0;
+    const HIT_ALONG: f32 = OPT + GAP;
+    const HIT_ACROSS: f32 = 36.0;
     let options = [(ThemeChoice::System, Icon::Monitor), (ThemeChoice::Light, Icon::Sun), (ThemeChoice::Dark, Icon::Moon)];
-    let long = 3.0 * OPT + 4.0 * PAD;
+    let long = 3.0 * OPT + 2.0 * GAP + 2.0 * PAD;
     let short = OPT + 2.0 * PAD;
     let (track, _) = ui.allocate_exact_size(if vertical { vec2(short, long) } else { vec2(long, short) }, Sense::hover());
     let pill = CornerRadius::same(theme::radius::PILL);
     ui.painter().rect(track, pill, t.bg, t.hairline(), egui::StrokeKind::Inside);
     let mut changed = false;
     for (i, (choice, icon)) in options.into_iter().enumerate() {
-        let off = PAD + i as f32 * (OPT + PAD);
+        let off = PAD + i as f32 * (OPT + GAP);
         let min = if vertical { track.min + vec2(PAD, off) } else { track.min + vec2(off, PAD) };
         let rect = Rect::from_min_size(min, vec2(OPT, OPT));
         let label = choice.label();
-        let resp = ui.interact(rect, ui.id().with(("theme-switch", i)), Sense::click());
+        let hit = Rect::from_center_size(rect.center(), if vertical { vec2(HIT_ACROSS, HIT_ALONG) } else { vec2(HIT_ALONG, HIT_ACROSS) });
+        let resp = ui.interact(hit, ui.id().with(("theme-switch", i)), Sense::click());
         let on = *value == choice;
         let p = ui.painter();
         if on {
