@@ -54,11 +54,13 @@ pub enum Icon {
     Maximize,
     /// Window caption: a window in front of another.
     Restore,
+    /// Window caption: a cross across the whole box (Close is drawn inside the 24 grid's margin).
+    CaptionClose,
 }
 
 impl Icon {
     /// Every icon, for tests and previews.
-    pub const ALL: [Self; 21] = [
+    pub const ALL: [Self; 22] = [
         Self::Settings,
         Self::Refresh,
         Self::Search,
@@ -80,6 +82,7 @@ impl Icon {
         Self::Minimize,
         Self::Maximize,
         Self::Restore,
+        Self::CaptionClose,
     ];
 }
 
@@ -267,6 +270,10 @@ pub fn shapes(rect: Rect, icon: Icon, color: Color32) -> Vec<Shape> {
         // Caption glyphs: Windows' own, a 1 px line at 10 px.
         Icon::Minimize => g.line(&mut s, &[(2.0, 12.0), (22.0, 12.0)]),
         Icon::Maximize => g.rect(&mut s, (2.0, 2.0), (22.0, 22.0)),
+        Icon::CaptionClose => {
+            g.line(&mut s, &[(2.0, 2.0), (22.0, 22.0)]);
+            g.line(&mut s, &[(22.0, 2.0), (2.0, 22.0)]);
+        }
         Icon::Restore => {
             g.rect(&mut s, (2.0, 6.0), (18.0, 22.0));
             g.line(&mut s, &[(6.0, 6.0), (6.0, 2.0), (22.0, 2.0), (22.0, 18.0), (18.0, 18.0)]);

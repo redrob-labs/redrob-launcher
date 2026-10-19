@@ -82,12 +82,11 @@ impl LauncherUi {
             }
             // The Redrob lockup exactly as supplied (the variant for this ground), in its own cell.
             let logo = vec2(18.0 * crate::icons::REDROB_LOGO_ASPECT, 18.0);
-            let (cell, _) = ui.allocate_exact_size(vec2(logo.x + 40.0, h), Sense::hover());
+            let (cell, _) = ui.allocate_exact_size(vec2(logo.x + 2.0 * theme::space::S5, h), Sense::hover());
             egui::Image::new(crate::icons::redrob_logo(t.dark)).alt_text(tl!("Redrob")).paint_at(ui, Rect::from_center_size(cell.center(), logo));
-            widgets::rule(ui, h);
-            ui.add_space(16.0);
-            widgets::tag(ui, tl!("Launcher"), t.invert_bg, t.invert_fg);
-            ui.add_space(12.0);
+            // The product name beside the lockup (DS AppShell brand row: 14 px semibold, ink).
+            ui.label(RichText::new(tl!("Launcher")).size(theme::text::CONTROL).family(theme::semibold()).color(t.ink));
+            ui.add_space(theme::space::S5);
             // The two pages, as tabs: the apps, and the models they can use on this computer.
             if widgets::nav_link(ui, tl!("Apps"), tl!("The Redrob apps"), h, self.page == Page::Apps).clicked() {
                 self.page = Page::Apps;
@@ -96,6 +95,8 @@ impl LauncherUi {
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if bar == TitleBar::Custom {
                     widgets::window_buttons(ui, h);
+                } else {
+                    ui.add_space(theme::space::S2);
                 }
                 ui.add_space(theme::space::S1);
                 if widgets::icon_button(ui, Icon::Settings, tl!("Settings"), theme::control::MD).clicked() {
@@ -108,10 +109,8 @@ impl LauncherUi {
                 ui.add_space(theme::space::S2);
                 self.account_link(ui, h);
                 self.engine_link(ui, h);
-                ui.add_space(6.0);
-                widgets::rule(ui, h);
                 if self.page == Page::Apps {
-                    ui.add_space(6.0);
+                    ui.add_space(theme::space::S3);
                     // Right to left: Table, then Grid, so they read Grid · Table.
                     for (mode, label, tip) in
                         [(ViewMode::Table, tl!("Table"), tl!("Show apps as a table")), (ViewMode::Grid, tl!("Grid"), tl!("Show apps as cards"))]
@@ -120,8 +119,6 @@ impl LauncherUi {
                             self.settings.view = mode;
                         }
                     }
-                    ui.add_space(6.0);
-                    widgets::rule(ui, h);
                 }
             });
         });

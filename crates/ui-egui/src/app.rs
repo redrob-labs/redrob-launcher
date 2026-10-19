@@ -585,9 +585,10 @@ impl LauncherUi {
             ctx.request_repaint_after(Duration::from_millis(50));
         }
 
-        // The bars' separator lines are the hairlines under the header and over the footer.
+        // The bars' separator lines are the hairlines under the header and over the footer. The
+        // header is the title bar: Redrob Cowork's 48 px bar on the sunken ground.
         egui::Panel::top("header")
-            .frame(egui::Frame::new().fill(tokens.bg))
+            .frame(egui::Frame::new().fill(tokens.sunken))
             .exact_size(crate::views::HEADER_H)
             .resizable(false)
             .show(ui, |ui| self.header(ui, host.title_bar()));

@@ -9,7 +9,7 @@ use egui::{Color32, CornerRadius, Galley, Rect, Response, RichText, Sense, Strok
 
 use crate::glyphs::Icon;
 use crate::model::Tone;
-use crate::theme::{self, Tokens};
+use crate::theme::{self, Tokens, tint};
 
 pub fn tone_color(t: &Tokens, tone: Tone) -> Color32 {
     match tone {
@@ -93,26 +93,23 @@ pub fn tag(ui: &mut Ui, text: &str, fill: Color32, ink: Color32) -> Response {
     resp
 }
 
-/// A vertical hairline `height` tall: divides the header's cells.
-pub fn rule(ui: &mut Ui, height: f32) {
-    let t = Tokens::get(ui.ctx());
-    let (rect, _) = ui.allocate_exact_size(vec2(1.0, height), Sense::hover());
-    ui.painter().vline(rect.center().x, rect.y_range(), t.hairline());
-}
-
-/// A header link, like the site's nav: a mono label whose span inverts on hover or when `active`.
+/// A header tab (DS AppShell nav item): 13 px label in ink-secondary on the bar's sunken ground;
+/// on hover and when `active` a radius-6 base-surface span with ink, `active` also semibold. No
+/// accent bar.
 pub fn nav_link(ui: &mut Ui, text: &str, tip: &str, height: f32, active: bool) -> Response {
     let t = Tokens::get(ui.ctx());
-    let galley = hud_galley(ui, text, t.muted);
+    let family = if active { theme::semibold() } else { theme::medium() };
+    let galley = caps(ui, text, theme::text::LABEL, family, 0.0, t.muted);
     let (rect, resp) = ui.allocate_exact_size(vec2(galley.size().x + 20.0, height), Sense::click());
-    let on = active || resp.hovered();
-    let span = Rect::from_center_size(rect.center(), galley.size() + vec2(12.0, 6.0));
-    if on {
-        ui.painter().rect_filled(span, CornerRadius::ZERO, t.invert_bg);
+    let hovered = resp.hovered();
+    let span = Rect::from_center_size(rect.center(), vec2(galley.size().x + 16.0, theme::control::SM));
+    if active || hovered {
+        ui.painter().rect_filled(span, CornerRadius::same(theme::radius::SM), t.bg);
     }
-    paint_centred(ui, rect, galley, if on { t.invert_fg } else { t.muted });
+    paint_centred(ui, rect, galley, if active || hovered { t.ink } else { t.muted });
     resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Button, true, active, text));
-    resp.on_hover_text(tip).on_hover_cursor(egui::CursorIcon::PointingHand)
+    focus_ring(ui, &resp, theme::radius::SM);
+    self::tip(resp, tip).on_hover_cursor(egui::CursorIcon::PointingHand)
 }
 
 /// How far in from the window's edges a custom title bar's window resizes ([`window_edges`]).
@@ -143,6 +140,9 @@ enum WindowButton {
     Close,
 }
 
+/// Width of a caption button: Windows' own (Redrob Cowork keeps the native 46 px ones).
+const CAPTION_W: f32 = 46.0;
+
 /// Minimize, maximize (or restore) and close, `height` tall, for a right-to-left layout: close
 /// ends up at the right.
 pub fn window_buttons(ui: &mut Ui, height: f32) {
@@ -158,54 +158,38 @@ pub fn window_buttons(ui: &mut Ui, height: f32) {
     if window_button(ui, WindowButton::Minimize, height).clicked() {
         ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(true));
     }
-    rule(ui, height);
 }
 
+/// One caption button, drawn like Redrob Cowork's (Windows' native ones over its 48 px bar): a
+/// 10 px glyph, idle in ink-secondary; hover fills 8% of ink and the glyph takes ink; close's hover
+/// is status-danger with white (was a hard-coded #c42b1c).
 fn window_button(ui: &mut Ui, button: WindowButton, height: f32) -> Response {
     let t = Tokens::get(ui.ctx());
-    let (rect, _) = ui.allocate_exact_size(vec2(46.0, height), Sense::hover());
+    let (rect, _) = ui.allocate_exact_size(vec2(CAPTION_W, height), Sense::hover());
     // Clickable below the resize band along the top (and, for close, the right edge).
     let right = if button == WindowButton::Close { RESIZE_EDGE } else { 0.0 };
     let hit = Rect::from_min_max(rect.min + vec2(0.0, RESIZE_EDGE), rect.max - vec2(right, 0.0));
     let resp = ui.interact(hit, ui.id().with(("window-button", button as u8)), Sense::click());
-    let (fill, ink) = match (button, resp.hovered()) {
-        (WindowButton::Close, true) => (Color32::from_rgb(0xc4, 0x2b, 0x1c), Color32::WHITE),
-        (_, true) => (t.line, t.ink_strong),
-        (_, false) => (Color32::TRANSPARENT, t.muted),
+    let hovered = resp.hovered() || resp.is_pointer_button_down_on();
+    let k = ui.ctx().animate_bool_with_time(resp.id.with("hover"), hovered, theme::motion::duration(ui.ctx(), theme::motion::FAST));
+    let (fill, ink) = match button {
+        WindowButton::Close => (t.bad.gamma_multiply(k), theme::mix(t.muted, t.on_brand(), k)),
+        _ => (tint(t.ink, 0.08 * k), theme::mix(t.muted, t.ink, k)),
     };
     let p = ui.painter();
-    p.rect_filled(rect, CornerRadius::ZERO, fill);
-    let c = rect.center();
-    let stroke = Stroke::new(1.0, ink);
-    let label = match button {
-        WindowButton::Minimize => tl!("Minimize"),
-        WindowButton::Maximize => tl!("Maximize"),
-        WindowButton::Restore => tl!("Restore"),
-        WindowButton::Close => tl!("Close"),
-    };
-    // Half the glyph's size: 10 px, like Windows' own caption buttons.
-    let s = 5.0;
-    match button {
-        WindowButton::Minimize => {
-            p.hline(c.x - s..=c.x + s, c.y, stroke);
-        }
-        WindowButton::Maximize => {
-            p.rect_stroke(Rect::from_center_size(c, vec2(2.0 * s, 2.0 * s)), CornerRadius::ZERO, stroke, egui::StrokeKind::Inside);
-        }
-        WindowButton::Restore => {
-            // A window in front of another.
-            let front = Rect::from_min_size(c + vec2(-s, -s + 2.0), vec2(2.0 * s - 2.0, 2.0 * s - 2.0));
-            p.rect_stroke(front, CornerRadius::ZERO, stroke, egui::StrokeKind::Inside);
-            p.hline(c.x - s + 2.0..=c.x + s, c.y - s, stroke);
-            p.vline(c.x + s, c.y - s..=c.y + s - 2.0, stroke);
-        }
-        WindowButton::Close => {
-            p.line_segment([c + vec2(-s, -s), c + vec2(s, s)], stroke);
-            p.line_segment([c + vec2(-s, s), c + vec2(s, -s)], stroke);
-        }
+    if k > 0.0 {
+        p.rect_filled(rect, CornerRadius::ZERO, fill);
     }
+    let (label, icon) = match button {
+        WindowButton::Minimize => (tl!("Minimize"), Icon::Minimize),
+        WindowButton::Maximize => (tl!("Maximize"), Icon::Maximize),
+        WindowButton::Restore => (tl!("Restore"), Icon::Restore),
+        WindowButton::Close => (tl!("Close"), Icon::CaptionClose),
+    };
+    // 10 px, like Windows' own caption glyphs; the icon grid draws them with a 1 px line.
+    crate::glyphs::paint(p, Rect::from_center_size(rect.center(), vec2(10.0, 10.0)), icon, ink);
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, label));
-    resp.on_hover_text(label)
+    tip(resp, label)
 }
 
 /// Custom title bars: a hairline round the window, and resizing it from its edges and corners.
