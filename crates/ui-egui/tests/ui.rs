@@ -367,7 +367,7 @@ fn each_cancellation_says_what_it_called_off() {
 fn a_search_that_matches_nothing_says_what_to_relax_and_clears() {
     let (mut h, _) = harness(egui::Theme::Light, true);
     h.run_steps(6);
-    let field = h.query_all(egui_kittest::kittest::by().role(egui::accesskit::Role::TextInput)).next().unwrap();
+    let field = h.query_all(egui_kittest::kittest::by().role(egui::accesskit::Role::TextInput).label("Search apps")).next().unwrap();
     field.focus();
     field.type_text("zzz");
     h.run_steps(4);
@@ -668,7 +668,10 @@ fn typing_in_the_search_on_another_page_shows_the_apps() {
     open_settings(&mut h);
     assert!(on_settings(&h));
     // The search stays in the title bar on every page.
-    let field = h.query_all(egui_kittest::kittest::by().role(egui::accesskit::Role::TextInput)).find(|n| n.rect().bottom() <= 48.0).unwrap();
+    let field = h
+        .query_all(egui_kittest::kittest::by().role(egui::accesskit::Role::TextInput).label("Search apps"))
+        .find(|n| n.rect().bottom() <= 48.0)
+        .unwrap();
     field.focus();
     field.type_text("canvas");
     h.run_steps(4);
@@ -1013,7 +1016,10 @@ fn web_build_offers_downloads() {
 
 /// The title bar's search field.
 fn search_field_rect(h: &Harness<'_, Option<LauncherUi>>) -> egui::Rect {
-    h.query_all(egui_kittest::kittest::by().role(egui::accesskit::Role::TextInput)).map(|n| n.rect()).find(|r| r.bottom() <= 48.0).unwrap()
+    h.query_all(egui_kittest::kittest::by().role(egui::accesskit::Role::TextInput).label("Search apps"))
+        .map(|n| n.rect())
+        .find(|r| r.bottom() <= 48.0)
+        .unwrap()
 }
 
 #[test]
@@ -1041,6 +1047,70 @@ fn a_native_title_bar_puts_the_chrome_in_a_row_over_the_page() {
     h.get_by_label("Check for updates").click();
     h.run_steps(2);
     assert!(sent.borrow().contains(&Command::CheckForUpdates { force: true }));
+}
+
+#[test]
+fn the_macos_title_bar_keeps_the_traffic_lights_clear() {
+    struct MacHost;
+    impl Host for MacHost {
+        fn title_bar(&self) -> redrob_launcher_ui_egui::TitleBar {
+            redrob_launcher_ui_egui::TitleBar::MacOs
+        }
+    }
+    for width in [600.0, 960.0, 1180.0] {
+        let mut backend = Some(Fake { events: events(), sent: Rc::new(RefCell::new(Vec::new())), manage: true, clock: Rc::new(Cell::new(NOW)) });
+        let mut h = Harness::builder().with_size(egui::vec2(width, 900.0)).build_ui_state(
+            move |ui, state: &mut Option<LauncherUi>| {
+                if state.is_none()
+                    && let Some(b) = backend.take()
+                {
+                    *state = Some(LauncherUi::new(ui.ctx(), Box::new(b), Settings { notify: false, ..Settings::default() }));
+                }
+                if let Some(l) = state.as_mut() {
+                    l.logic(&ui.ctx().clone(), &mut MacHost);
+                    l.ui(ui, &mut MacHost);
+                }
+            },
+            None,
+        );
+        h.run_steps(6);
+        if width == 1180.0 {
+            snapshot(&mut h, "grid-title-bar-macos-dark");
+        }
+        // The OS draws the traffic lights: no window buttons of ours.
+        assert!(h.query_by_label("Minimize").is_none(), "{width}");
+        let search = search_field_rect(&h);
+        let logo = h.get_by_label("Go to console.redrob.ai").rect();
+        let update = h.get_by_label("Update all (2)").rect();
+        // Left to right: Update, the logo, the search, all in the 48 px bar and inside the window.
+        assert!(update.right() <= logo.left() && logo.right() <= search.left() && search.right() <= width, "{width}: {update:?} {logo:?} {search:?}");
+        for r in [search, logo, update] {
+            assert!(r.bottom() <= 48.0, "{width}: {r:?}");
+        }
+        // The traffic lights' 72 px stay clear, with room to drag the window beside them.
+        assert!(update.left() >= 72.0 + 24.0, "{width}: {update:?}");
+    }
+}
+
+#[test]
+fn the_grid_shows_every_app_name_whole_at_the_default_window() {
+    let (mut h, _) = harness(egui::Theme::Dark, true);
+    h.run_steps(6);
+    // Each card's name is one unwrapped line (a wrapped wordmark would be two lines tall) and
+    // lies inside the window, beside its icon.
+    let mut seen = 0;
+    for app in redrob_launcher_core::SUITE {
+        for node in h.query_all_by_label(app.name) {
+            let r = node.rect();
+            if r.top() < 48.0 || r.height() > 30.0 && r.width() > 300.0 {
+                continue; // not a card's name (e.g. a whole card or the title bar)
+            }
+            assert!(r.height() <= 30.0, "{}: wrapped onto a second line: {r:?}", app.name);
+            assert!(r.right() <= 1180.0 - 24.0, "{}: runs past the content edge: {r:?}", app.name);
+            seen += 1;
+        }
+    }
+    assert!(seen >= 5, "the first section's names were checked ({seen})");
 }
 
 #[test]

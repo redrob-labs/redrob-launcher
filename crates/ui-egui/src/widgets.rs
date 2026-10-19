@@ -453,6 +453,8 @@ pub fn search_field(ui: &mut Ui, text: &mut String, hint: &str, width: f32, id_s
             .margin(vec2(0.0, 0.0))
             .desired_width(field.width()),
     );
+    // The hint is only a placeholder to screen readers; the field's name is the hint's words.
+    ui.ctx().accesskit_node_builder(resp.id, |node| node.set_label(hint));
     // The glyph and padding focus the field too.
     if bg.clicked() {
         ui.memory_mut(|m| m.request_focus(id));
