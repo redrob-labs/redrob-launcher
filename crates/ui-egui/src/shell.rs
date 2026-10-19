@@ -2,7 +2,7 @@
 //! pages, the theme, Settings and the account) and a 48 px top bar over each page but Apps, on one
 //! continuous base ground so no grey seam shows between them.
 
-use egui::{Rect, RichText, Sense, Stroke, Ui, vec2};
+use egui::{RichText, Sense, Stroke, Ui, vec2};
 
 use crate::app::{LauncherUi, Page};
 use crate::glyphs::Icon;
@@ -60,21 +60,26 @@ impl LauncherUi {
         let ui = &mut child;
         ui.spacing_mut().item_spacing = vec2(0.0, 1.0);
 
-        // Brand row (DS AppShell: padding 20 / 16 / 16): the lockup as supplied, then the product.
+        // Brand row (DS AppShell: padding 20 / 16 / 16): the product's name as plain text, 15 / 600 ink,
+        // tracked in -0.01em (Redrob Cowork's wordmark text). The folded rail keeps the row's room, empty.
         ui.add_space(theme::space::S5);
+        let name = tl!("Redrob Launcher");
         if rail {
-            let (cell, _) = ui.allocate_exact_size(vec2(ui.available_width(), 28.0), Sense::hover());
-            egui::Image::new(crate::icons::redrob_mark())
-                .alt_text(tl!("Redrob Launcher"))
-                .paint_at(ui, Rect::from_center_size(cell.center(), vec2(28.0, 28.0)));
+            ui.allocate_exact_size(vec2(ui.available_width(), 22.0), Sense::hover());
         } else {
             ui.horizontal(|ui| {
-                ui.spacing_mut().item_spacing.x = theme::space::S2;
                 ui.add_space(theme::space::S2);
-                let logo = vec2(18.0 * crate::icons::REDROB_LOGO_ASPECT, 18.0);
-                let (cell, _) = ui.allocate_exact_size(vec2(logo.x, 22.0), Sense::hover());
-                egui::Image::new(crate::icons::redrob_logo(t.dark)).alt_text(tl!("Redrob")).paint_at(ui, Rect::from_center_size(cell.center(), logo));
-                ui.label(RichText::new(tl!("Launcher")).size(theme::text::CONTROL).family(theme::semibold()).color(t.ink));
+                ui.add(
+                    egui::Label::new(
+                        RichText::new(name)
+                            .size(theme::text::BODY)
+                            .family(theme::semibold())
+                            .color(t.ink)
+                            .extra_letter_spacing(-0.01 * theme::text::BODY),
+                    )
+                    .selectable(false)
+                    .truncate(),
+                );
             });
         }
         ui.add_space(theme::space::S4);

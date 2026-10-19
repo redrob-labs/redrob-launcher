@@ -164,7 +164,7 @@ fn korean_switches_persists_and_keeps_install_actions() {
     h.get_by_label_contains("3분 전 확인함 · Redrob API 사용");
     h.get_by_label("0.5.0(으)로 업데이트");
     // Product names stay in Latin script.
-    h.get_by_label("Launcher");
+    h.get_by_label("Redrob Launcher");
     h.get_by_label("Redrob Canvas");
     snapshot(&mut h, "grid-ko-dark");
     h.get_by_label("모두 업데이트(2)").click();
