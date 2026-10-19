@@ -7,7 +7,7 @@ use redrob_launcher_core::protocol::{Command, JobPhase};
 use redrob_launcher_core::status::AppStatus;
 use redrob_launcher_core::{AppGroup, SUITE, time};
 
-use crate::app::{Dialog, LauncherUi, Page, TitleBar};
+use crate::app::{Dialog, LauncherUi, TitleBar};
 use crate::glyphs::Icon;
 use crate::i18n::{current, fmt, t, tn, tr_ctx};
 use crate::model::{self, AppEntry};
@@ -56,11 +56,14 @@ pub(crate) const FOOTER_H: f32 = 34.0;
 /// The footer drops its platform label rather than leave the status less room than this.
 const FOOTER_MIN_STATUS_W: f32 = 300.0;
 
-const CARD_MIN_W: f32 = 320.0;
+/// Three tiles across the main area beside the sidebar at the default 1180 px window.
+const CARD_MIN_W: f32 = 272.0;
 const CARD_H: f32 = 280.0;
 /// The card's top strip: number tab and links.
 const STRIP_H: f32 = 40.0;
 const CARD_PAD: f32 = 20.0;
+/// The icon buttons beside an app's main action (pause, cancel, More actions): DS IconButton sm.
+pub(crate) const ACTION_ICON: f32 = theme::control::SM;
 /// Room macOS's traffic lights take at the left of the header.
 const TRAFFIC_LIGHTS_W: f32 = 72.0;
 
@@ -68,9 +71,10 @@ const TRAFFIC_LIGHTS_W: f32 = 72.0;
 type Section = (Option<(&'static str, &'static str)>, Vec<&'static str>);
 
 impl LauncherUi {
-    /// The header bar; with a custom or macOS title bar it is also the window's title bar.
+    /// The title bar (Redrob Cowork's): with a custom or macOS title bar the whole bar drags the
+    /// window; at its right end Check for updates and, on a custom bar, the window buttons. The
+    /// pages, Settings and the account live in the sidebar.
     pub(crate) fn header(&mut self, ui: &mut Ui, bar: TitleBar) {
-        let t = Tokens::get(ui.ctx());
         let h = HEADER_H;
         if bar != TitleBar::Native {
             widgets::title_bar_drag(ui);
@@ -80,45 +84,15 @@ impl LauncherUi {
             if bar == TitleBar::MacOs {
                 ui.add_space(TRAFFIC_LIGHTS_W);
             }
-            // The Redrob lockup exactly as supplied (the variant for this ground), in its own cell.
-            let logo = vec2(18.0 * crate::icons::REDROB_LOGO_ASPECT, 18.0);
-            let (cell, _) = ui.allocate_exact_size(vec2(logo.x + 2.0 * theme::space::S5, h), Sense::hover());
-            egui::Image::new(crate::icons::redrob_logo(t.dark)).alt_text(tl!("Redrob")).paint_at(ui, Rect::from_center_size(cell.center(), logo));
-            // The product name beside the lockup (DS AppShell brand row: 14 px semibold, ink).
-            ui.label(RichText::new(tl!("Launcher")).size(theme::text::CONTROL).family(theme::semibold()).color(t.ink));
-            ui.add_space(theme::space::S5);
-            // The two pages, as tabs: the apps, and the models they can use on this computer.
-            if widgets::nav_link(ui, tl!("Apps"), tl!("The Redrob apps"), h, self.page == Page::Apps).clicked() {
-                self.page = Page::Apps;
-            }
-            self.models_link(ui, h);
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if bar == TitleBar::Custom {
                     widgets::window_buttons(ui, h);
                 } else {
                     ui.add_space(theme::space::S2);
                 }
-                ui.add_space(theme::space::S1);
-                if widgets::icon_button(ui, Icon::Settings, tl!("Settings"), theme::control::MD).clicked() {
-                    self.dialog = Some(Dialog::Settings);
-                }
-                ui.add_space(theme::space::S1);
-                if widgets::icon_button_busy(ui, Icon::Refresh, tl!("Check for updates"), theme::control::MD, self.checking).clicked() {
-                    self.check_now();
-                }
                 ui.add_space(theme::space::S2);
-                self.account_link(ui, h);
-                self.engine_link(ui, h);
-                if self.page == Page::Apps {
-                    ui.add_space(theme::space::S3);
-                    // Right to left: Table, then Grid, so they read Grid · Table.
-                    for (mode, label, tip) in
-                        [(ViewMode::Table, tl!("Table"), tl!("Show apps as a table")), (ViewMode::Grid, tl!("Grid"), tl!("Show apps as cards"))]
-                    {
-                        if widgets::nav_link(ui, label, tip, h, self.settings.view == mode).clicked() {
-                            self.settings.view = mode;
-                        }
-                    }
+                if widgets::icon_button_busy(ui, Icon::Refresh, tl!("Check for updates"), theme::control::SM, self.checking).clicked() {
+                    self.check_now();
                 }
             });
         });
@@ -192,8 +166,9 @@ impl LauncherUi {
             ui.add_space(14.0);
         }
         self.announcements(ui);
+        // A narrow window (the folded sidebar) puts the sort under the filters, not over them.
+        let narrow = ui.available_width() < 640.0;
         ui.horizontal(|ui| {
-            let updates = self.count(Filter::Updates);
             let filters: Vec<(Filter, Cell<'_>)> = [
                 (Filter::All, tl!("All"), tl!("Every Redrob app"), None),
                 // The tab names a group ("installed ones"); the status pill says "Installed".
@@ -206,34 +181,21 @@ impl LauncherUi {
             .map(|(f, label, tip, highlight)| (f, Cell { label, tip, count: Some((self.count(f), highlight)) }))
             .collect();
             widgets::cells(ui, &mut self.settings.filter, &filters);
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if self.caps.manage_apps && updates > 0 {
-                    let label = if updates == 1 {
-                        tl!("Update 1 app").to_string()
-                    } else {
-                        fmt(tl!("Update all ({count})"), &[("count", &updates.to_string())])
-                    };
-                    if widgets::button(ui, &label, Kind::Primary, 0.0).clicked() {
-                        let ids: Vec<&str> = self
-                            .entries
-                            .iter()
-                            .filter(|e| e.status(self.platform, true) == AppStatus::UpdateAvailable && e.job.is_none())
-                            .map(|e| e.app.id)
-                            .collect();
-                        for id in ids {
-                            self.send(Command::Install { app: id.to_string() });
-                        }
-                    }
-                    ui.add_space(4.0);
-                }
-                ui.add(
-                    egui::TextEdit::singleline(&mut self.search)
-                        .hint_text(tl!("Search apps"))
-                        .desired_width(200.0)
-                        .min_size(vec2(0.0, theme::CONTROL_H))
-                        .vertical_align(egui::Align::Center)
-                        .margin(vec2(10.0, 0.0)),
-                );
+            if !narrow {
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| self.sort_combo(ui));
+            }
+        });
+        if narrow && self.settings.view == ViewMode::Grid {
+            ui.add_space(8.0);
+            ui.horizontal(|ui| ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| self.sort_combo(ui)));
+        }
+    }
+
+    /// The grid's sort, with its caption where it fits. Right to left.
+    fn sort_combo(&mut self, ui: &mut Ui) {
+        let t = Tokens::get(ui.ctx());
+        {
+            {
                 if self.settings.view == ViewMode::Grid {
                     egui::ComboBox::from_id_salt("sort")
                         .selected_text(RichText::new(sort_label(self.settings.sort)).size(13.0))
@@ -260,8 +222,8 @@ impl LauncherUi {
                         widgets::hud(ui, sort, t.faint);
                     }
                 }
-            });
-        });
+            }
+        }
     }
 
     /// News from the release feed (and app renames), until the user dismisses each.
@@ -519,18 +481,19 @@ impl LauncherUi {
             let y = ui.max_rect().bottom() + ui.spacing().item_spacing.y / 2.0;
             ui.ctx().layer_painter(ui.layer_id()).with_clip_rect(clip).hline(span, y, t.hairline());
         };
-        egui::Frame::new().fill(t.bg).stroke(t.hairline()).inner_margin(egui::Margin::symmetric(16, 0)).show(ui, |ui| {
+        egui::Frame::new().fill(t.bg).stroke(t.hairline()).inner_margin(egui::Margin::symmetric(12, 0)).show(ui, |ui| {
             TableBuilder::new(ui)
                 .striped(false)
                 .vscroll(false)
                 .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
-                .column(Column::remainder().at_least(220.0).clip(true))
-                .column(Column::exact(172.0).clip(true))
-                .column(Column::exact(176.0))
-                .column(Column::exact(84.0))
-                .column(Column::exact(84.0))
-                .column(Column::exact(104.0))
-                .column(Column::exact(206.0))
+                // Sized to fit the main area beside the sidebar at the default 1180 px window.
+                .column(Column::remainder().at_least(140.0).clip(true))
+                .column(Column::exact(96.0).clip(true))
+                .column(Column::exact(136.0).clip(true))
+                .column(Column::exact(64.0))
+                .column(Column::exact(64.0))
+                .column(Column::exact(96.0).clip(true))
+                .column(Column::exact(196.0))
                 .header(42.0, |mut header| {
                     for (key, label) in [
                         (Some(SortKey::Name), tl!("App")),
@@ -638,7 +601,7 @@ impl LauncherUi {
                                     r.on_hover_text(ago_text(w, now));
                                 }
                             });
-                            row.col(|ui| self.actions(ui, &entry, &status, 204.0));
+                            row.col(|ui| self.actions(ui, &entry, &status, 194.0));
                         });
                     }
                 });
@@ -689,10 +652,10 @@ impl LauncherUi {
         let id = entry.app.id.to_string();
         // One square button (the menu) beside the main one.
         let gap = ui.spacing().item_spacing.x;
-        let main_w = (width - theme::CONTROL_H - gap).max(120.0);
+        let main_w = (width - ACTION_ICON - gap).max(120.0);
         if let Some(phase) = entry.job {
             // Two square buttons (pause, cancel) beside the bar while downloading.
-            let bar_w = (width - 2.0 * (theme::CONTROL_H + gap) - 4.0).max(100.0);
+            let bar_w = (width - 2.0 * (ACTION_ICON + gap) - 4.0).max(100.0);
             let short = bar_w < 200.0;
             let amount = |done: u64, total: u64| {
                 if total > 0 {
@@ -733,17 +696,12 @@ impl LauncherUi {
             let waiting = phase == JobPhase::Waiting;
             // Waiting has one square button beside the bar, like the menu otherwise.
             widgets::progress(ui, fraction, &caption, color, if downloading { bar_w } else { main_w });
-            if downloading && widgets::icon_button(ui, crate::glyphs::Icon::Pause, tl!("Pause download"), crate::theme::CONTROL_H).clicked() {
+            if downloading && widgets::icon_button(ui, crate::glyphs::Icon::Pause, tl!("Pause download"), ACTION_ICON).clicked() {
                 self.send(Command::Pause { app: id.clone() });
             }
             if (downloading || waiting)
-                && widgets::icon_button(
-                    ui,
-                    crate::glyphs::Icon::Close,
-                    if waiting { tl!("Cancel") } else { tl!("Cancel download") },
-                    crate::theme::CONTROL_H,
-                )
-                .clicked()
+                && widgets::icon_button(ui, crate::glyphs::Icon::Close, if waiting { tl!("Cancel") } else { tl!("Cancel download") }, ACTION_ICON)
+                    .clicked()
             {
                 self.send(Command::Cancel { app: id });
             }
@@ -754,7 +712,7 @@ impl LauncherUi {
         {
             let pct = if p.total > 0 { format!(" · {:.0}%", p.done as f32 / p.total as f32 * 100.0) } else { String::new() };
             // Resume, then discard and the menu (two squares).
-            let resume_w = (width - 2.0 * (theme::CONTROL_H + gap)).max(90.0);
+            let resume_w = (width - 2.0 * (ACTION_ICON + gap)).max(90.0);
             // Narrow (the table): just tl!("Resume"); the tooltip says how far it got.
             let label = match resume_w {
                 w if w < 150.0 => tl!("Resume").to_string(),
@@ -770,7 +728,7 @@ impl LauncherUi {
             if resp.on_hover_text(tip).clicked() {
                 self.send(Command::Install { app: id.clone() });
             }
-            if widgets::icon_button(ui, crate::glyphs::Icon::Close, tl!("Discard download"), crate::theme::CONTROL_H).clicked() {
+            if widgets::icon_button(ui, crate::glyphs::Icon::Close, tl!("Discard download"), ACTION_ICON).clicked() {
                 self.send(Command::Cancel { app: id.clone() });
             }
             self.menu(ui, entry, status);

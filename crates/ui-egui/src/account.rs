@@ -6,7 +6,7 @@ use redrob_launcher_core::SUITE;
 use redrob_launcher_core::account::{AppLink, ConnectState};
 use redrob_launcher_core::protocol::LatestRelease;
 
-use crate::app::{Dialog, LauncherUi};
+use crate::app::{LauncherUi, Page};
 use crate::i18n::{fmt, msg};
 use crate::theme::{self, Tokens};
 use crate::widgets::{self, Kind};
@@ -30,23 +30,27 @@ impl LauncherUi {
         }
     }
 
-    /// The header's account link: "Sign in", or the workspace's name. Opens the account dialog.
-    pub(crate) fn account_link(&mut self, ui: &mut egui::Ui, height: f32) {
-        let (label, tip) = match self.header_account() {
-            HeaderAccount::None => return,
-            HeaderAccount::SignedOut => (tl!("Sign in").to_string(), tl!("Sign in to Redrob once for every app on this computer").to_string()),
-            HeaderAccount::Busy => (tl!("Signing in…").to_string(), tl!("Approve the code on console.redrob.ai").to_string()),
-            HeaderAccount::SignedIn(name) => (name, tl!("Your Redrob workspace and the apps that use it").to_string()),
+    /// The sidebar's account row: "Sign in", or the workspace's name. Opens the account page.
+    /// Returns whether there is one (no account backend on the web).
+    pub(crate) fn account_nav(&mut self, ui: &mut egui::Ui, rail: bool) -> bool {
+        let (label, tip, initial) = match self.header_account() {
+            HeaderAccount::None => return false,
+            HeaderAccount::SignedOut => (tl!("Sign in").to_string(), tl!("Sign in to Redrob once for every app on this computer").to_string(), None),
+            HeaderAccount::Busy => (tl!("Signing in…").to_string(), tl!("Approve the code on console.redrob.ai").to_string(), None),
+            HeaderAccount::SignedIn(name) => {
+                let initial = name.chars().next();
+                (name, tl!("Your Redrob workspace and the apps that use it").to_string(), initial)
+            }
         };
-        if widgets::nav_link(ui, &label, &tip, height, matches!(self.dialog, Some(Dialog::Account))).clicked() {
-            self.dialog = Some(Dialog::Account);
+        if widgets::account_row(ui, &label, tl!("Redrob account"), initial, self.page == Page::Account, rail, &tip).clicked() {
+            self.set_page(Page::Account);
         }
+        true
     }
 
-    pub(crate) fn account_dialog(&mut self, ui: &mut egui::Ui) -> bool {
+    /// The account page (its title is in the page's top bar). Returns true when Done is pressed.
+    pub(crate) fn account_page(&mut self, ui: &mut egui::Ui) -> bool {
         let t = Tokens::get(ui.ctx());
-        ui.set_width(560.0f32.min(ui.ctx().content_rect().width() - 80.0));
-        Self::title(ui, Some(crate::icons::redrob_mark()), tl!("Redrob account"), tl!("One sign-in for every Redrob app on this computer"));
         let Some(acct) = self.backend.account() else { return true };
         let workspace = acct.workspace();
         let state = acct.state();
@@ -119,7 +123,8 @@ impl LauncherUi {
         ui.add_space(6.0);
         let signed_in = workspace.is_some();
         let mut connect: Option<&'static str> = None;
-        egui::ScrollArea::vertical().max_height(ui.ctx().content_rect().height() * 0.45).show(ui, |ui| {
+        // The page scrolls as a whole.
+        {
             for app in &SUITE {
                 let entry = self.entry(app.id);
                 let installed = entry.and_then(|e| e.installed.as_ref()).and_then(|i| i.version.clone());
@@ -164,7 +169,7 @@ impl LauncherUi {
                 });
                 ui.add_space(4.0);
             }
-        });
+        }
         if let Some(id) = connect {
             let ctx = ui.ctx().clone();
             let name = SUITE.iter().find(|a| a.id == id).map_or(id, |a| a.name);

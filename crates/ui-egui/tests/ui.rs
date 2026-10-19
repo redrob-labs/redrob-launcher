@@ -219,14 +219,17 @@ fn grid_shows_every_status_and_installs_on_click() {
 fn downloads_can_be_paused_resumed_and_discarded() {
     let (mut h, sent) = harness(ViewMode::Grid, egui::Theme::Dark, true);
     h.run_steps(4);
-    // Bring the paused and reconnecting apps on screen.
+    // Bring the paused and reconnecting apps on screen (the sidebar leaves the grid three
+    // columns, so the third row needs a taller window).
     if let Some(l) = h.state_mut().as_mut() {
         l.settings.filter = redrob_launcher_ui_egui::settings::Filter::NotInstalled;
     }
+    h.set_size(egui::vec2(1180.0, 1100.0));
     h.run_steps(6);
     snapshot(&mut h, "grid-downloads-dark");
     h.get_by_label("Download paused");
-    h.get_by_label("Reconnecting…");
+    // The badge, and in a narrow tile the progress caption too.
+    assert!(h.query_all_by_label("Reconnecting…").count() >= 1);
     h.get_by_label_contains("· 25%").click();
     h.run_steps(2);
     assert!(sent.borrow().contains(&Command::Install { app: "redrob-cowork".into() }));
@@ -900,12 +903,12 @@ fn the_rate_limit_notice_never_runs_under_the_footer_links() {
         // Cut short in a narrow window, but enough of it left to read.
         assert!(notice.width() >= 120.0 && notice.right() <= width, "{width}: notice {notice:?}");
         // Everything on the footer's right: the two links and (when there's room) the platform.
-        // Only the footer's 34 px band: a card's own links can scroll to just above it.
+        // Only the footer's own row: a card's links can scroll under the footer, a few px off it.
         let footer_top = 900.0 - 34.0;
         let mut right = Vec::new();
         for label in ["Website", "GitHub"] {
             right.extend(
-                h.query_all_by_label(label).map(|n| n.rect()).filter(|r| (r.center().y - notice.center().y).abs() < 12.0 && r.top() >= footer_top),
+                h.query_all_by_label(label).map(|n| n.rect()).filter(|r| (r.center().y - notice.center().y).abs() < 1.5 && r.top() >= footer_top),
             );
         }
         assert_eq!(right.len(), 2, "{width}: {right:?}");

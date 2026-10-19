@@ -31,6 +31,7 @@ pub mod model;
 mod models;
 mod notes;
 pub mod settings;
+mod shell;
 pub mod theme;
 mod views;
 mod widgets;

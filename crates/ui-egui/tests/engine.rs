@@ -110,9 +110,9 @@ fn a_running_engine_lists_its_apps_and_offers_stop_and_restart() {
     h.run_steps(12);
     h.get_by_label("Running");
     h.get_by_label("version 0.6.0");
-    // The suite grid lists these names too, so the dialog adds a second match for each.
-    assert_eq!(h.get_all_by_label("Redrob Design").count(), 2);
-    assert_eq!(h.get_all_by_label("Redrob Cowork").count(), 2);
+    // The engine is a page now: it replaces the suite grid, so each attached app is listed once.
+    assert_eq!(h.get_all_by_label("Redrob Design").count(), 1);
+    assert_eq!(h.get_all_by_label("Redrob Cowork").count(), 1);
     if let Some(dir) = std::env::var_os("REDROB_LAUNCHER_SNAPSHOTS") {
         h.render().unwrap().save(std::path::Path::new(&dir).join("engine.png")).unwrap();
     }

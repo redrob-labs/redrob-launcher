@@ -93,25 +93,6 @@ pub fn tag(ui: &mut Ui, text: &str, fill: Color32, ink: Color32) -> Response {
     resp
 }
 
-/// A header tab (DS AppShell nav item): 13 px label in ink-secondary on the bar's sunken ground;
-/// on hover and when `active` a radius-6 base-surface span with ink, `active` also semibold. No
-/// accent bar.
-pub fn nav_link(ui: &mut Ui, text: &str, tip: &str, height: f32, active: bool) -> Response {
-    let t = Tokens::get(ui.ctx());
-    let family = if active { theme::semibold() } else { theme::medium() };
-    let galley = caps(ui, text, theme::text::LABEL, family, 0.0, t.muted);
-    let (rect, resp) = ui.allocate_exact_size(vec2(galley.size().x + 20.0, height), Sense::click());
-    let hovered = resp.hovered();
-    let span = Rect::from_center_size(rect.center(), vec2(galley.size().x + 16.0, theme::control::SM));
-    if active || hovered {
-        ui.painter().rect_filled(span, CornerRadius::same(theme::radius::SM), t.bg);
-    }
-    paint_centred(ui, rect, galley, if active || hovered { t.ink } else { t.muted });
-    resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Button, true, active, text));
-    focus_ring(ui, &resp, theme::radius::SM);
-    self::tip(resp, tip).on_hover_cursor(egui::CursorIcon::PointingHand)
-}
-
 /// How far in from the window's edges a custom title bar's window resizes ([`window_edges`]).
 /// The title bar's own controls leave this band alone.
 const RESIZE_EDGE: f32 = 5.0;
@@ -599,7 +580,7 @@ pub fn human_bytes(n: u64) -> String {
 
 /// The "more" icon button that opens an app's menu (DS Menu: 8 px radius list, min 200 wide).
 pub fn more_menu<R>(ui: &mut Ui, add_contents: impl FnOnce(&mut Ui) -> R) {
-    let resp = icon_button(ui, Icon::More, tl!("More actions"), theme::CONTROL_H);
+    let resp = icon_button(ui, Icon::More, tl!("More actions"), theme::control::SM);
     egui::Popup::menu(&resp).gap(theme::space::S1).show(|ui| {
         ui.set_min_width(200.0);
         // DS menu items are about 36 px.
@@ -626,4 +607,179 @@ pub fn wordmark(ui: &mut Ui, app: &redrob_launcher_core::CraftApp, size: f32) ->
 /// A heading in the display face, tracked in like the site's (`tracking-[-0.02em]`).
 pub fn heading(text: &str, size: f32, color: Color32) -> RichText {
     RichText::new(text).size(size).family(theme::display()).color(color).extra_letter_spacing(-0.02 * size)
+}
+
+/// What a sidebar row shows at its right end.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum NavMeta {
+    None,
+    /// A count in this colour (DS nav meta: 12 px, right aligned); nothing when zero.
+    Count(usize, Color32),
+    /// A 7 px status dot (DS TaskStatus).
+    Dot(Color32),
+}
+
+/// Height of a sidebar row (Redrob Cowork: 7 px of padding round a 24 px line).
+pub const NAV_ROW_H: f32 = 38.0;
+
+/// A sidebar row (DS AppShell nav item, Cowork's numbers): 16 px icon in ink-muted, 13 px label
+/// in ink-secondary, radius 6; hover takes a step of the sunken surface; the current row is
+/// sunken, semibold ink, its icon ink-brand. No accent bar. In the folded `rail` only the icon
+/// shows, the label becomes its tooltip and a meta becomes a dot on the icon.
+pub fn nav_row(ui: &mut Ui, icon: Icon, label: &str, hint: &str, meta: NavMeta, current: bool, rail: bool) -> Response {
+    let t = Tokens::get(ui.ctx());
+    let (rect, resp) = ui.allocate_exact_size(vec2(ui.available_width(), NAV_ROW_H), Sense::click());
+    let hovered = resp.hovered();
+    let p = ui.painter();
+    let radius = CornerRadius::same(theme::radius::SM);
+    if current {
+        p.rect_filled(rect, radius, t.sunken);
+    } else if hovered {
+        p.rect_filled(rect, radius, t.hover_row());
+    }
+    let icon_ink = if current {
+        t.accent_ink
+    } else if hovered {
+        t.ink
+    } else {
+        t.faint
+    };
+    let ink = if current || hovered { t.ink } else { t.muted };
+    let pad = theme::space::S2;
+    let icon_rect = if rail {
+        Rect::from_center_size(rect.center(), vec2(16.0, 16.0))
+    } else {
+        Rect::from_min_size(egui::pos2(rect.left() + pad, rect.center().y - 8.0), vec2(16.0, 16.0))
+    };
+    crate::glyphs::paint(p, icon_rect, icon, icon_ink);
+    if rail {
+        let dot = match meta {
+            NavMeta::Dot(c) => Some(c),
+            NavMeta::Count(n, c) if n > 0 => Some(c),
+            _ => None,
+        };
+        if let Some(c) = dot {
+            p.circle_filled(icon_rect.right_top() + vec2(1.0, 1.0), 3.5, c);
+        }
+    } else {
+        let mut right = rect.right() - pad;
+        match meta {
+            NavMeta::Count(n, c) if n > 0 => {
+                let g = caps(ui, &n.to_string(), theme::text::META, theme::medium(), 0.0, c);
+                let w = g.size().x;
+                paint_left(ui, Rect::from_min_max(egui::pos2(right - w, rect.top()), egui::pos2(right, rect.bottom())), g, c);
+                right -= w + pad;
+            }
+            NavMeta::Dot(c) => {
+                p.circle_filled(egui::pos2(right - 3.5, rect.center().y), 3.5, c);
+                right -= 7.0 + pad;
+            }
+            _ => {}
+        }
+        let text_left = icon_rect.right() + pad;
+        let family = if current { theme::semibold() } else { egui::FontFamily::Proportional };
+        let format = egui::TextFormat { font_id: egui::FontId::new(theme::text::LABEL, family), color: ink, ..Default::default() };
+        let mut job = egui::text::LayoutJob::single_section(label.to_owned(), format);
+        job.wrap = egui::text::TextWrapping::truncate_at_width((right - text_left).max(0.0));
+        let g = ui.painter().layout_job(job);
+        paint_left(ui, Rect::from_min_max(egui::pos2(text_left, rect.top()), rect.max), g, ink);
+    }
+    resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Button, true, current, label));
+    focus_ring(ui, &resp, theme::radius::SM);
+    let resp = if rail {
+        tip(resp, label)
+    } else if hint.is_empty() {
+        resp
+    } else {
+        tip(resp, hint)
+    };
+    resp.on_hover_cursor(egui::CursorIcon::PointingHand)
+}
+
+/// The sidebar's account row: a 28 px avatar (DS Avatar: the workspace's initial in white on
+/// the brand blue; signed out, a person on the sunken surface), the name in 13 px semibold and a
+/// 12 px meta line under it. Screen readers read `name`.
+pub fn account_row(ui: &mut Ui, name: &str, meta: &str, initial: Option<char>, current: bool, rail: bool, hint: &str) -> Response {
+    let t = Tokens::get(ui.ctx());
+    let (rect, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 48.0), Sense::click());
+    let hovered = resp.hovered();
+    let p = ui.painter();
+    let radius = CornerRadius::same(theme::radius::SM);
+    if current {
+        p.rect_filled(rect, radius, t.sunken);
+    } else if hovered {
+        p.rect_filled(rect, radius, t.hover_row());
+    }
+    let size = 28.0;
+    let centre = if rail { rect.center() } else { egui::pos2(rect.left() + theme::space::S2 + size / 2.0, rect.center().y) };
+    match initial {
+        Some(c) => {
+            p.circle_filled(centre, size / 2.0, t.accent);
+            let s: String = c.to_uppercase().collect();
+            p.text(centre, egui::Align2::CENTER_CENTER, s, egui::FontId::new(theme::text::LABEL, theme::semibold()), t.on_brand());
+        }
+        None => {
+            p.circle_filled(centre, size / 2.0, if current { t.bg } else { t.sunken });
+            crate::glyphs::paint(p, Rect::from_center_size(centre, vec2(16.0, 16.0)), Icon::Account, t.muted);
+        }
+    }
+    if !rail {
+        let left = centre.x + size / 2.0 + 10.0;
+        let width = (rect.right() - theme::space::S2 - left).max(0.0);
+        let line = |text: &str, size: f32, family: egui::FontFamily, color: Color32| {
+            let format = egui::TextFormat { font_id: egui::FontId::new(size, family), color, ..Default::default() };
+            let mut job = egui::text::LayoutJob::single_section(text.to_owned(), format);
+            job.wrap = egui::text::TextWrapping::truncate_at_width(width);
+            ui.painter().layout_job(job)
+        };
+        let top = line(name, theme::text::LABEL, theme::semibold(), t.ink);
+        let bottom = line(meta, theme::text::META, egui::FontFamily::Proportional, t.faint);
+        let total = top.size().y + bottom.size().y;
+        let y = rect.center().y - total / 2.0;
+        let top_h = top.size().y;
+        ui.painter().galley(egui::pos2(left, y), top, t.ink);
+        ui.painter().galley(egui::pos2(left, y + top_h), bottom, t.faint);
+    }
+    resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Button, true, current, name));
+    focus_ring(ui, &resp, theme::radius::SM);
+    let resp = if rail { tip(resp, name) } else { tip(resp, hint) };
+    resp.on_hover_cursor(egui::CursorIcon::PointingHand)
+}
+
+/// The DS ThemeSwitch: System, Light and Dark as three 28 px round icon options in a pill with a
+/// hairline, the chosen one sunken with a hairline ring. Three options, never a two-way toggle.
+/// Stacked when `vertical` (the folded sidebar). Returns whether the choice changed.
+pub fn theme_switch(ui: &mut Ui, value: &mut theme::ThemeChoice, vertical: bool) -> bool {
+    use theme::ThemeChoice;
+    let t = Tokens::get(ui.ctx());
+    const OPT: f32 = 28.0;
+    const PAD: f32 = 2.0;
+    let options = [(ThemeChoice::System, Icon::Monitor), (ThemeChoice::Light, Icon::Sun), (ThemeChoice::Dark, Icon::Moon)];
+    let long = 3.0 * OPT + 4.0 * PAD;
+    let short = OPT + 2.0 * PAD;
+    let (track, _) = ui.allocate_exact_size(if vertical { vec2(short, long) } else { vec2(long, short) }, Sense::hover());
+    let pill = CornerRadius::same(theme::radius::PILL);
+    ui.painter().rect(track, pill, t.bg, t.hairline(), egui::StrokeKind::Inside);
+    let mut changed = false;
+    for (i, (choice, icon)) in options.into_iter().enumerate() {
+        let off = PAD + i as f32 * (OPT + PAD);
+        let min = if vertical { track.min + vec2(PAD, off) } else { track.min + vec2(off, PAD) };
+        let rect = Rect::from_min_size(min, vec2(OPT, OPT));
+        let label = choice.label();
+        let resp = ui.interact(rect, ui.id().with(("theme-switch", i)), Sense::click());
+        let on = *value == choice;
+        let p = ui.painter();
+        if on {
+            p.rect(rect, pill, t.sunken, t.hairline(), egui::StrokeKind::Inside);
+        }
+        let ink = if on || resp.hovered() { t.ink } else { t.faint };
+        crate::glyphs::paint(p, Rect::from_center_size(rect.center(), vec2(16.0, 16.0)), icon, ink);
+        resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::RadioButton, true, on, label));
+        focus_ring(ui, &resp, theme::radius::PILL);
+        if tip(resp, label).on_hover_cursor(egui::CursorIcon::PointingHand).clicked() && !on {
+            *value = choice;
+            changed = true;
+        }
+    }
+    changed
 }

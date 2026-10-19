@@ -132,14 +132,25 @@ fn fit_rank(fit: Fit) -> u8 {
 }
 
 impl LauncherUi {
-    /// The header's Models tab, on backends that can download models. Says so while one is coming in.
-    pub(crate) fn models_link(&mut self, ui: &mut egui::Ui, height: f32) {
+    /// The sidebar's Models row, on backends that can download models. Says so while one is coming in.
+    pub(crate) fn models_nav(&mut self, ui: &mut egui::Ui, rail: bool) {
         let Some(models) = self.backend.models() else { return };
         let views = models.models();
         let busy = views.iter().any(|v| matches!(v.state, ModelState::Downloading { .. }) || v.serving == Serving::Starting);
         let label = if busy { tl!("Models…") } else { tl!("Models") };
-        if widgets::nav_link(ui, label, tl!("Local models: what runs on this computer"), height, self.page == Page::Models).clicked() {
-            self.page = Page::Models;
+        let meta = if busy { widgets::NavMeta::Dot(Tokens::get(ui.ctx()).accent) } else { widgets::NavMeta::None };
+        if widgets::nav_row(
+            ui,
+            crate::glyphs::Icon::Models,
+            label,
+            tl!("Local models: what runs on this computer"),
+            meta,
+            self.page == Page::Models,
+            rail,
+        )
+        .clicked()
+        {
+            self.set_page(Page::Models);
         }
     }
 
@@ -245,7 +256,7 @@ impl LauncherUi {
             ui.set_width(ui.available_width().min(920.0));
             ui.horizontal(|ui| {
                 ui.vertical(|ui| {
-                    ui.label(RichText::new(tl!("Models")).size(20.0).family(theme::medium()).color(t.ink_strong));
+                    // The title is in the page's top bar.
                     ui.add(
                         egui::Label::new(
                             RichText::new(tl!(

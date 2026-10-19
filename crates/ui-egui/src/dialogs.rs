@@ -11,7 +11,7 @@ use crate::theme::{self, ThemeChoice, Tokens};
 use crate::widgets::{self, Cell, Kind};
 
 impl LauncherUi {
-    pub(crate) fn dialogs(&mut self, ctx: &egui::Context, host: &mut dyn Host) {
+    pub(crate) fn dialogs(&mut self, ctx: &egui::Context) {
         let Some(dialog) = self.dialog.clone() else {
             self.alert_popup(ctx);
             return;
@@ -23,16 +23,9 @@ impl LauncherUi {
         let response = match &dialog {
             Dialog::Notes(id) => modal.show(ctx, |ui| close = self.notes_dialog(ui, id)),
             Dialog::ConfirmUninstall(id) => modal.show(ctx, |ui| close = self.uninstall_dialog(ui, id)),
-            Dialog::Settings => modal.show(ctx, |ui| close = self.settings_dialog(ui, host)),
             Dialog::LauncherUpdate(r) => modal.show(ctx, |ui| close = self.launcher_update_dialog(ui, r)),
-            Dialog::Account => modal.show(ctx, |ui| close = self.account_dialog(ui)),
-            Dialog::Engine => modal.show(ctx, |ui| close = self.engine_dialog(ui)),
         };
         if close || response.should_close() {
-            if matches!(dialog, Dialog::Settings) {
-                // The next open reads the engine's channel files again.
-                self.channels.reset();
-            }
             self.dialog = None;
         }
     }
@@ -173,10 +166,9 @@ impl LauncherUi {
         close
     }
 
-    fn settings_dialog(&mut self, ui: &mut egui::Ui, host: &mut dyn Host) -> bool {
-        // Wide enough for the community buttons and every social icon on one row.
-        ui.set_width(520.0);
-        Self::title(ui, Some(crate::icons::redrob_mark()), tl!("Settings"), &format!("Redrob Launcher {}", env!("CARGO_PKG_VERSION")));
+    /// The Settings page (its title is in the page's top bar): General, Channels and Apps as a
+    /// segmented control, Quit at the foot. Returns true when Done is pressed.
+    pub(crate) fn settings_page(&mut self, ui: &mut egui::Ui, host: &mut dyn Host) -> bool {
         // Channels and Apps need the engine's files and daemon: desktop only.
         if self.backend.channels().is_some() {
             use crate::channels::SettingsTab;
@@ -197,12 +189,7 @@ impl LauncherUi {
             ui.add_space(10.0);
             match tab {
                 SettingsTab::General => self.settings_general(ui, host),
-                SettingsTab::Channels => {
-                    egui::ScrollArea::vertical().max_height(ui.ctx().content_rect().height() * 0.62).show(ui, |ui| {
-                        ui.set_width(ui.available_width());
-                        self.channels_tab(ui);
-                    });
-                }
+                SettingsTab::Channels => self.channels_tab(ui),
                 SettingsTab::Apps => self.apps_tab(ui),
             }
         } else {

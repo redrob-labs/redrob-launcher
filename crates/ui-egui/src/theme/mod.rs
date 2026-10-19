@@ -162,6 +162,22 @@ impl Tokens {
         (if self.dark { self.ink } else { self.invert_bg }, self.invert_fg)
     }
 
+    /// A row's hover in a list on the base surface: `surface-sunken` 60% over the base, a step
+    /// below the current row's full sunken fill (DS AppShell nav hover).
+    pub fn hover_row(&self) -> Color32 {
+        mix(self.bg, self.sunken, 0.6)
+    }
+
+    /// Redrob Cowork's floating card edge: `border-subtle` at 55% (dark: white at 7%).
+    pub fn card_edge(&self) -> Color32 {
+        if self.dark { tint(Color32::WHITE, 0.07) } else { tint(self.line, 0.55) }
+    }
+
+    /// The floating card's 1 px top highlight (`inset 0 1px 0`): white at 40% (dark 7%).
+    pub fn card_highlight(&self) -> Color32 {
+        tint(Color32::WHITE, if self.dark { 0.07 } else { 0.40 })
+    }
+
     /// Danger button hover (DS: `status-danger` at `brightness(0.92)`).
     pub fn bad_hover(&self) -> Color32 {
         scale(self.bad, 0.92)
@@ -347,10 +363,10 @@ pub fn shadow_lg(t: &Tokens) -> egui::epaint::Shadow {
     ds_shadow(t, 16, 40, 0.14, 0.8)
 }
 
-/// Redrob Cowork's floating sidebar card shadow (0 12px 32px -16px, .30). egui shadows have no
+/// Redrob Cowork's floating sidebar card shadow (0 12px 32px -16px, .30; dark .45). egui shadows have no
 /// negative spread, so draw it under the card's rect shrunk by [`FLOATING_SHADOW_INSET`].
 pub fn shadow_floating(t: &Tokens) -> egui::epaint::Shadow {
-    ds_shadow(t, 12, 32, 0.30, 0.6)
+    ds_shadow(t, 12, 32, 0.30, 0.45)
 }
 
 /// The negative spread of [`shadow_floating`]: shrink the card's rect by this before casting it.

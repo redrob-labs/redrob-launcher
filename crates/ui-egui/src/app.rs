@@ -68,11 +68,17 @@ pub struct LanguageChoice {
     pub apps: std::collections::BTreeMap<String, String>,
 }
 
-/// Which page the central panel shows: the apps, or the models they can use.
+/// Which page the main area shows: one per sidebar row.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Page {
     Apps,
+    /// The models the apps can use on this computer.
     Models,
+    /// The shared Redrob Code engine: running or not, who uses it, start and stop.
+    Engine,
+    /// Signing in to Redrob, and which apps use it.
+    Account,
+    Settings,
 }
 
 pub(crate) struct Toast {
@@ -85,13 +91,7 @@ pub(crate) struct Toast {
 pub(crate) enum Dialog {
     Notes(String),
     ConfirmUninstall(String),
-    Settings,
     LauncherUpdate(redrob_launcher_core::Release),
-    /// Signing in to Redrob, and which apps use it.
-    Account,
-    /// The apps' downloadable models.
-    /// The shared Redrob Code engine: running or not, who uses it, start and stop.
-    Engine,
 }
 
 pub struct LauncherUi {
@@ -118,7 +118,7 @@ pub struct LauncherUi {
     pub(crate) toasts: Vec<Toast>,
     pub(crate) dialog: Option<Dialog>,
     pub(crate) page: Page,
-    /// Which page of the Settings dialog is open.
+    /// Which tab of the Settings page is open.
     pub(crate) settings_tab: crate::channels::SettingsTab,
     /// Settings > Channels, as edited.
     pub(crate) channels: crate::channels::ChannelsPanel,
@@ -218,12 +218,12 @@ impl LauncherUi {
     }
 
     /// Looks for updates now (the tray's "Check for Updates").
-    /// Open the engine dialog (the tray's "Redrob Code engine" item).
+    /// Open the engine page (the tray's "Redrob Code engine" item).
     pub fn show_engine(&mut self) {
         if let Some(engine) = self.backend.engine() {
             engine.refresh();
         }
-        self.dialog = Some(Dialog::Engine);
+        self.set_page(Page::Engine);
     }
 
     pub fn check_now(&mut self) {
@@ -585,49 +585,76 @@ impl LauncherUi {
             ctx.request_repaint_after(Duration::from_millis(50));
         }
 
-        // The bars' separator lines are the hairlines under the header and over the footer. The
-        // header is the title bar: Redrob Cowork's 48 px bar on the sunken ground.
+        // The title bar across the top (Redrob Cowork's 48 px bar on the sunken ground, its hairline
+        // under it), then the sidebar card down the left; the footer and each page's top bar span
+        // the main area only, on the same base ground as the card's gap.
         egui::Panel::top("header")
             .frame(egui::Frame::new().fill(tokens.sunken))
             .exact_size(crate::views::HEADER_H)
             .resizable(false)
             .show(ui, |ui| self.header(ui, host.title_bar()));
+        let inset = crate::shell::INSET as i8;
+        egui::Panel::left("sidebar")
+            .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin { left: inset, right: inset, top: inset, bottom: inset }))
+            .exact_size(Self::sidebar_width(&ctx))
+            .resizable(false)
+            .show_separator_line(false)
+            .show(ui, |ui| self.sidebar(ui));
         egui::Panel::bottom("footer")
-            .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin::symmetric(20, 0)))
+            .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin::symmetric(24, 0)))
             .exact_size(crate::views::FOOTER_H)
             .resizable(false)
             .show(ui, |ui| self.footer(ui));
+        egui::Panel::top("page-top")
+            .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin::symmetric(24, 0)))
+            .exact_size(crate::shell::PAGE_TOP_H)
+            .resizable(false)
+            .show(ui, |ui| self.page_top_bar(ui));
         egui::CentralPanel::default()
-            .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin { left: 20, right: 20, top: 18, bottom: 0 }))
-            .show(ui, |ui| {
-                if self.page == Page::Models {
-                    self.models_page(ui);
-                    return;
-                }
-                self.toolbar(ui);
-                ui.add_space(18.0);
-                let ids = self.visible_ids();
-                // The table is wider than a narrow window: let it scroll sideways too.
-                let scroll = match self.settings.view {
-                    ViewMode::Grid => egui::ScrollArea::vertical(),
-                    ViewMode::Table => egui::ScrollArea::both(),
-                };
-                scroll.auto_shrink(false).show(ui, |ui| {
-                    if ids.is_empty() {
-                        ui.add_space(40.0);
-                        ui.vertical_centered(|ui| {
-                            crate::widgets::hud(ui, tl!("No apps match"), tokens.muted);
-                        });
-                    } else {
-                        match self.settings.view {
-                            ViewMode::Grid => self.grid(ui, &ids),
-                            ViewMode::Table => self.table(ui, &ids),
+            .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin { left: 24, right: 24, top: 20, bottom: 0 }))
+            .show(ui, |ui| match self.page {
+                Page::Models => self.models_page(ui),
+                Page::Engine | Page::Account | Page::Settings => {
+                    egui::ScrollArea::vertical().auto_shrink(false).show(ui, |ui| {
+                        // A reading measure, like Cowork's content column.
+                        ui.set_max_width(720.0);
+                        let done = match self.page {
+                            Page::Engine => self.engine_page(ui),
+                            Page::Account => self.account_page(ui),
+                            _ => self.settings_page(ui, host),
+                        };
+                        ui.add_space(24.0);
+                        if done {
+                            self.set_page(Page::Apps);
                         }
-                    }
+                    });
+                }
+                Page::Apps => {
+                    self.toolbar(ui);
                     ui.add_space(16.0);
-                });
+                    let ids = self.visible_ids();
+                    // The table is wider than a narrow window: let it scroll sideways too.
+                    let scroll = match self.settings.view {
+                        ViewMode::Grid => egui::ScrollArea::vertical(),
+                        ViewMode::Table => egui::ScrollArea::both(),
+                    };
+                    scroll.auto_shrink(false).show(ui, |ui| {
+                        if ids.is_empty() {
+                            ui.add_space(40.0);
+                            ui.vertical_centered(|ui| {
+                                crate::widgets::hud(ui, tl!("No apps match"), tokens.muted);
+                            });
+                        } else {
+                            match self.settings.view {
+                                ViewMode::Grid => self.grid(ui, &ids),
+                                ViewMode::Table => self.table(ui, &ids),
+                            }
+                        }
+                        ui.add_space(16.0);
+                    });
+                }
             });
-        self.dialogs(&ctx, host);
+        self.dialogs(&ctx);
         self.draw_toasts(&ctx);
         if host.title_bar() == TitleBar::Custom {
             crate::widgets::window_edges(&ctx);

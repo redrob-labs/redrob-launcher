@@ -6,7 +6,8 @@ use egui::{RichText, vec2};
 use redrob_launcher_core::engine::{EngineState, app_display_name};
 use redrob_launcher_core::protocol::Command;
 
-use crate::app::{Dialog, LauncherUi};
+use crate::app::{LauncherUi, Page};
+use crate::glyphs::Icon;
 use crate::i18n::{fmt, msg};
 use crate::model::Tone;
 use crate::theme::{self, Tokens};
@@ -29,37 +30,33 @@ fn minutes(secs: u64) -> String {
 }
 
 impl LauncherUi {
-    /// The header's engine link, on backends that can reach the daemon.
-    pub(crate) fn engine_link(&mut self, ui: &mut egui::Ui, height: f32) {
+    /// The sidebar's engine row, on backends that can reach the daemon: its state as a dot.
+    pub(crate) fn engine_nav(&mut self, ui: &mut egui::Ui, rail: bool) {
+        let t = Tokens::get(ui.ctx());
         let Some(engine) = self.backend.engine() else { return };
-        let (label, tip): (String, String) = match engine.state() {
+        let (label, tip, dot): (String, String, egui::Color32) = match engine.state() {
             EngineState::Running(r) => (
                 if r.attached.is_empty() { tl!("Engine").to_string() } else { fmt(tl!("Engine · {n}"), &[("n", &r.attached.len().to_string())]) },
                 tl!("The Redrob Code engine is running; every app shares it").to_string(),
+                t.good,
             ),
-            EngineState::Busy => (tl!("Engine…").to_string(), tl!("The engine is starting or stopping").to_string()),
-            EngineState::Stopped => (tl!("Engine off").to_string(), tl!("The Redrob Code engine is not running").to_string()),
+            EngineState::Busy => (tl!("Engine…").to_string(), tl!("The engine is starting or stopping").to_string(), t.accent),
+            EngineState::Stopped => (tl!("Engine off").to_string(), tl!("The Redrob Code engine is not running").to_string(), t.faint),
             EngineState::NotInstalled => {
-                (tl!("Engine").to_string(), tl!("Install Redrob Code, the engine every app runs its AI through").to_string())
+                (tl!("Engine").to_string(), tl!("Install Redrob Code, the engine every app runs its AI through").to_string(), t.warn)
             }
         };
-        if widgets::nav_link(ui, &label, &tip, height, matches!(self.dialog, Some(Dialog::Engine))).clicked() {
+        if widgets::nav_row(ui, Icon::Engine, &label, &tip, widgets::NavMeta::Dot(dot), self.page == Page::Engine, rail).clicked() {
             if let Some(engine) = self.backend.engine() {
                 engine.refresh();
             }
-            self.dialog = Some(Dialog::Engine);
+            self.set_page(Page::Engine);
         }
     }
 
-    pub(crate) fn engine_dialog(&mut self, ui: &mut egui::Ui) -> bool {
+    /// The engine page (its title is in the page's top bar). Returns true when Done is pressed.
+    pub(crate) fn engine_page(&mut self, ui: &mut egui::Ui) -> bool {
         let t = Tokens::get(ui.ctx());
-        ui.set_width(560.0f32.min(ui.ctx().content_rect().width() - 80.0));
-        Self::title(
-            ui,
-            crate::icons::app(ENGINE_APP).or_else(|| Some(crate::icons::redrob_mark())),
-            tl!("Redrob Code engine"),
-            tl!("One engine on this computer; every Redrob app runs its AI through it"),
-        );
         // The newer engine, when there is one, and what holds its install back.
         let newer: Option<(String, String)> = self.entry(ENGINE_APP).and_then(|e| {
             (e.status(self.platform, true) == redrob_launcher_core::AppStatus::UpdateAvailable)
