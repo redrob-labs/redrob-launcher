@@ -870,6 +870,22 @@ fn web_build_offers_downloads() {
 }
 
 #[test]
+fn a_native_title_bar_draws_no_chrome_and_the_page_starts_at_the_top() {
+    // NoHost: the OS draws the title bar (or there is none, on the web).
+    let (mut h, sent) = harness(ViewMode::Grid, egui::Theme::Dark, true);
+    h.run_steps(6);
+    snapshot(&mut h, "grid-native-dark");
+    assert!(h.query_by_label("Minimize").is_none());
+    // No 48 px header above: the page's top bar starts at the top and carries Check for updates.
+    let check = h.get_by_label("Check for updates").rect();
+    assert!(check.bottom() <= 48.0, "Check for updates should sit in the 48 px page top bar: {check:?}");
+    sent.borrow_mut().clear();
+    h.get_by_label("Check for updates").click();
+    h.run_steps(2);
+    assert!(sent.borrow().contains(&Command::CheckForUpdates { force: true }));
+}
+
+#[test]
 fn custom_title_bar_has_window_buttons() {
     struct FramelessHost;
     impl Host for FramelessHost {
@@ -894,6 +910,9 @@ fn custom_title_bar_has_window_buttons() {
     );
     h.run_steps(6);
     snapshot(&mut h, "grid-title-bar-dark");
+    // The custom bar keeps its 48 px chrome, Check for updates in it.
+    assert!(h.get_by_label("Check for updates").rect().bottom() <= 48.0);
+    assert!(h.get_all_by_label("Apps").all(|n| n.rect().top() >= 48.0), "the sidebar and page start under the title bar");
     h.get_by_label("Minimize");
     h.get_by_label("Maximize");
     h.get_by_label("Close").click();

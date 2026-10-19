@@ -588,11 +588,16 @@ impl LauncherUi {
         // The title bar across the top (Redrob Cowork's 48 px bar on the sunken ground, its hairline
         // under it), then the sidebar card down the left; the footer and each page's top bar span
         // the main area only, on the same base ground as the card's gap.
-        egui::Panel::top("header")
-            .frame(egui::Frame::new().fill(tokens.sunken))
-            .exact_size(crate::views::HEADER_H)
-            .resizable(false)
-            .show(ui, |ui| self.header(ui, host.title_bar()));
+        // A window the OS decorates (and the web build) has no chrome of ours to draw: no
+        // header, and Check for updates moves into the page's top bar.
+        let bar = host.title_bar();
+        if bar != TitleBar::Native {
+            egui::Panel::top("header")
+                .frame(egui::Frame::new().fill(tokens.sunken))
+                .exact_size(crate::views::HEADER_H)
+                .resizable(false)
+                .show(ui, |ui| self.header(ui, bar));
+        }
         let inset = crate::shell::INSET as i8;
         egui::Panel::left("sidebar")
             .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin { left: inset, right: inset, top: inset, bottom: inset }))
@@ -609,7 +614,7 @@ impl LauncherUi {
             .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin::symmetric(24, 0)))
             .exact_size(crate::shell::PAGE_TOP_H)
             .resizable(false)
-            .show(ui, |ui| self.page_top_bar(ui));
+            .show(ui, |ui| self.page_top_bar(ui, bar));
         egui::CentralPanel::default()
             .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin { left: 24, right: 24, top: 20, bottom: 0 }))
             .show(ui, |ui| match self.page {

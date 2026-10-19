@@ -6,7 +6,7 @@ use egui::{Rect, RichText, Sense, Stroke, Ui, vec2};
 use redrob_launcher_core::protocol::Command;
 use redrob_launcher_core::status::AppStatus;
 
-use crate::app::{LauncherUi, Page};
+use crate::app::{LauncherUi, Page, TitleBar};
 use crate::glyphs::Icon;
 use crate::i18n::{fmt, tn};
 use crate::settings::{Filter, ViewMode};
@@ -133,7 +133,8 @@ impl LauncherUi {
     }
 
     /// The page's top bar: its title and a meta line, and the page's own actions at the right.
-    pub(crate) fn page_top_bar(&mut self, ui: &mut Ui) {
+    /// With no title bar of ours (`TitleBar::Native`), Check for updates sits here at the right.
+    pub(crate) fn page_top_bar(&mut self, ui: &mut Ui, bar: TitleBar) {
         let t = Tokens::get(ui.ctx());
         let (title, meta): (&str, String) = match self.page {
             Page::Apps => (tl!("Apps"), tn(self.count(Filter::All) as u64, "{n} app", "{n} apps")),
@@ -146,14 +147,21 @@ impl LauncherUi {
             ui.spacing_mut().item_spacing.x = theme::space::S2;
             // DS AppShell top bar: title 15 / 600, meta 12 ink-muted.
             ui.label(RichText::new(title).size(theme::text::BODY).family(theme::semibold()).color(t.ink));
-            let actions_w = if self.page == Page::Apps { 520.0 } else { 0.0 };
+            let actions_w = if self.page == Page::Apps { 520.0 } else { 0.0 } + if bar == TitleBar::Native { 40.0 } else { 0.0 };
             let room = (ui.available_width() - actions_w).max(0.0);
             if !meta.is_empty() && room > 40.0 {
                 widgets::hud_elided(ui, &meta, t.faint, room);
             }
-            if self.page == Page::Apps {
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| self.apps_actions(ui));
-            }
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                if bar == TitleBar::Native
+                    && widgets::icon_button_busy(ui, Icon::Refresh, tl!("Check for updates"), theme::control::SM, self.checking).clicked()
+                {
+                    self.check_now();
+                }
+                if self.page == Page::Apps {
+                    self.apps_actions(ui);
+                }
+            });
         });
     }
 
