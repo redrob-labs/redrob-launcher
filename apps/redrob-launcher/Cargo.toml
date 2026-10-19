@@ -9,8 +9,15 @@ default-run = "redrob-launcher"
 build = "build.rs"
 publish = false
 
-[lints]
-workspace = true
+# The workspace's lints, except that `unsafe_code` is "deny" rather than "forbid": the macOS
+# Apple Event handler for redrob:// links (src/url_event.rs) is the one module that allows it.
+# Keep in step with [workspace.lints] in the root Cargo.toml.
+[lints.rust]
+unsafe_code = "deny"
+
+[lints.clippy]
+dbg_macro = "warn"
+todo = "warn"
 
 [features]
 # Development only: install from `cargo xtask local serve` (see the README).
@@ -36,11 +43,12 @@ serde = { workspace = true }
 [target.'cfg(any(target_os = "macos", target_os = "windows"))'.dependencies]
 tray-icon = "0.25"
 
-# macOS only: which desktop (Space) the window shows on (spaces.rs). Safe AppKit calls only, and
-# already in Cargo.lock through winit and tray-icon; pinned exactly to those versions.
+# macOS only: which desktop (Space) the window shows on (spaces.rs), safe AppKit calls only, and the
+# redrob:// Apple Event handler (url_event.rs). Already in Cargo.lock through winit and tray-icon;
+# pinned exactly to those versions.
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "=0.6.5"
-objc2-foundation = { version = "=0.3.2", default-features = false, features = ["std", "NSArray", "NSEnumerator"] }
+objc2-foundation = { version = "=0.3.2", default-features = false, features = ["std", "NSArray", "NSEnumerator", "NSString"] }
 objc2-app-kit = { version = "=0.3.2", default-features = false, features = ["std", "NSApplication", "NSResponder", "NSWindow"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]

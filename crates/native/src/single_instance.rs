@@ -12,15 +12,22 @@
 //! - the running one is from before this handshake (0.1.3 or older) and closes without an
 //!   answer: it can't be asked to quit, so the newcomer starts anyway.
 //!
+//! A start for a `redrob://` link (the OS starts the launcher with the link as its argument) that
+//! defers to the running launcher then hands it the link on a second connection, `link <url>`, and
+//! the running launcher acts on it (`deep_link`). A launcher from before links ignores that
+//! message, having shown its window for the hello already. A newer start that takes over acts on
+//! its own link.
+//!
 //! Launchers from before the handshake send a bare `show`, which is still understood. The worst
-//! another local program can do with any of this is bring the window forward or make the launcher
-//! quit.
+//! another local program can do with any of this is bring the window forward, make the launcher
+//! quit, or do what a `redrob://` link in a web page can: start or install a Redrob app.
 
 use std::io::{ErrorKind, Read, Write};
 use std::net::{Ipv4Addr, SocketAddr, TcpListener, TcpStream};
 use std::sync::mpsc::{Receiver, channel};
 use std::time::{Duration, Instant};
 
+use redrob_launcher_core::deep_link::{self, DeepLink};
 use redrob_launcher_core::version::{self, Version};
 
 const PORT: u16 = 47_413;
@@ -32,12 +39,18 @@ const HELLO: &str = "redrob-launcher:hello ";
 const RUNNING: &str = "redrob-launcher:running ";
 /// How long a newer start waits for the old one to quit and free the port.
 const TAKE_OVER_WITHIN: Duration = Duration::from_secs(10);
+/// `link <url>`: a deferring start hands over the `redrob:` link it was started for.
+const LINK: &str = "redrob-launcher:link ";
+/// The longest message read: a link message.
+const MAX_MESSAGE: usize = 64 + deep_link::MAX_LEN;
 
 /// What another start asks of the running launcher.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Request {
     /// Bring the window forward.
     Show,
+    /// Bring the window forward and act on a `redrob://` link.
+    Link(DeepLink),
     /// A newer launcher is starting: quit so it can take over (or show the window when quitting
     /// now would cut short an install).
     Replace,
@@ -69,15 +82,24 @@ fn ours() -> Option<Version> {
     version::parse(env!("CARGO_PKG_VERSION"))
 }
 
-/// Claims the instance; `wake` is set later (the UI context doesn't exist yet).
-pub fn claim(wake: Wake) -> Instance {
+/// Claims the instance; `wake` is set later (the UI context doesn't exist yet). `link` is the
+/// `redrob:` link this start was given: handed to the running launcher when this start defers to
+/// it, and the caller's own to act on otherwise.
+pub fn claim(wake: Wake, link: Option<&str>) -> Instance {
     let addr = SocketAddr::from((Ipv4Addr::LOCALHOST, PORT));
     let ours = ours();
     if let Ok(listener) = TcpListener::bind(addr) {
         return Instance::Primary(listen(listener, ours, wake));
     }
     match ask(addr, ours.as_ref()) {
-        Ok(Answer::Defer) => Instance::Secondary,
+        Ok(Answer::Defer) => {
+            if let Some(link) = link
+                && let Err(e) = hand_over(addr, link)
+            {
+                log::warn!("couldn't hand the link to the running Redrob Launcher: {e}");
+            }
+            Instance::Secondary
+        }
         Ok(Answer::TakeOver) => {
             let deadline = Instant::now() + TAKE_OVER_WITHIN;
             while Instant::now() < deadline {
@@ -103,7 +125,7 @@ fn listen(listener: TcpListener, ours: Option<Version>, wake: Wake) -> Receiver<
     let (tx, rx) = channel();
     std::thread::spawn(move || {
         for mut stream in listener.incoming().flatten() {
-            let mut buf = [0u8; 64];
+            let mut buf = [0u8; MAX_MESSAGE];
             let _ = stream.set_read_timeout(Some(Duration::from_secs(1)));
             let n = stream.read(&mut buf).unwrap_or(0);
             let Some((request, reply)) = buf.get(..n).and_then(|m| answer(m, ours.as_ref())) else { continue };
@@ -127,7 +149,12 @@ fn answer(message: &[u8], ours: Option<&Version>) -> Option<(Request, Option<Str
     if message == SHOW {
         return Some((Request::Show, None));
     }
-    let theirs = std::str::from_utf8(message).ok()?.strip_prefix(HELLO)?;
+    let message = std::str::from_utf8(message).ok()?;
+    if let Some(link) = message.strip_prefix(LINK) {
+        // Started for a link that means nothing: the launcher's home.
+        return Some((deep_link::parse(link).map_or(Request::Show, Request::Link), None));
+    }
+    let theirs = message.strip_prefix(HELLO)?;
     let newer = match (version::parse(theirs), ours) {
         (Some(theirs), Some(ours)) => version::is_newer(&theirs, ours),
         _ => false,
@@ -156,6 +183,17 @@ fn ask(addr: SocketAddr, ours: Option<&Version>) -> std::io::Result<Answer> {
         Err(_) => {}
     }
     Ok(verdict(&reply, ours))
+}
+
+/// Hands the running launcher the link this start was given. Only a link that fits travels; the
+/// running launcher parses it again itself.
+fn hand_over(addr: SocketAddr, link: &str) -> std::io::Result<()> {
+    let link = link.trim();
+    if link.len() > deep_link::MAX_LEN || !deep_link::is_link(link) {
+        return Err(std::io::Error::new(ErrorKind::InvalidInput, "not a redrob: link"));
+    }
+    let mut stream = TcpStream::connect_timeout(&addr, Duration::from_secs(1))?;
+    stream.write_all(format!("{LINK}{link}").as_bytes())
 }
 
 /// Reads the running launcher's answer.

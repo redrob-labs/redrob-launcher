@@ -9,6 +9,7 @@
 pub mod account;
 pub mod catalog;
 pub mod channels;
+pub mod deep_link;
 pub mod device;
 pub mod distro;
 pub mod engine;

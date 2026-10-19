@@ -35,13 +35,15 @@ integrate() {
   src_desktop="$APPDIR/usr/share/applications/$DESK_ID.desktop"
   [ -f "$src_desktop" ] || return 0
 
-  # Rewrite Exec to this AppImage (the binary is not on the host PATH) and drop
-  # TryExec, which would hide the entry; everything else is shipped as packaged.
+  # Rewrite Exec to this AppImage (the binary is not on the host PATH), keeping %u so
+  # redrob:// links (MimeType=x-scheme-handler/redrob) reach it, and drop TryExec, which
+  # would hide the entry; everything else is shipped as packaged. The launcher itself
+  # makes it the default redrob: handler (url_scheme.rs).
   apps="$data/applications"
   mkdir -p "$apps" 2>/dev/null || return 0
   tmp="$apps/.$DESK_ID.tmp.$$"
   esc="$(printf '%s' "$appimage" | sed 's/[\\&|]/\\&/g')"
-  if sed -e "s|^Exec=.*|Exec=\"$esc\"|" -e '/^TryExec=/d' "$src_desktop" 2>/dev/null >"$tmp"; then
+  if sed -e "s|^Exec=.*|Exec=\"$esc\" %u|" -e '/^TryExec=/d' "$src_desktop" 2>/dev/null >"$tmp"; then
     if cmp -s "$tmp" "$apps/$DESK_ID.desktop"; then
       rm -f "$tmp"
     else

@@ -46,6 +46,17 @@ English: [README.md](./README.md)
   알립니다. 앱은 로컬 모델이 있으면 그것을, 없으면 Console을 씁니다
   ([docs/local-models.ko.md](docs/local-models.ko.md)).
 
+## 웹에서 열기
+
+웹 페이지는 `redrob://` 링크로 런처를 열어 앱 하나를 보여 줍니다.
+
+- `redrob://open/cad`는 Redrob CAD를 실행하고, 설치되지 않았으면 설치 버튼과 함께 보여 줍니다.
+- `redrob://install/cowork`는 Redrob Cowork를 보여 주고 설치합니다.
+
+앱은 카탈로그 ID이며 `redrob-`는 있어도 없어도 됩니다(`cad`, `cowork`, `office`, `query`…). 다른 링크는
+런처만 엽니다. 설치 프로그램이 스킴을 등록하고, 런처도 시작할 때마다 확인합니다. 자세한 내용:
+[docs/deep-links.ko.md](docs/deep-links.ko.md).
+
 ## 소스에서 빌드
 
 ```sh

@@ -51,6 +51,18 @@ Redrob Launcher is one place to install, update, sign in and connect every Redro
   model through one registry file, so an app uses the local model when there is one and the
   Console when there is not ([docs/local-models.md](docs/local-models.md)).
 
+## Open from the web
+
+Web pages open the launcher on one app with a `redrob://` link:
+
+- `redrob://open/cad` starts Redrob CAD, or shows it with its Install button when it isn't
+  installed;
+- `redrob://install/cowork` shows Redrob Cowork and installs it.
+
+The app is its catalog id with or without `redrob-` (`cad`, `cowork`, `office`, `query`…); any
+other link just opens the launcher. The installers register the scheme, and the launcher checks it
+on every start. Details: [docs/deep-links.md](docs/deep-links.md).
+
 ## Build from source
 
 ```sh
