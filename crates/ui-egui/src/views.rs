@@ -772,7 +772,14 @@ impl LauncherUi {
         }
         match self.primary_action(entry, status) {
             Primary::Install => {
-                if widgets::button(ui, tl!("Install"), Kind::Primary, main_w).clicked() {
+                let resp = widgets::button(ui, tl!("Install"), Kind::Primary, main_w);
+                // Opened by a `redrob://open` link for an app that isn't installed yet.
+                if self.focus_install == Some(entry.app.id) {
+                    self.focus_install = None;
+                    resp.request_focus();
+                    resp.scroll_to_me(None);
+                }
+                if resp.clicked() {
                     self.send(Command::Install { app: id.clone() });
                 }
             }

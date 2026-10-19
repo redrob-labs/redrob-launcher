@@ -18,7 +18,7 @@ use std::sync::{Arc, Mutex, OnceLock, PoisonError};
 use std::time::Duration;
 
 use eframe::wgpu::rwh::{HasDisplayHandle, RawDisplayHandle};
-use redrob_launcher_core::deep_link;
+use redrob_launcher_core::deep_link::{self, DeepLink};
 use redrob_launcher_core::protocol::Backend;
 use redrob_launcher_native::single_instance::{self, Instance};
 use redrob_launcher_native::{NativeBackend, language, login};
@@ -61,6 +61,7 @@ fn main() -> ExitCode {
     let backend_waker = waker.clone();
     let settings_path = settings_file::path(APP_ID);
     let mut launcher = Launcher::new(Box::new(NativeBackend::new(move || backend_waker.wake())), starts, settings_path.clone());
+    launcher.link = link.as_deref().and_then(deep_link::parse);
     // Started hidden at login where a window can't hide: start in the tray without mapping one,
     // so no window flashes up. Without a tray to come back from, the window opens after all.
     let mut window = true;
@@ -351,6 +352,9 @@ struct Launcher {
     host: DesktopHost,
     /// Requests from later starts of the launcher.
     starts: Receiver<single_instance::Request>,
+    /// The `redrob://` link this start was given (or the OS sent), acted on at the next tick,
+    /// once the saved settings are in.
+    link: Option<DeepLink>,
     /// Stands in for a window's context while only the tray exists. A window can't reuse it: a
     /// new window's renderer has none of the textures a used context has already handed out.
     windowless: egui::Context,
@@ -377,6 +381,7 @@ impl Launcher {
             tray: None,
             host: DesktopHost { tray: false, quit: false },
             starts,
+            link: None,
             windowless,
             run_again,
             started: false,
@@ -441,6 +446,16 @@ impl Launcher {
             requests.push(Request::Quit);
         } else if !starts.is_empty() {
             requests.push(Request::Show);
+        }
+        let links = starts.iter().filter_map(|s| match s {
+            single_instance::Request::Link(link) => Some(*link),
+            _ => None,
+        });
+        let links: Vec<DeepLink> = self.link.take().into_iter().chain(links).collect();
+        if !requests.contains(&Request::Quit) {
+            for link in links {
+                self.ui.open_link(link);
+            }
         }
         let actions = self.tray.as_ref().map(tray::Tray::actions).unwrap_or_default();
         for action in actions {
