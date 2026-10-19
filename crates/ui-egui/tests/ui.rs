@@ -468,6 +468,21 @@ fn order(h: &Harness<'_, Option<LauncherUi>>) -> Vec<String> {
 }
 
 #[test]
+fn the_table_shows_every_app_name_whole_at_the_default_window() {
+    let (mut h, _) = harness(ViewMode::Table, egui::Theme::Light, true);
+    h.run_steps(8);
+    // A name cut short with "…" fills its column to the edge; a whole one leaves room before Kind.
+    let kind = h.get_by_label("Kind").rect();
+    let mut seen = 0;
+    for app in &SUITE {
+        let Some(name) = h.query_all_by_label(app.name).map(|n| n.rect()).find(|r| r.top() > kind.bottom()) else { continue };
+        seen += 1;
+        assert!(name.right() < kind.left() - 10.0, "{} is cut short: {name:?}, Kind starts at {}", app.name, kind.left());
+    }
+    assert!(seen >= 9, "only {seen} names on screen");
+}
+
+#[test]
 fn every_table_column_sorts_both_ways() {
     let (mut h, _) = harness(ViewMode::Table, egui::Theme::Dark, true);
     h.run_steps(6);

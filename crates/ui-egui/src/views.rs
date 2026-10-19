@@ -477,7 +477,16 @@ impl LauncherUi {
             });
         });
         ui.add_space(theme::space::S2);
-        ui.add(egui::Label::new(RichText::new(version_line(&entry, &status)).size(theme::text::META).color(t.muted)).truncate());
+        // One line, never cut short: where the dated line doesn't fit the tile, the date moves to
+        // the tooltip.
+        let full = version_line(&entry, &status);
+        let font = FontId::proportional(theme::text::META);
+        let fits = ui.fonts_mut(|f| f.layout_no_wrap(full.clone(), font.clone(), t.muted).size().x) <= ui.available_width();
+        if fits {
+            ui.label(RichText::new(full).font(font).color(t.muted));
+        } else {
+            ui.label(RichText::new(version_line_dated(&entry, &status, false)).font(font).color(t.muted)).on_hover_text(full);
+        }
         ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
             ui.horizontal(|ui| self.actions(ui, &entry, &status, inner.width()));
         });
@@ -524,14 +533,15 @@ impl LauncherUi {
                     .striped(false)
                     .vscroll(false)
                     .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
-                    // Sized to fit the main area beside the sidebar at the default 1180 px window.
-                    .column(Column::remainder().at_least(136.0).clip(true))
-                    .column(Column::exact(88.0).clip(true))
-                    .column(Column::exact(136.0).clip(true))
-                    .column(Column::exact(64.0))
-                    .column(Column::exact(64.0))
-                    .column(Column::exact(92.0).clip(true))
-                    .column(Column::exact(196.0))
+                    // The App column never cuts a product's name short: at least 184 wide, it takes what the
+                    // others leave; a window narrower than the table scrolls it sideways.
+                    .column(Column::remainder().at_least(184.0).clip(true))
+                    .column(Column::exact(76.0).clip(true))
+                    .column(Column::exact(132.0).clip(true))
+                    .column(Column::exact(56.0))
+                    .column(Column::exact(56.0))
+                    .column(Column::exact(84.0).clip(true))
+                    .column(Column::exact(188.0))
                     .header(42.0, |mut header| {
                         for (key, label) in [
                             (Some(SortKey::Name), tl!("App")),
@@ -649,7 +659,7 @@ impl LauncherUi {
                                         r.on_hover_text(ago_text(w, now));
                                     }
                                 });
-                                row.col(|ui| self.actions(ui, &entry, &status, 194.0));
+                                row.col(|ui| self.actions(ui, &entry, &status, 186.0));
                             });
                         }
                     });
@@ -909,7 +919,12 @@ fn sort_label(k: SortKey) -> &'static str {
 
 /// "0.4.1 installed → 0.5.0 released · Oct 8, 2026" and friends.
 fn version_line(e: &AppEntry, status: &AppStatus) -> String {
-    let released = e.release().and_then(|r| r.published_at).map(|at| format!(" · {}", date_text(at))).unwrap_or_default();
+    version_line_dated(e, status, true)
+}
+
+/// [`version_line`], with or without the release date.
+fn version_line_dated(e: &AppEntry, status: &AppStatus, dated: bool) -> String {
+    let released = e.release().and_then(|r| r.published_at).filter(|_| dated).map(|at| format!(" · {}", date_text(at))).unwrap_or_default();
     match (status, e.installed_label(), e.latest_label()) {
         (AppStatus::UpdateAvailable, Some(i), Some(l)) => {
             format!("{}{released}", fmt(tl!("{version} installed → {latest} released"), &[("version", i.as_str()), ("latest", l.as_str())]))
