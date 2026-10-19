@@ -254,6 +254,7 @@ class SetupApp {
   // --render-stages <dir>: draw each screen into a PNG with no window, so the layout can be checked
   // on a machine reached over ssh, where no window can be shown. Returns 0 when every file was written.
   int RenderStages(HINSTANCE hinst, const std::wstring& dir);
+  bool Uninstalling() const { return mode_ == Mode::Uninstall; }
  private:
 
   // payload
@@ -353,15 +354,17 @@ SetupApp* g_app = nullptr;
 std::wstring StatusText(Stage s) {
   if (!g_statusOverride.empty()) return g_statusOverride;
   switch (s) {
-    case Stage::Language:   return L"Choose your language \u00B7 언어를 선택하세요";
+    case Stage::Language:   return L"Choose your language\n언어를 선택하세요";
     case Stage::Welcome:    return Tr(L"Install Redrob Launcher", L"Redrob Launcher 설치");
-    case Stage::Preparing:  return Tr(L"Preparing\u2026", L"준비 중\u2026");
-    case Stage::Installing: return Tr(L"Installing\u2026", L"설치 중\u2026");
-    case Stage::Opening:    return Tr(L"Opening Redrob Launcher\u2026", L"Redrob Launcher 여는 중\u2026");
-    case Stage::Error:      return Tr(L"Something went wrong", L"문제가 생겼어요");
+    case Stage::Preparing:  return Tr(L"Preparing to install", L"설치를 준비하고 있어요");
+    case Stage::Installing: return Tr(L"Installing Redrob Launcher", L"Redrob Launcher를 설치하고 있어요");
+    case Stage::Opening:    return Tr(L"Opening Redrob Launcher", L"Redrob Launcher를 여는 중이에요");
+    case Stage::Error:      return g_app && g_app->Uninstalling()
+                                   ? Tr(L"Redrob Launcher was not removed", L"Redrob Launcher를 제거하지 못했어요")
+                                   : Tr(L"Setup did not finish", L"설치를 마치지 못했어요");
     case Stage::Confirm:    return Tr(L"Uninstall Redrob Launcher?", L"Redrob Launcher를 제거할까요?");
-    case Stage::Removing:   return Tr(L"Removing Redrob Launcher\u2026", L"Redrob Launcher 제거 중\u2026");
-    case Stage::Removed:    return Tr(L"Redrob Launcher has been removed", L"Redrob Launcher를 제거했어요");
+    case Stage::Removing:   return Tr(L"Removing Redrob Launcher", L"Redrob Launcher를 제거하고 있어요");
+    case Stage::Removed:    return Tr(L"Redrob Launcher is removed", L"Redrob Launcher를 제거했어요");
   }
   return L"";
 }
@@ -370,16 +373,26 @@ std::wstring StatusText(Stage s) {
 std::wstring BodyText(Stage s, Mode m, bool deleteData, const std::wstring& error) {
   switch (s) {
     case Stage::Language:
-      return L"Redrob Launcher and every Redrob app will use this language.\n설치 과정, Redrob Launcher, Redrob 앱이 이 언어를 씁니다.";
+      return L"Setup, Redrob Launcher and the Redrob apps use this language. You can change it later in Redrob Launcher's settings.\n"
+             L"설치 과정, Redrob Launcher, Redrob 앱이 이 언어를 써요. 나중에 Redrob Launcher 설정에서 바꿀 수 있어요.";
     case Stage::Welcome:
-      return Tr(L"Installs for this Windows account. No administrator rights needed.",
-                L"이 Windows 계정에만 설치됩니다. 관리자 권한이 필요하지 않아요.");
+      return Tr(L"It installs for this Windows account only, so no administrator rights are needed. Redrob Launcher opens when setup is done.",
+                L"이 Windows 계정에만 설치해서 관리자 권한이 필요 없어요. 설치가 끝나면 Redrob Launcher가 열려요.");
+    case Stage::Preparing: case Stage::Installing:
+      return Tr(L"Redrob Launcher opens when it is done.", L"끝나면 Redrob Launcher가 열려요.");
+    case Stage::Opening:
+      return Tr(L"Redrob Launcher is installed. This window closes by itself.",
+                L"Redrob Launcher를 설치했어요. 이 창은 저절로 닫혀요.");
     case Stage::Confirm:
-      return Tr(L"Redrob Launcher will be removed from this PC. The apps it installed stay.",
-                L"이 PC에서 Redrob Launcher를 제거합니다. 런처로 설치한 앱은 그대로 남아요.");
+      return Tr(L"This removes Redrob Launcher from this PC. The apps it installed and your files stay where they are.",
+                L"이 PC에서 Redrob Launcher를 제거해요. 런처로 설치한 앱과 내 파일은 그대로 남아요.");
+    case Stage::Removing:
+      return Tr(L"The apps it installed and your files stay where they are.", L"런처로 설치한 앱과 내 파일은 그대로 남아요.");
     case Stage::Removed:
-      return deleteData ? Tr(L"Its settings and downloads were deleted too.", L"설정과 내려받은 파일도 삭제했어요.")
-                        : Tr(L"Its settings stay on this PC for a later install.", L"설정은 다음 설치를 위해 이 PC에 남아 있어요.");
+      return deleteData ? Tr(L"Its settings and downloads are deleted too. The apps it installed and your files stay where they are.",
+                             L"설정과 내려받은 파일도 삭제했어요. 런처로 설치한 앱과 내 파일은 그대로 남아요.")
+                        : Tr(L"The apps it installed and your files stay where they are. Its settings stay on this PC for a later install.",
+                             L"런처로 설치한 앱과 내 파일은 그대로 남아요. 설정은 다음 설치를 위해 이 PC에 남아 있어요.");
     case Stage::Error: return error;
     default: (void)m; return L"";
   }
@@ -393,7 +406,7 @@ std::wstring ResultSentence(DWORD code, bool uninstall) {
                      : Tr(L"Redrob Launcher is open. Quit it from its tray icon, then press Retry to update it.",
                           L"Redrob Launcher가 실행 중이에요. 트레이 아이콘에서 종료한 뒤 다시 시도를 눌러 업데이트하세요.");
   if (code == kResultUnpackFailed)
-    return Tr(L"The app files could not be unpacked. Please try again.", L"앱 파일을 풀 수 없었어요. 다시 시도해 주세요.");
+    return Tr(L"The app files could not be unpacked. Press Retry to try again.", L"앱 파일을 풀지 못했어요. 다시 시도를 눌러 주세요.");
   if (code == kResultNoExe)
     return Tr(L"This setup file is damaged. Please download it again.", L"이 설치 파일이 손상됐어요. 다시 내려받아 주세요.");
   if (code == ERROR_DISK_FULL || code == ERROR_HANDLE_DISK_FULL)
@@ -404,10 +417,10 @@ std::wstring ResultSentence(DWORD code, bool uninstall) {
               L"파일이 사용 중이에요. Redrob Launcher와 그 폴더에서 연 것을 모두 닫은 뒤 다시 시도를 누르세요.");
   const std::wstring n = std::to_wstring(code);
   if (uninstall)
-    return g_lang == Lang::Ko ? L"Redrob Launcher를 제거하지 못했어요 (코드 " + n + L"). 다시 시도해 주세요."
-                              : L"Redrob Launcher could not be removed (code " + n + L"). Please try again.";
-  return g_lang == Lang::Ko ? L"설치를 마치지 못했어요 (코드 " + n + L"). 다시 시도해 주세요."
-                            : L"Setup did not complete (code " + n + L"). Please try again.";
+    return g_lang == Lang::Ko ? L"Windows 오류 코드 " + n + L". 다시 시도를 눌러 주세요."
+                              : L"Windows error code " + n + L". Press Retry to try again.";
+  return g_lang == Lang::Ko ? L"Windows 오류 코드 " + n + L". 다시 시도를 눌러 주세요."
+                            : L"Windows error code " + n + L". Press Retry to try again.";
 }
 
 // ---------------------------------------------------------------------------
@@ -505,7 +518,7 @@ int SetupApp::Run(HINSTANCE hinst) {
   if (mode_ == Mode::Uninstall) {
     SetStage(Stage::Confirm);
   } else if (demoError_) {
-    errorMessage_ = L"The installer could not be started. Please try again.";
+    errorMessage_ = ResultSentence(kResultUnpackFailed, false);
     SetStage(Stage::Error);
   } else {
     // Nothing is installed until the person presses Install. The language comes first: every screen
