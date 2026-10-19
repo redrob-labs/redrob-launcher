@@ -180,6 +180,20 @@ fn signing_in_shows_the_code_then_the_workspace_and_connects_apps() {
     h.get_by_label("Sign out").click();
     h.run_steps(2);
     assert_eq!(state.borrow().asked.last(), Some(&Asked::Disconnect));
+    // A page, not a dialog: no Done; the back button and Escape lead to the apps.
+    assert!(h.query_by_label("Done").is_none());
+    let on_page = |h: &egui_kittest::Harness<'_, _>| h.query_by_label("Sign out").is_some() || h.query_by_label("Sign in to Redrob").is_some();
+    assert!(on_page(&h));
+    h.get_by_label("Back to apps").click();
+    h.run_steps(4);
+    assert!(!on_page(&h));
+    // The sidebar's account row opens it again ("Acme" or "Sign in", whichever the fake reports).
+    h.query_by_label("Acme").or_else(|| h.query_by_label("Sign in")).unwrap().click();
+    h.run_steps(6);
+    assert!(on_page(&h));
+    h.key_press(egui::Key::Escape);
+    h.run_steps(4);
+    assert!(!on_page(&h));
 }
 
 #[test]

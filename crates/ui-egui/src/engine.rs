@@ -54,8 +54,8 @@ impl LauncherUi {
         }
     }
 
-    /// The engine page (its title is in the page's top bar). Returns true when Done is pressed.
-    pub(crate) fn engine_page(&mut self, ui: &mut egui::Ui) -> bool {
+    /// The engine page (its title is in the page's top bar).
+    pub(crate) fn engine_page(&mut self, ui: &mut egui::Ui) {
         let t = Tokens::get(ui.ctx());
         // The newer engine, when there is one, and what holds its install back.
         let newer: Option<(String, String)> = self.entry(ENGINE_APP).and_then(|e| {
@@ -66,7 +66,7 @@ impl LauncherUi {
         let engine_job = self.entry(ENGINE_APP).is_some_and(|e| e.job.is_some());
         let updating = engine_job || self.engine_update.step != crate::engine_update::Step::Idle;
         let waiting_on = self.engine_update.waiting_on.clone();
-        let Some(engine) = self.backend.engine() else { return true };
+        let Some(engine) = self.backend.engine() else { return };
         let state = engine.state();
         let error = engine.last_error();
         let mut ask: Option<Ask> = None;
@@ -218,17 +218,13 @@ impl LauncherUi {
         ui.ctx().request_repaint_after(std::time::Duration::from_secs(5));
 
         ui.add_space(12.0);
-        let mut close = false;
-        ui.horizontal(|ui| {
-            widgets::hud(
-                ui,
-                tl!("The engine holds the Redrob key, picks the model provider and masks personal details, once, for every app."),
-                t.faint,
-            );
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                close = widgets::button(ui, tl!("Done"), Kind::Secondary, 90.0).clicked();
-            });
-        });
-        close
+        ui.add(
+            egui::Label::new(
+                RichText::new(tl!("The engine holds the Redrob key, picks the model provider and masks personal details, once, for every app."))
+                    .size(theme::text::META)
+                    .color(t.faint),
+            )
+            .wrap(),
+        );
     }
 }

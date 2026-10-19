@@ -145,6 +145,10 @@ impl LauncherUi {
         };
         ui.horizontal_centered(|ui| {
             ui.spacing_mut().item_spacing.x = theme::space::S2;
+            // Every page but Apps leads back to it (Escape does too).
+            if self.page != Page::Apps && widgets::icon_button(ui, Icon::ChevronLeft, tl!("Back to apps"), theme::control::SM).clicked() {
+                self.set_page(Page::Apps);
+            }
             // DS AppShell top bar: title 15 / 600, meta 12 ink-muted.
             ui.label(RichText::new(title).size(theme::text::BODY).family(theme::semibold()).color(t.ink));
             let actions_w = if self.page == Page::Apps { 520.0 } else { 0.0 } + if bar == TitleBar::Native { 40.0 } else { 0.0 };

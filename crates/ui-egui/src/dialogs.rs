@@ -222,8 +222,8 @@ impl LauncherUi {
     }
 
     /// The Settings page (its title is in the page's top bar): General, Channels and Apps as a
-    /// segmented control, Quit at the foot. Returns true when Done is pressed.
-    pub(crate) fn settings_page(&mut self, ui: &mut egui::Ui, host: &mut dyn Host) -> bool {
+    /// segmented control, Quit at the foot of General. The top bar's back button and Escape leave it.
+    pub(crate) fn settings_page(&mut self, ui: &mut egui::Ui, host: &mut dyn Host) {
         // Channels and Apps need the engine's files and daemon: desktop only.
         if self.backend.channels().is_some() {
             use crate::channels::SettingsTab;
@@ -250,18 +250,6 @@ impl LauncherUi {
         } else {
             self.settings_general(ui, host);
         }
-
-        ui.add_space(24.0);
-        let mut close = false;
-        ui.horizontal(|ui| {
-            if self.caps.manage_apps && widgets::button(ui, tl!("Quit Redrob Launcher"), Kind::Secondary, 0.0).clicked() {
-                host.quit();
-            }
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                close = widgets::button(ui, tl!("Done"), Kind::Primary, 90.0).clicked();
-            });
-        });
-        close
     }
 
     /// The General page of Settings: language, updates, Linux packages, background, appearance.
@@ -401,7 +389,8 @@ impl LauncherUi {
         ui.add_space(6.0);
         ui.horizontal(|ui| {
             use redrob_launcher_core::catalog::{GITHUB_URL, WEBSITE_URL};
-            if widgets::button(ui, tl!("Website"), Kind::Primary, 0.0).on_hover_text(WEBSITE_URL).clicked() {
+            // Secondary: a settings page has no primary action of its own.
+            if widgets::button(ui, tl!("Website"), Kind::Secondary, 0.0).on_hover_text(WEBSITE_URL).clicked() {
                 ui.ctx().open_url(egui::OpenUrl::new_tab(WEBSITE_URL));
             }
             if widgets::button(ui, tl!("GitHub"), Kind::Secondary, 0.0).on_hover_text(GITHUB_URL).clicked() {
@@ -415,5 +404,12 @@ impl LauncherUi {
             widgets::cells(ui, &mut theme_choice, &ThemeChoice::ALL.map(|c| (c, Cell { label: c.label(), tip: c.label(), count: None })));
         });
         self.settings.theme = theme_choice;
+
+        if self.caps.manage_apps {
+            ui.add_space(24.0);
+            if widgets::button(ui, tl!("Quit Redrob Launcher"), Kind::Secondary, 0.0).clicked() {
+                host.quit();
+            }
+        }
     }
 }

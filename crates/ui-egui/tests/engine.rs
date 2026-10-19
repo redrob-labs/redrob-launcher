@@ -121,6 +121,16 @@ fn a_running_engine_lists_its_apps_and_offers_stop_and_restart() {
     h.get_by_label("Stop").click();
     h.run_steps(4);
     assert_eq!(state.borrow().asked, ["refresh", "restart", "stop"]);
+    // A page, not a dialog: no Done; Escape and the back button lead to the apps.
+    assert!(h.query_by_label("Done").is_none());
+    h.key_press(egui::Key::Escape);
+    h.run_steps(4);
+    assert!(h.query_by_label("Restart").is_none());
+    h.get_by_label("Engine · 2").click();
+    h.run_steps(8);
+    h.get_by_label("Back to apps").click();
+    h.run_steps(4);
+    assert!(h.query_by_label("Restart").is_none());
 }
 
 #[test]

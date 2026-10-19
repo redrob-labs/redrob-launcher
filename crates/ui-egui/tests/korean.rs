@@ -163,7 +163,7 @@ fn korean_switches_persists_and_keeps_install_actions() {
     let saved = serde_json::to_string(&settings).unwrap();
     let restored: Settings = serde_json::from_str(&saved).unwrap();
     assert_eq!(restored.language, "ko");
-    h.get_by_label("완료").click();
+    h.get_by_label("앱으로 돌아가기").click();
     h.run_steps(3);
     h.get_by_label("에이전트와 함께 그림을 그리고 이미지를 편집해요");
     h.get_by_label("그래픽");

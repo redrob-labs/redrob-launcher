@@ -502,6 +502,33 @@ fn every_table_column_sorts_both_ways() {
 }
 
 #[test]
+fn pages_lead_back_to_apps_by_the_back_button_and_escape() {
+    let (mut h, _) = harness(ViewMode::Grid, egui::Theme::Dark, true);
+    h.run_steps(6);
+    let on_settings = |h: &Harness<'_, Option<LauncherUi>>| h.query_by_label("News and source code for every Redrob app").is_some();
+    // Settings is a page: no Done button, one primary at most (Website is secondary now).
+    h.get_by_label("Settings").click();
+    h.run_steps(4);
+    assert!(on_settings(&h));
+    assert!(h.query_by_label("Done").is_none());
+    h.get_by_label("Quit Redrob Launcher");
+    // The top bar's back button.
+    h.get_by_label("Back to apps").click();
+    h.run_steps(4);
+    assert!(!on_settings(&h));
+    h.get_by_label("Update to 0.5.0");
+    assert!(h.query_by_label("Back to apps").is_none(), "Apps is where back leads; it has no back button");
+    // Escape.
+    h.get_by_label("Settings").click();
+    h.run_steps(4);
+    assert!(on_settings(&h));
+    h.key_press(egui::Key::Escape);
+    h.run_steps(4);
+    assert!(!on_settings(&h));
+    h.get_by_label("Update to 0.5.0");
+}
+
+#[test]
 fn settings_link_to_redrob() {
     let (mut h, _) = harness(ViewMode::Grid, egui::Theme::Dark, true);
     h.run_steps(6);

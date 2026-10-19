@@ -20,6 +20,8 @@ pub enum Icon {
     Search,
     /// A chevron pointing down: a list opens below.
     ChevronDown,
+    /// A chevron pointing left: back.
+    ChevronLeft,
     /// Three dots: more actions.
     More,
     /// A cross: close, dismiss, cancel.
@@ -60,11 +62,12 @@ pub enum Icon {
 
 impl Icon {
     /// Every icon, for tests and previews.
-    pub const ALL: [Self; 22] = [
+    pub const ALL: [Self; 23] = [
         Self::Settings,
         Self::Refresh,
         Self::Search,
         Self::ChevronDown,
+        Self::ChevronLeft,
         Self::More,
         Self::Close,
         Self::Pause,
@@ -190,6 +193,7 @@ pub fn shapes(rect: Rect, icon: Icon, color: Color32) -> Vec<Shape> {
             g.line(&mut s, &[(15.2, 15.2), (20.0, 20.0)]);
         }
         Icon::ChevronDown => g.line(&mut s, &[(6.0, 9.0), (12.0, 15.0), (18.0, 9.0)]),
+        Icon::ChevronLeft => g.line(&mut s, &[(15.0, 6.0), (9.0, 12.0), (15.0, 18.0)]),
         Icon::More => {
             for x in [5.5, 12.0, 18.5] {
                 g.dot(&mut s, (x, 12.0), 1.75);

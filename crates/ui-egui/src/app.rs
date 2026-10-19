@@ -623,15 +623,13 @@ impl LauncherUi {
                     egui::ScrollArea::vertical().auto_shrink(false).show(ui, |ui| {
                         // A reading measure, like Cowork's content column.
                         ui.set_max_width(720.0);
-                        let done = match self.page {
+                        match self.page {
                             Page::Engine => self.engine_page(ui),
                             Page::Account => self.account_page(ui),
                             _ => self.settings_page(ui, host),
-                        };
-                        ui.add_space(24.0);
-                        if done {
-                            self.set_page(Page::Apps);
                         }
+                        // Room under the last control, so nothing ends against the footer.
+                        ui.add_space(32.0);
                     });
                 }
                 Page::Apps => {
@@ -656,6 +654,18 @@ impl LauncherUi {
                     });
                 }
             });
+        // Escape leaves a page for Apps, when nothing above the page (a dialog, the feed alert, a
+        // menu or a list) would take the key itself.
+        let alert_open = self.alerts.iter().any(|a| !self.settings.dismissed_notices.contains(&a.id));
+        if self.page != Page::Apps
+            && self.dialog.is_none()
+            && !alert_open
+            && !egui::Popup::is_any_open(&ctx)
+            && ctx.memory(|m| m.focused().is_none())
+            && ctx.input(|i| i.key_pressed(egui::Key::Escape))
+        {
+            self.set_page(Page::Apps);
+        }
         self.dialogs(&ctx);
         self.draw_toasts(&ctx);
         if host.title_bar() == TitleBar::Custom {

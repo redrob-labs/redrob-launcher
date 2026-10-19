@@ -48,10 +48,10 @@ impl LauncherUi {
         true
     }
 
-    /// The account page (its title is in the page's top bar). Returns true when Done is pressed.
-    pub(crate) fn account_page(&mut self, ui: &mut egui::Ui) -> bool {
+    /// The account page (its title is in the page's top bar).
+    pub(crate) fn account_page(&mut self, ui: &mut egui::Ui) {
         let t = Tokens::get(ui.ctx());
-        let Some(acct) = self.backend.account() else { return true };
+        let Some(acct) = self.backend.account() else { return };
         let workspace = acct.workspace();
         let state = acct.state();
         let mut action: Option<fn(&mut dyn redrob_launcher_core::account::AccountBackend)> = None;
@@ -179,12 +179,5 @@ impl LauncherUi {
                 None => {}
             }
         }
-
-        ui.add_space(14.0);
-        let mut close = false;
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            close = widgets::button(ui, tl!("Done"), Kind::Secondary, 90.0).clicked();
-        });
-        close
     }
 }
