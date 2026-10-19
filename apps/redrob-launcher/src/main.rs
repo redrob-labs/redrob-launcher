@@ -51,6 +51,8 @@ fn main() -> ExitCode {
         Instance::Secondary => return ExitCode::SUCCESS,
         Instance::Primary(rx) => rx,
     };
+    // Web pages open the launcher with `redrob://` links: make sure they reach this copy.
+    redrob_launcher_native::url_scheme::register();
     let (tray_loop, woken) = sync_channel(1);
     let waker = Arc::new(Waker { window: Mutex::new(None), tray_loop, quit_pending: AtomicBool::new(false) });
     {

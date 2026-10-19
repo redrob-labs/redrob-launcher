@@ -33,6 +33,7 @@ pub mod runtime;
 pub mod self_update;
 pub mod single_instance;
 pub mod source;
+pub mod url_scheme;
 
 pub use backend::NativeBackend;
 
