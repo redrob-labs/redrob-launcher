@@ -18,6 +18,7 @@ use std::sync::{Arc, Mutex, OnceLock, PoisonError};
 use std::time::Duration;
 
 use eframe::wgpu::rwh::{HasDisplayHandle, RawDisplayHandle};
+use redrob_launcher_core::deep_link;
 use redrob_launcher_core::protocol::Backend;
 use redrob_launcher_native::single_instance::{self, Instance};
 use redrob_launcher_native::{NativeBackend, language, login};
@@ -42,9 +43,11 @@ fn main() -> ExitCode {
         return ExitCode::SUCCESS;
     }
     let mut hidden = args.iter().any(|a| a == login::HIDDEN_FLAG);
+    // Started by the OS for a `redrob:` link (`redrob://open/cad`): see `deep_link`.
+    let link = args.iter().find(|a| deep_link::is_link(a)).cloned();
 
     let wake: Wake = Arc::new(OnceLock::new());
-    let starts = match single_instance::claim(wake.clone()) {
+    let starts = match single_instance::claim(wake.clone(), link.as_deref()) {
         Instance::Secondary => return ExitCode::SUCCESS,
         Instance::Primary(rx) => rx,
     };
