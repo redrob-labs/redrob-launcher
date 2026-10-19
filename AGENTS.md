@@ -51,7 +51,9 @@ settings file must produce an error the user can act on, never a panic.
   `unimplemented!`. Return the crate's error type and propagate with `?`.
 - Every production crate root (`lib.rs`, each binary's `main.rs`, and `xtask`) carries
   `#![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]`.
-- **No `unsafe`.** The workspace sets `unsafe_code = "forbid"`.
+- **No `unsafe`.** The workspace sets `unsafe_code = "forbid"`. The one exception is the macOS
+  Apple Event handler for `redrob://` links (`apps/redrob-launcher/src/url_event.rs`): that crate
+  denies `unsafe_code` instead, and only that module allows it.
 - **Everything from the network is hostile.** Use `get()` instead of indexing, checked arithmetic
   for sizes and offsets, and cap downloads and JSON sizes.
 
