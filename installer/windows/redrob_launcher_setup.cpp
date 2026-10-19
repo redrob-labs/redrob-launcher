@@ -137,6 +137,10 @@ constexpr D2D1_COLOR_F kPanelViolet = Hex(0x8B82FF);
 bool g_dark = false;  // set from Windows' AppsUseLightTheme at start (or --theme)
 int g_themeFlag = 0;  // --theme: 0 follow Windows, 1 light, 2 dark (a dev aid, mainly for --render-stages)
 inline const Palette& Pal() { return g_dark ? kDark : kLight; }
+// a -> b by t (0..1): hover and pressed states blend between two roles.
+inline D2D1_COLOR_F Mix(const D2D1_COLOR_F& a, const D2D1_COLOR_F& b, float t) {
+  return {a.r + (b.r - a.r) * t, a.g + (b.g - a.g) * t, a.b + (b.b - a.b) * t, a.a + (b.a - a.a) * t};
+}
 
 // Windows' app theme: HKCU\...\Themes\Personalize\AppsUseLightTheme (0 = dark). Read only. Light if unset.
 static bool SystemPrefersDark() {
@@ -160,6 +164,9 @@ constexpr float kCapBtnW = 46.0f;   // each caption button
 // window messages / timers
 constexpr UINT_PTR kTickTimer = 1;
 constexpr UINT     kTickMs     = 16;   // ~60fps for the eased bar / fades
+constexpr UINT_PTR kAnimTimer = 2;     // hover and stage fades; runs only while something moves
+constexpr float    kHoverMs = 140.0f;  // DS motion "fast", standard easing
+constexpr float    kStageMs = 220.0f;  // DS motion "base": a new screen's content fades in
 constexpr UINT_PTR kPayloadMsgDone = (WM_APP + 1);
 constexpr UINT_PTR kUninstallMsgDone = (WM_APP + 2);
 constexpr UINT_PTR kStageMsg = (WM_APP + 3);  // the worker moved on: wParam is the Stage
@@ -318,6 +325,26 @@ class SetupApp {
   // hit-tested button rects (device px), recomputed each paint
   RECT rcMin_{}, rcClose_{}, rcRetry_{}, rcErrClose_{}, rcCheck_{};
   bool confirmingQuit_ = false;
+
+  // Pointer and keyboard state of the controls. Retry = the primary button (English on the language screen),
+  // ErrClose = the secondary one (한국어 there), Check = the checkbox row.
+  enum Ctl { kNone = 0, kMin, kClose, kRetry, kErrClose, kCheck, kCtlCount };
+  int hover_ = kNone;          // under the pointer
+  int pressed_ = kNone;        // mouse went down here; the action runs on release over it
+  int focus_ = kNone;          // keyboard focus (Tab / Shift+Tab)
+  bool focusVisible_ = false;  // the ring shows after keyboard use only, never after a click
+  bool trackingMouse_ = false;
+  bool reducedMotion_ = false; // SPI_GETCLIENTAREAANIMATION off: no fades
+  float hoverT_[kCtlCount] = {};  // 0..1 per control, eased toward hover/pressed
+  ULONGLONG animLast_ = 0;
+  int HitTest(POINT pt) const;
+  void Activate(int ctl);
+  void UpdateHover();
+  void StartAnim();
+  bool AnimStep();  // advance; true while anything still moves
+  std::vector<int> Focusables() const;
+  float Eased(int ctl) const;
+  float StageFade() const;
 };
 
 SetupApp* g_app = nullptr;
@@ -468,6 +495,8 @@ int SetupApp::Run(HINSTANCE hinst) {
   DwmSetWindowAttribute(hwnd_, DWMWA_WINDOW_CORNER_PREFERENCE, &corner, sizeof(corner));
   g_dark = SystemPrefersDark();
   ApplyWindowTheme();
+  BOOL animate = TRUE;
+  if (SystemParametersInfoW(SPI_GETCLIENTAREAANIMATION, 0, &animate, 0)) reducedMotion_ = !animate;
 
   LayoutText();
 
@@ -573,6 +602,10 @@ LRESULT SetupApp::WndProc(UINT msg, WPARAM wp, LPARAM lp) {
 
     case WM_TIMER:
       if (wp == kTickTimer) OnTick();
+      if (wp == kAnimTimer) {
+        if (!AnimStep()) KillTimer(hwnd_, kAnimTimer);
+        InvalidateRect(hwnd_, nullptr, FALSE);
+      }
       return 0;
 
     case kStageMsg:
@@ -628,51 +661,76 @@ LRESULT SetupApp::WndProc(UINT msg, WPARAM wp, LPARAM lp) {
       }
       return 0;
 
+    case WM_MOUSEMOVE:
+      if (!trackingMouse_) {
+        TRACKMOUSEEVENT tme = {sizeof(tme), TME_LEAVE, hwnd_, 0};
+        trackingMouse_ = TrackMouseEvent(&tme) != FALSE;
+      }
+      UpdateHover();
+      return 0;
+
+    case WM_MOUSELEAVE:
+      trackingMouse_ = false;
+      if (hover_ != kNone) { hover_ = kNone; StartAnim(); }
+      return 0;
+
+    case WM_SETCURSOR:
+      if (LOWORD(lp) == HTCLIENT) {
+        POINT pt; GetCursorPos(&pt); ScreenToClient(hwnd_, &pt);
+        SetCursor(LoadCursor(nullptr, HitTest(pt) != kNone ? IDC_HAND : IDC_ARROW));
+        return TRUE;
+      }
+      return DefWindowProc(hwnd_, msg, wp, lp);
+
     case WM_LBUTTONDOWN: {
       POINT pt{GET_X_LPARAM(lp), GET_Y_LPARAM(lp)};
-      if (PtInRect(&rcClose_, pt)) { RequestClose(false); return 0; }
-      if (PtInRect(&rcMin_, pt)) { ShowWindow(hwnd_, SW_MINIMIZE); return 0; }
-      if (stage_ == Stage::Language) {
-        // The two pills ARE the choice: picking one moves on, in that language.
-        if (PtInRect(&rcRetry_, pt)) { ChooseLanguage(Lang::En); return 0; }
-        if (PtInRect(&rcErrClose_, pt)) { ChooseLanguage(Lang::Ko); return 0; }
-      }
-      if (stage_ == Stage::Confirm) {
-        if (PtInRect(&rcCheck_, pt)) { deleteData_ = !deleteData_; InvalidateRect(hwnd_, nullptr, FALSE); return 0; }
-        if (PtInRect(&rcRetry_, pt)) { StartUninstall(); return 0; }       // "Uninstall"
-        if (PtInRect(&rcErrClose_, pt)) { RequestClose(true); return 0; }  // "Cancel"
-      }
-      if (stage_ == Stage::Welcome) {
-        if (PtInRect(&rcCheck_, pt)) {
-          desktopShortcut_ = !desktopShortcut_;
-          InvalidateRect(hwnd_, nullptr, FALSE);
-          return 0;
-        }
-        if (PtInRect(&rcRetry_, pt)) { StartInstall(); return 0; }              // "Install"
-        if (PtInRect(&rcErrClose_, pt)) { SetStage(Stage::Language); return 0; } // "Back"
-      }
-      if (stage_ == Stage::Removed && PtInRect(&rcRetry_, pt)) { RequestClose(true); return 0; }  // "Close"
-      if (stage_ == Stage::Error && mode_ == Mode::Uninstall && PtInRect(&rcRetry_, pt)) {
-        errorMessage_.clear();
-        SetStage(Stage::Confirm);  // back to the question, so a retry is still a choice
+      focusVisible_ = false;  // a click never shows the focus ring
+      const int hit = HitTest(pt);
+      if (hit != kNone) {
+        pressed_ = hit;
+        SetCapture(hwnd_);
+        StartAnim();
         return 0;
       }
-      if (stage_ == Stage::Error && PtInRect(&rcRetry_, pt)) {
-        errorMessage_.clear();
-        StartInstall();
-        return 0;
-      }
-      if (stage_ == Stage::Error && PtInRect(&rcErrClose_, pt)) { RequestClose(true); return 0; }
       // Anywhere else on the caption strip or the brand panel drags the window.
       if (pt.y < MulDiv((int)kCaption, dpi_, 96) || pt.x < MulDiv((int)kPanelW, dpi_, 96)) {
         ReleaseCapture();
         SendMessage(hwnd_, WM_NCLBUTTONDOWN, HTCAPTION, 0);
       }
+      InvalidateRect(hwnd_, nullptr, FALSE);
       return 0;
     }
 
-    case WM_KEYDOWN:
+    case WM_LBUTTONUP: {
+      POINT pt{GET_X_LPARAM(lp), GET_Y_LPARAM(lp)};
+      const int was = pressed_;
+      pressed_ = kNone;
+      if (GetCapture() == hwnd_) ReleaseCapture();
+      StartAnim();
+      // The action runs on release over the control it went down on, like a native button.
+      if (was != kNone && HitTest(pt) == was) Activate(was);
+      return 0;
+    }
+
+    case WM_KEYDOWN: {
       if (wp == VK_ESCAPE) { RequestClose(false); return 0; }
+      if (wp == VK_TAB) {
+        const std::vector<int> order = Focusables();
+        if (order.empty()) return 0;
+        const bool back = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
+        auto at = std::find(order.begin(), order.end(), focus_);
+        int i = at == order.end() ? (back ? (int)order.size() - 1 : 0)
+                                  : ((int)(at - order.begin()) + (back ? -1 : 1) + (int)order.size()) % (int)order.size();
+        focus_ = order[i];
+        focusVisible_ = true;
+        InvalidateRect(hwnd_, nullptr, FALSE);
+        return 0;
+      }
+      // A focused control answers Enter and Space itself; otherwise the keys keep their screen-wide meaning.
+      if (focusVisible_ && focus_ != kNone && (wp == VK_RETURN || wp == VK_SPACE)) {
+        const std::vector<int> order = Focusables();
+        if (std::find(order.begin(), order.end(), focus_) != order.end()) { Activate(focus_); return 0; }
+      }
       if (stage_ == Stage::Language) {
         // Left/Right or E/K pick; Enter keeps the preselected language.
         if (wp == VK_LEFT || wp == 'E') { ChooseLanguage(Lang::En); return 0; }
@@ -680,21 +738,14 @@ LRESULT SetupApp::WndProc(UINT msg, WPARAM wp, LPARAM lp) {
         if (wp == VK_RETURN) { ChooseLanguage(g_lang); return 0; }
         return 0;
       }
-      if (stage_ == Stage::Confirm && wp == VK_SPACE) {
-        deleteData_ = !deleteData_;
-        InvalidateRect(hwnd_, nullptr, FALSE);
-        return 0;
-      }
+      if (stage_ == Stage::Confirm && wp == VK_SPACE) { Activate(kCheck); return 0; }
       if (stage_ == Stage::Confirm && wp == VK_RETURN) { StartUninstall(); return 0; }
-      if (stage_ == Stage::Welcome && wp == VK_SPACE) {
-        desktopShortcut_ = !desktopShortcut_;
-        InvalidateRect(hwnd_, nullptr, FALSE);
-        return 0;
-      }
+      if (stage_ == Stage::Welcome && wp == VK_SPACE) { Activate(kCheck); return 0; }
       if (stage_ == Stage::Welcome && wp == VK_RETURN) { StartInstall(); return 0; }
       if (stage_ == Stage::Welcome && wp == VK_BACK) { SetStage(Stage::Language); return 0; }
       if (stage_ == Stage::Removed && wp == VK_RETURN) { RequestClose(true); return 0; }
       return 0;
+    }
 
     case WM_SYSKEYDOWN:
       if (wp == VK_F4) { RequestClose(false); return 0; }  // Alt+F4
@@ -730,6 +781,111 @@ void SetupApp::RequestClose(bool force) {
   DestroyWindow(hwnd_);
 }
 
+// What a click (on release) or a focused Enter/Space does. The same actions the screens always had.
+void SetupApp::Activate(int ctl) {
+  if (ctl == kClose) { RequestClose(false); return; }
+  if (ctl == kMin) { ShowWindow(hwnd_, SW_MINIMIZE); return; }
+  if (stage_ == Stage::Language) {
+    // The two buttons ARE the choice: picking one moves on, in that language.
+    if (ctl == kRetry) { ChooseLanguage(Lang::En); return; }
+    if (ctl == kErrClose) { ChooseLanguage(Lang::Ko); return; }
+  }
+  if (stage_ == Stage::Confirm) {
+    if (ctl == kCheck) { deleteData_ = !deleteData_; InvalidateRect(hwnd_, nullptr, FALSE); return; }
+    if (ctl == kRetry) { StartUninstall(); return; }       // "Uninstall"
+    if (ctl == kErrClose) { RequestClose(true); return; }  // "Cancel"
+  }
+  if (stage_ == Stage::Welcome) {
+    if (ctl == kCheck) { desktopShortcut_ = !desktopShortcut_; InvalidateRect(hwnd_, nullptr, FALSE); return; }
+    if (ctl == kRetry) { StartInstall(); return; }               // "Install"
+    if (ctl == kErrClose) { SetStage(Stage::Language); return; } // "Back"
+  }
+  if (stage_ == Stage::Removed && ctl == kRetry) { RequestClose(true); return; }  // "Close"
+  if (stage_ == Stage::Error && mode_ == Mode::Uninstall && ctl == kRetry) {
+    errorMessage_.clear();
+    SetStage(Stage::Confirm);  // back to the question, so a retry is still a choice
+    return;
+  }
+  if (stage_ == Stage::Error && ctl == kRetry) { errorMessage_.clear(); StartInstall(); return; }
+  if (stage_ == Stage::Error && ctl == kErrClose) { RequestClose(true); return; }
+}
+
+// The control under `pt` (device px). Only the controls the current screen drew have a rect.
+int SetupApp::HitTest(POINT pt) const {
+  if (PtInRect(&rcClose_, pt)) return kClose;
+  if (PtInRect(&rcMin_, pt)) return kMin;
+  if (PtInRect(&rcRetry_, pt)) return kRetry;
+  if (PtInRect(&rcErrClose_, pt)) return kErrClose;
+  if (PtInRect(&rcCheck_, pt)) return kCheck;
+  return kNone;
+}
+
+void SetupApp::UpdateHover() {
+  if (!hwnd_) return;
+  POINT pt;
+  GetCursorPos(&pt);
+  ScreenToClient(hwnd_, &pt);
+  RECT rc;
+  GetClientRect(hwnd_, &rc);
+  const int hit = PtInRect(&rc, pt) ? HitTest(pt) : kNone;
+  if (hit != hover_) { hover_ = hit; StartAnim(); }
+}
+
+// Tab order, left to right as drawn: the checkbox, then the secondary button, then the primary.
+std::vector<int> SetupApp::Focusables() const {
+  switch (stage_) {
+    case Stage::Language: return {kRetry, kErrClose};  // English, 한국어
+    case Stage::Welcome: case Stage::Confirm: return {kCheck, kErrClose, kRetry};
+    case Stage::Error: return {kErrClose, kRetry};
+    case Stage::Removed: return {kRetry};
+    default: return {};
+  }
+}
+
+void SetupApp::StartAnim() {
+  if (!hwnd_) return;
+  if (reducedMotion_) {
+    for (int i = 0; i < kCtlCount; ++i) hoverT_[i] = (i == hover_ || i == pressed_) ? 1.0f : 0.0f;
+    InvalidateRect(hwnd_, nullptr, FALSE);
+    return;
+  }
+  animLast_ = GetTickCount64();
+  SetTimer(hwnd_, kAnimTimer, kTickMs, nullptr);
+  InvalidateRect(hwnd_, nullptr, FALSE);
+}
+
+bool SetupApp::AnimStep() {
+  const ULONGLONG now = GetTickCount64();
+  const float step = (float)(now - animLast_) / kHoverMs;
+  animLast_ = now;
+  bool moving = false;
+  for (int i = 0; i < kCtlCount; ++i) {
+    const float target = (i == hover_ || i == pressed_) ? 1.0f : 0.0f;
+    if (hoverT_[i] < target) hoverT_[i] = std::min(target, hoverT_[i] + step);
+    else if (hoverT_[i] > target) hoverT_[i] = std::max(target, hoverT_[i] - step);
+    if (hoverT_[i] != target) moving = true;
+  }
+  return moving || StageFade() < 1.0f;
+}
+
+// DS standard easing, cubic-bezier(0.2, 0, 0, 1), solved for x by bisection.
+static float StandardEase(float t) {
+  if (t <= 0) return 0;
+  if (t >= 1) return 1;
+  auto bez = [](float a, float b, float u) { return 3 * a * u * (1 - u) * (1 - u) + 3 * b * u * u * (1 - u) + u * u * u; };
+  float lo = 0, hi = 1, u = t;
+  for (int i = 0; i < 20; ++i) { u = (lo + hi) / 2; if (bez(0.2f, 0.0f, u) < t) lo = u; else hi = u; }
+  return bez(0.0f, 1.0f, u);
+}
+
+float SetupApp::Eased(int ctl) const { return StandardEase(hoverT_[ctl]); }
+
+// The current screen's content opacity: 0 -> 1 over 220 ms after the screen changes; 1 under reduced motion.
+float SetupApp::StageFade() const {
+  if (reducedMotion_ || !hwnd_) return 1.0f;
+  return StandardEase(std::min(1.0f, (float)(GetTickCount64() - stageTick_) / kStageMs));
+}
+
 void SetupApp::SetStage(Stage s) {
   if (s != stage_) stageTick_ = GetTickCount64();
   stage_ = s;
@@ -737,6 +893,11 @@ void SetupApp::SetStage(Stage s) {
   if (s == Stage::Opening) openedAt_ = GetTickCount64();
   if (s == Stage::Error || s == Stage::Confirm || s == Stage::Removed || s == Stage::Welcome || s == Stage::Language)
     KillTimer(hwnd_, kTickTimer);
+  // A new screen starts with no focus (Enter keeps meaning its primary action) and fades its content in.
+  focus_ = kNone;
+  focusVisible_ = false;
+  pressed_ = kNone;
+  if (hwnd_) { UpdateHover(); StartAnim(); }
   if (hwnd_) InvalidateRect(hwnd_, nullptr, FALSE);
 }
 
@@ -1029,10 +1190,33 @@ HRESULT SetupApp::DrawScene() {
   {
     const float cy = kCaption / 2, g = 5.0f;  // 10 dip glyphs
     const float closeX = W - kCapBtnW / 2, minX = W - kCapBtnW * 1.5f;
-    rt_->DrawLine(D2D1::Point2F(closeX - g, cy - g), D2D1::Point2F(closeX + g, cy + g), secondary.p, 1.0f);
-    rt_->DrawLine(D2D1::Point2F(closeX + g, cy - g), D2D1::Point2F(closeX - g, cy + g), secondary.p, 1.0f);
+    // Hover: 8% ink behind minimise; status-danger behind close, with a white glyph.
+    const float hm = Eased(kMin), hc = Eased(kClose);
+    if (hm > 0) {
+      ComPtr<ID2D1SolidColorBrush> fill;
+      D2D1_COLOR_F c = p.ink; c.a = 0.08f * hm;
+      rt_->CreateSolidColorBrush(c, &fill);
+      if (fill) rt_->FillRectangle(D2D1::RectF(W - 2 * kCapBtnW, 0, W - kCapBtnW, kCaption), fill.p);
+    }
+    ComPtr<ID2D1SolidColorBrush> closeGlyph;
+    rt_->CreateSolidColorBrush(Mix(p.secondary, kWhite, hc), &closeGlyph);
+    if (hc > 0) {
+      ComPtr<ID2D1SolidColorBrush> fill;
+      D2D1_COLOR_F c = p.danger; c.a = hc;
+      rt_->CreateSolidColorBrush(c, &fill);
+      if (fill) rt_->FillRectangle(D2D1::RectF(W - kCapBtnW, 0, W, kCaption), fill.p);
+    }
+    rt_->DrawLine(D2D1::Point2F(closeX - g, cy - g), D2D1::Point2F(closeX + g, cy + g), closeGlyph.p, 1.0f);
+    rt_->DrawLine(D2D1::Point2F(closeX + g, cy - g), D2D1::Point2F(closeX - g, cy + g), closeGlyph.p, 1.0f);
     rt_->DrawLine(D2D1::Point2F(minX - g, cy), D2D1::Point2F(minX + g, cy), secondary.p, 1.0f);
   }
+
+  // The content column fades in with each new screen (not the progress bar, which carries on).
+  const float fade = StageFade();
+  ComPtr<ID2D1Layer> layer;
+  if (fade < 1.0f && SUCCEEDED(rt_->CreateLayer(&layer)))
+    rt_->PushLayer(D2D1::LayerParameters(D2D1::InfiniteRect(), nullptr, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE,
+                                         D2D1::IdentityMatrix(), fade), layer.p);
 
   // ---- content column: stepper, title, body, controls; left aligned -----------
   const float x = kPanelW + kPad, cw = W - x - kPad;
@@ -1045,39 +1229,53 @@ HRESULT SetupApp::DrawScene() {
   // DS Button: radius 8, 40 tall, 20 side padding (min 96); primary Redrob Blue with white type, secondary a
   // 1 px border-strong outline on the ground. Laid out from the right edge; returns its left edge.
   const float bh = 40.0f, by = H - kPad - bh;
-  auto button = [&](RECT& rc, float right, const wchar_t* label, bool primary) -> float {
+  // DS focus ring: 2 px focus-ring, 2 px outside the control, following its radius. Keyboard focus only.
+  auto focusRing = [&](int ctl, D2D1_RECT_F r, float radius) {
+    if (!focusVisible_ || focus_ != ctl) return;
+    ComPtr<ID2D1SolidColorBrush> ring;
+    rt_->CreateSolidColorBrush(p.focus, &ring);
+    if (ring) rt_->DrawRoundedRectangle(D2D1::RoundedRect(D2D1::RectF(r.left - 3, r.top - 3, r.right + 3, r.bottom + 3),
+                                                          radius + 3, radius + 3), ring.p, 2.0f);
+  };
+  // Pressed reads as full hover (DS: action-primary-hover is hover AND pressed).
+  auto button = [&](RECT& rc, int ctl, float right, const wchar_t* label, bool primary) -> float {
     const float w = std::max(96.0f, TextWidth(label, fmtButton_.p) + 40.0f);
     const float l = right - w;
     const D2D1_RECT_F br = D2D1::RectF(l, by, right, by + bh);
-    if (primary) {
-      rt_->FillRoundedRectangle(D2D1::RoundedRect(br, 8, 8), blue.p);
-    } else {
-      rt_->FillRoundedRectangle(D2D1::RoundedRect(br, 8, 8), base.p);
+    const float t = pressed_ == ctl ? 1.0f : Eased(ctl);
+    ComPtr<ID2D1SolidColorBrush> fill;
+    rt_->CreateSolidColorBrush(primary ? Mix(p.blue, p.blueHover, t) : Mix(p.base, p.sunken, t), &fill);
+    if (fill) rt_->FillRoundedRectangle(D2D1::RoundedRect(br, 8, 8), fill.p);
+    if (!primary)
       rt_->DrawRoundedRectangle(D2D1::RoundedRect(D2D1::RectF(l + 0.5f, by + 0.5f, right - 0.5f, by + bh - 0.5f), 7.5f, 7.5f),
                                 strong.p, 1.0f);
-    }
+    focusRing(ctl, br, 8.0f);
     if (fmtButton_) rt_->DrawTextW(label, (UINT32)wcslen(label), fmtButton_.p, br, primary ? white.p : ink.p);
     rc = ToDevice(l, by, w, bh);
     return l;
   };
   auto twoButtons = [&](const wchar_t* primary, const wchar_t* secondaryLabel) {
-    const float l = button(rcRetry_, W - kPad, primary, true);
-    button(rcErrClose_, l - 8.0f, secondaryLabel, false);
+    const float l = button(rcRetry_, kRetry, W - kPad, primary, true);
+    button(rcErrClose_, kErrClose, l - 8.0f, secondaryLabel, false);
   };
   // DS Checkbox: 18 px box, radius 4, 1 px border-strong; checked = blue with a white tick. The row (box and
-  // label) is the hit target.
+  // label) is the hit target; hovering it fills an empty box with sunken, a checked one with the hover blue.
   auto checkRow = [&](float rowY, const std::wstring& label, bool checked) {
     const float box = 18.0f, bx = x, byy = rowY + 1.0f;
-    const D2D1_ROUNDED_RECT boxRR = D2D1::RoundedRect(D2D1::RectF(bx, byy, bx + box, byy + box), 4.0f, 4.0f);
+    const float t = pressed_ == kCheck ? 1.0f : Eased(kCheck);
+    const D2D1_RECT_F boxR = D2D1::RectF(bx, byy, bx + box, byy + box);
+    const D2D1_ROUNDED_RECT boxRR = D2D1::RoundedRect(boxR, 4.0f, 4.0f);
+    ComPtr<ID2D1SolidColorBrush> fill;
+    rt_->CreateSolidColorBrush(checked ? Mix(p.blue, p.blueHover, t) : Mix(p.base, p.sunken, t), &fill);
+    if (fill) rt_->FillRoundedRectangle(boxRR, fill.p);
     if (checked) {
-      rt_->FillRoundedRectangle(boxRR, blue.p);
       rt_->DrawLine(D2D1::Point2F(bx + 4.5f, byy + 9.5f), D2D1::Point2F(bx + 7.75f, byy + 12.5f), white.p, 1.8f);
       rt_->DrawLine(D2D1::Point2F(bx + 7.75f, byy + 12.5f), D2D1::Point2F(bx + 13.5f, byy + 6.0f), white.p, 1.8f);
     } else {
-      rt_->FillRoundedRectangle(boxRR, base.p);
       rt_->DrawRoundedRectangle(D2D1::RoundedRect(D2D1::RectF(bx + 0.5f, byy + 0.5f, bx + box - 0.5f, byy + box - 0.5f),
                                                   3.5f, 3.5f), strong.p, 1.0f);
     }
+    focusRing(kCheck, boxR, 4.0f);
     const float lw = TextWidth(label, fmtLabel_.p);
     if (fmtLabel_) rt_->DrawTextW(label.c_str(), (UINT32)label.size(), fmtLabel_.p,
                                   D2D1::RectF(bx + box + 8, rowY, bx + box + 8 + lw + 2, rowY + 20), ink.p);
@@ -1088,8 +1286,8 @@ HRESULT SetupApp::DrawScene() {
   if (stage_ == Stage::Language) {
     // Bilingual by nature: it comes before the choice. The two buttons are the choice; the preselected
     // one (a previous install's answer, or the Windows UI language) is drawn as the primary.
-    const float l = button(rcErrClose_, W - kPad, L"한국어", g_lang == Lang::Ko);
-    button(rcRetry_, l - 8.0f, L"English", g_lang == Lang::En);
+    const float l = button(rcErrClose_, kErrClose, W - kPad, L"한국어", g_lang == Lang::Ko);
+    button(rcRetry_, kRetry, l - 8.0f, L"English", g_lang == Lang::En);
   } else if (stage_ == Stage::Welcome) {
     checkRow(y + 20.0f, Tr(L"Create a desktop shortcut", L"바탕 화면에 바로 가기 만들기"), desktopShortcut_);
     twoButtons(Tr(L"Install", L"설치"), Tr(L"Back", L"뒤로"));
@@ -1097,10 +1295,11 @@ HRESULT SetupApp::DrawScene() {
     checkRow(y + 20.0f, Tr(L"Also delete its settings and downloads", L"설정과 내려받은 파일도 삭제"), deleteData_);
     twoButtons(Tr(L"Uninstall", L"제거"), Tr(L"Cancel", L"취소"));
   } else if (stage_ == Stage::Removed) {
-    button(rcRetry_, W - kPad, Tr(L"Close", L"닫기"), true);
+    button(rcRetry_, kRetry, W - kPad, Tr(L"Close", L"닫기"), true);
   } else if (stage_ == Stage::Error) {
     twoButtons(Tr(L"Retry", L"다시 시도"), Tr(L"Close", L"닫기"));
   } else {
+    if (layer) { rt_->PopLayer(); layer.reset(); }
     // ---- DS Progress: 8 px pill track (sunken), blue bar ------------------------
     const float barY = y + 24.0f, barH = 8.0f;
     rt_->FillRoundedRectangle(D2D1::RoundedRect(D2D1::RectF(x, barY, x + cw, barY + barH), 4, 4), sunken.p);
@@ -1110,6 +1309,7 @@ HRESULT SetupApp::DrawScene() {
           D2D1::RoundedRect(D2D1::RectF(x, barY, x + std::max(fillW, barH), barY + barH), 4, 4), blue.p);
     }
   }
+  if (layer) rt_->PopLayer();
 
   return rt_->EndDraw();
 }
@@ -1128,8 +1328,11 @@ int SetupApp::RenderStages(HINSTANCE hinst, const std::wstring& dir) {
   dpi_ = 192;  // 200%: the sharpest the art is drawn for
   const UINT pw = MulDiv(kBaseW, dpi_, 96), ph = MulDiv(kBaseH, dpi_, 96);
   int failures = 0;
-  struct Shot { Stage stage; double progress; const wchar_t* name; Lang lang; bool flag; };
+  struct Shot { Stage stage; double progress; const wchar_t* name; Lang lang; bool flag; int states = 0; };
   const Shot shots[] = {
+    // states 1: pointer over Back, keyboard focus on Install; 2: pointer over close, focus on the checkbox.
+    {Stage::Welcome, 0.0, L"8-states-buttons.png", Lang::En, true, 1},
+    {Stage::Welcome, 0.0, L"8-states-checkbox.png", Lang::Ko, false, 2},
     {Stage::Language, 0.0, L"0-language.png", Lang::En, false},
     {Stage::Language, 0.0, L"0-language-ko.png", Lang::Ko, false},
     {Stage::Welcome, 0.0, L"1-welcome.png", Lang::En, true},
@@ -1168,6 +1371,11 @@ int SetupApp::RenderStages(HINSTANCE hinst, const std::wstring& dir) {
     g_lang = s.lang;
     desktopShortcut_ = s.flag;  // Welcome: the box ticked or not
     deleteData_ = s.flag;       // Removed: settings deleted too, or kept
+    for (float& t : hoverT_) t = 0.0f;
+    hover_ = focus_ = kNone;
+    focusVisible_ = s.states != 0;
+    if (s.states == 1) { hover_ = kErrClose; hoverT_[kErrClose] = 1.0f; focus_ = kRetry; }
+    if (s.states == 2) { hover_ = kClose; hoverT_[kClose] = 1.0f; focus_ = kCheck; }
     if (s.stage == Stage::Error) errorMessage_ = ResultSentence(kResultAppRunning, false);
     if (FAILED(DrawScene())) { ++failures; continue; }
 
