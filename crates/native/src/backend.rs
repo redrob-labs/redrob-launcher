@@ -494,8 +494,29 @@ fn run_install(
         .get(app.id)
         .cloned()
         .ok_or("the latest release hasn't been found yet. Check for updates first.")?;
-    let (asset, kind) = planned_asset(app, &release, platform, options, existing, record)
-        .ok_or_else(|| format!("{} {} has no download for {}", app.name, release.version_label(), platform.label()))?;
+    let (asset, kind) = planned_asset(app, &release, platform, options, existing, record).ok_or_else(|| {
+        let tried = install::choose_kinds(existing, record, &options.kinds);
+        let files: Vec<&str> = release.assets.iter().map(|a| a.name.as_str()).collect();
+        log::warn!(
+            "{}: no download for {} in {}: installed as {:?} (record {:?}), tried {:?}, release files {:?}",
+            app.name,
+            platform.label(),
+            release.tag,
+            existing.map(|e| e.source),
+            record.map(|r| r.kind),
+            tried,
+            files
+        );
+        format!(
+            "{} {} has no download for {} (launcher {}, {} files in the release). Details: {}",
+            app.name,
+            release.version_label(),
+            platform.label(),
+            env!("CARGO_PKG_VERSION"),
+            files.len(),
+            crate::log_file::path().map_or_else(|| "the log".to_string(), |p| p.display().to_string())
+        )
+    })?;
     let mut last_emit = Instant::now() - Duration::from_secs(1);
     let mut phase = |p: JobPhase| {
         // Downloads report thousands of times; the UI needs ~20 a second.
