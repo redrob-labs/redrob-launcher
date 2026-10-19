@@ -42,13 +42,14 @@ out="$("$APPDIR/AppRun" open file.png)" || fail "AppRun exited non-zero"
 DESKTOP="$XDG_DATA_HOME/applications/$APP_ID.desktop"
 [ -f "$DESKTOP" ] || fail "desktop entry not installed"
 
-# 2. Exec rewritten to the AppImage (quoted, spaces intact), TryExec dropped,
+# 2. Exec rewritten to the AppImage (quoted, spaces intact, %u kept), TryExec dropped,
 #    everything else preserved from the packaged entry.
-expected_exec="Exec=\"$(readlink -f "$APPIMAGE")\""
+expected_exec="Exec=\"$(readlink -f "$APPIMAGE")\" %u"
 grep -Fxq "$expected_exec" "$DESKTOP" || fail "Exec not rewritten: $(grep '^Exec=' "$DESKTOP")"
 grep -q '^TryExec=' "$DESKTOP" && fail "TryExec kept, the entry would be hidden"
 grep -Fxq "Icon=$APP_ID" "$DESKTOP" || fail "Icon line lost"
 grep -Fxq 'Categories=Utility;PackageManager;' "$DESKTOP" || fail "metadata lines lost"
+grep -Fxq 'MimeType=x-scheme-handler/redrob;' "$DESKTOP" || fail "redrob: scheme handler lost"
 if command -v desktop-file-validate >/dev/null; then
   desktop-file-validate "$DESKTOP" || fail "generated desktop entry is invalid"
 fi
@@ -69,7 +70,7 @@ after="$(stat -c %i "$DESKTOP")"
 mv "$APPIMAGE" "$TMP/moved.AppImage"
 export APPIMAGE="$TMP/moved.AppImage"
 "$APPDIR/AppRun" >/dev/null || fail "launch after move exited non-zero"
-grep -Fxq "Exec=\"$(readlink -f "$APPIMAGE")\"" "$DESKTOP" || fail "Exec not refreshed after move"
+grep -Fxq "Exec=\"$(readlink -f "$APPIMAGE")\" %u" "$DESKTOP" || fail "Exec not refreshed after move"
 
 # 6. Opt-out installs nothing.
 rm -rf "$XDG_DATA_HOME"
