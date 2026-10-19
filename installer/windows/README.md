@@ -43,6 +43,7 @@ Redrob apps, a language page, an `.exe` that can carry the Redrob icon and build
 | `--delete-data` | with `--uninstall --silent`: also delete settings and downloads |
 | `--demo`, `--demo-error`, `--demo-uninstall` | the window's states on a timer, touching nothing |
 | `--render-stages <dir>` | draw every screen (both languages) to PNGs in `<dir>`, no window |
+| `--theme light` / `--theme dark` | draw in that theme instead of Windows' own (mainly for `--render-stages`) |
 
 ## Build
 
@@ -58,10 +59,24 @@ The release workflow builds it in two stages so every binary is signed before it
 (`.github/workflows/release.yml`, Windows jobs; signing is the shared `redrob-labs/.github/actions/sign-windows`
 action through Azure Artifact Signing).
 
-The art is committed: `res/background.png` is `res/background.html` rasterised at 1320x800 (shared with the
-other Redrob setups); `res/lockup.png` is built by `build-art.py` from the design system's Redrob Primary
-lockup and the name "Launcher", by the product-lockup rule; `assets/app-icon/redrob-launcher.ico` by
+## Look
+
+The window follows Windows' light or dark app theme and is two columns: a brand panel on the left, drawn in
+Direct2D (Redrob Blue radial gradient `#2E7EFF` -> `#2B52FF` -> `#2746EE`, a white glint top-left and a
+`#8B82FF` glint bottom-right) with the design system's white symbol, `assets/brand/symbol-white-192.png`,
+embedded as is; and a left-aligned content column with the design system's button, checkbox, progress bar
+and step dots. No new art file is committed for it.
+
+Type is Pretendard SemiBold and Regular from `assets/fonts`, cut by `build.py` (fontTools) to the characters
+the window draws (about 68 KB each). Without fontTools the build embeds no font and the window uses Segoe
+UI Variable.
+
+`res/background.png`, `res/background.html`, `res/lockup.png` and `build-art.py` belong to the previous
+dark centred window; this build no longer embeds them. `assets/app-icon/redrob-launcher.ico` comes from
 `packaging/brand-assets.sh`.
+
+`--render-stages <dir>` draws every screen in both languages; add `--theme light` or `--theme dark` to pick
+the theme (otherwise Windows' own).
 
 ## Verify
 

@@ -8,17 +8,21 @@
 // replaces it; and the install records what the launcher reads back.
 //
 // What it is: a native Win32 app, no dependencies beyond the Windows SDK. It renders a small borderless,
-// rounded, DWM-shadowed window with the Redrob Launcher lockup, a status line and a progress bar.
+// rounded, DWM-shadowed 720 x 440 window: a Redrob Blue brand panel on the left, and a left-aligned content
+// column (step dots, a title, one line under it, the screen's controls, buttons at the bottom right).
 //
-// Design system (redrob-design-system):
-//   * Ground "deep" (20-color.md): field is Redrob Black #0A0B0C. type is gray-1 / gray-5; the call to
-//     action is a white pill with black type.
-//   * "Blue acts" (20-color.md): the progress fill is action-primary, Redrob Blue #2B52FF.
-//   * Foot light is `wash-edge` from the brand gradient, pre-rendered into res/background.png from
-//     res/background.html.
-//   * Type is Pretendard (30-typography.md, 35-korean.md: it carries Hangul), embedded in-memory when
-//     available, else Segoe UI Variable with DirectWrite's font fallback for Hangul.
-//   * Motion: every transition under a third of a second (40-surfaces-and-motion.md).
+// Design system (@redrob-labs/ui):
+//   * Follows Windows' app theme (AppsUseLightTheme): light = surface-base #FFFFFF, ink #0A0B0C; dark =
+//     #0A0B0C, ink #F8F9FB. Every colour is a semantic role (Palette, below).
+//   * Brand panel: radial gradient #2E7EFF -> #2B52FF -> #2746EE with a white and a #8B82FF glint, drawn in
+//     Direct2D, with the design system's white symbol (assets/brand/symbol-white-192.png) as is.
+//   * "Blue acts": the primary button, the checked box and the progress bar are action-primary #2B52FF.
+//   * Controls are the DS Button (radius 8, h40), Checkbox (18 px, radius 4), Progress (8 px pill) and a
+//     small Stepper, with hover, pressed and keyboard focus (2 px focus ring) states.
+//   * Type is Pretendard SemiBold and Regular (it carries Hangul), embedded as a private DirectWrite
+//     collection when the build had fontTools, else Segoe UI Variable.
+//   * Motion: 140 ms hover and 220 ms screen fades, DS standard easing; none when Windows' client-area
+//     animation is off.
 //
 // Language: the first screen is bilingual and offers English / 한국어. The choice is stored under
 // HKCU\Software\Redrob\Redrob Launcher\Language (en, ko); the launcher adopts it on its first run and

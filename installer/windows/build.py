@@ -17,12 +17,11 @@ The payload is the release's own -portable.zip (packaging/windows/package.ps1: r
 portable.txt at the top level), already Authenticode-signed inside, so the setup must be built after signing
 and then signed itself (release workflow, Windows jobs). The setup drops portable.txt when it installs.
 
-The art is committed, not rendered here: res/background.png is res/background.html rasterised at 1320x800
-(shared with the other Redrob setups); res/lockup.png is built by build-art.py from the design system's
-Redrob Primary lockup and the product name; assets/app-icon/redrob-launcher.ico comes from
-packaging/brand-assets.sh. Pretendard is embedded when the design system delivery is present
-(--design-system, default ../redrob-design-system) and fontTools is installed; otherwise the window uses
-Segoe UI Variable (DirectWrite falls back to a system font for Hangul).
+The art is drawn by the window itself (the brand panel's gradient) around the design system's white symbol,
+assets/brand/symbol-white-192.png, embedded as is; assets/app-icon/redrob-launcher.ico comes from
+packaging/brand-assets.sh. Pretendard SemiBold and Regular are embedded, cut to the window's characters,
+when fontTools is installed: from assets/fonts, else the design system delivery (--design-system, default
+../redrob-design-system); otherwise the window uses Segoe UI Variable.
 
 Adapted from redrob-labs/redrob-canvas installer/windows/build.py (our own code).
 """
