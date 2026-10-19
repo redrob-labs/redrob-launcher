@@ -152,7 +152,7 @@ impl Platform {
     /// Package formats the launcher installs on this OS, in order of preference.
     pub fn default_kinds(self) -> &'static [PackageKind] {
         match self.os {
-            Os::Windows => &[PackageKind::Msi, PackageKind::PortableZip],
+            Os::Windows => &[PackageKind::Setup, PackageKind::Msi, PackageKind::PortableZip],
             Os::MacOs => &[PackageKind::Dmg],
             Os::Linux => &[PackageKind::AppImage, PackageKind::TarGz],
         }
