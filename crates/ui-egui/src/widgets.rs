@@ -798,9 +798,9 @@ pub fn nav_row(ui: &mut Ui, icon: Icon, label: &str, hint: &str, meta: NavMeta, 
     resp.on_hover_cursor(egui::CursorIcon::PointingHand)
 }
 
-/// The sidebar's account row: a 28 px avatar (DS Avatar: the workspace's initial in white on
-/// the brand blue; signed out, a person on the sunken surface), the name in 13 px semibold and a
-/// 12 px meta line under it. Screen readers read `name`.
+/// The sidebar's account row (Redrob Cowork's): a 32 px avatar on the sunken surface (the
+/// workspace's initial in ink, or a person), the name in 13 px semibold and a 12 px status line in
+/// ink-faint under it. Screen readers read `name`.
 pub fn account_row(ui: &mut Ui, name: &str, meta: &str, initial: Option<char>, current: bool, rail: bool, hint: &str) -> Response {
     let t = Tokens::get(ui.ctx());
     let (rect, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 48.0), Sense::click());
@@ -812,18 +812,15 @@ pub fn account_row(ui: &mut Ui, name: &str, meta: &str, initial: Option<char>, c
     } else if hovered {
         p.rect_filled(rect, radius, t.hover_row());
     }
-    let size = 28.0;
+    let size = 32.0;
     let centre = if rail { rect.center() } else { egui::pos2(rect.left() + theme::space::S2 + size / 2.0, rect.center().y) };
+    p.circle(centre, size / 2.0, if current || hovered { t.bg } else { t.sunken }, t.hairline());
     match initial {
         Some(c) => {
-            p.circle_filled(centre, size / 2.0, t.accent);
             let s: String = c.to_uppercase().collect();
-            p.text(centre, egui::Align2::CENTER_CENTER, s, egui::FontId::new(theme::text::LABEL, theme::semibold()), t.on_brand());
+            p.text(centre, egui::Align2::CENTER_CENTER, s, egui::FontId::new(theme::text::LABEL, theme::semibold()), t.ink);
         }
-        None => {
-            p.circle_filled(centre, size / 2.0, if current { t.bg } else { t.sunken });
-            crate::glyphs::paint(p, Rect::from_center_size(centre, vec2(16.0, 16.0)), Icon::Account, t.muted);
-        }
+        None => crate::glyphs::paint(p, Rect::from_center_size(centre, vec2(16.0, 16.0)), Icon::Account, t.muted),
     }
     if !rail {
         let left = centre.x + size / 2.0 + 10.0;
@@ -845,6 +842,33 @@ pub fn account_row(ui: &mut Ui, name: &str, meta: &str, initial: Option<char>, c
     resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Button, true, current, name));
     focus_ring(ui, &resp, theme::radius::SM);
     let resp = if rail { tip(resp, name) } else { tip(resp, hint) };
+    resp.on_hover_cursor(egui::CursorIcon::PointingHand)
+}
+
+/// A DS Menu item, `width` wide: 36 px, radius 6, a 16 px icon in ink-muted (or its room, so the
+/// labels line up) and a 13 px label in ink; hover takes the sunken step. A disabled item (the
+/// version line) is ink-faint and can't be clicked.
+pub fn menu_item(ui: &mut Ui, icon: Option<Icon>, label: &str, enabled: bool, width: f32) -> Response {
+    let t = Tokens::get(ui.ctx());
+    let (rect, resp) = ui.allocate_exact_size(vec2(width, 36.0), if enabled { Sense::click() } else { Sense::hover() });
+    let hovered = enabled && (resp.hovered() || resp.is_pointer_button_down_on());
+    let p = ui.painter();
+    if hovered {
+        p.rect_filled(rect, CornerRadius::same(theme::radius::SM), t.hover_row());
+    }
+    let pad = theme::space::S2;
+    let icon_rect = Rect::from_min_size(egui::pos2(rect.left() + pad, rect.center().y - 8.0), vec2(16.0, 16.0));
+    if let Some(icon) = icon {
+        crate::glyphs::paint(p, icon_rect, icon, if hovered { t.ink } else { t.muted });
+    }
+    let ink = if enabled { t.ink } else { t.faint };
+    let galley = caps(ui, label, theme::text::LABEL, egui::FontFamily::Proportional, 0.0, ink);
+    paint_left(ui, Rect::from_min_max(egui::pos2(icon_rect.right() + pad, rect.top()), rect.max), galley, ink);
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, enabled, label));
+    if !enabled {
+        return resp;
+    }
+    focus_ring(ui, &resp, theme::radius::SM);
     resp.on_hover_cursor(egui::CursorIcon::PointingHand)
 }
 

@@ -396,10 +396,28 @@ fn switching_filters() {
     h.get_by_label("Redrob Canvas");
 }
 
-/// Opens the Settings page from the sidebar.
-fn open_settings(h: &mut Harness<'_, Option<LauncherUi>>) {
-    h.get_by_label("Settings").click();
+/// Clicks the sidebar's account row labelled `row`, then the item `item` of the menu it opens
+/// above itself.
+fn from_account_menu(h: &mut Harness<'_, Option<LauncherUi>>, row: &str, item: &str) {
+    let row_rect = h.get_by_label(row).rect();
+    h.get_by_label(row).click();
     h.run_steps(4);
+    {
+        // The menu's item: the nearest one above the row (a page title can share its label).
+        let node = h
+            .get_all_by_label(item)
+            .filter(|n| n.rect().bottom() <= row_rect.top() + 0.5)
+            .max_by(|a, b| a.rect().bottom().total_cmp(&b.rect().bottom()))
+            .unwrap();
+        node.click();
+    }
+    h.run_steps(4);
+}
+
+/// Opens the Settings page: the sidebar's account row (it reads "Settings" with no account
+/// backend) opens its menu, and the menu's Settings item opens the page.
+fn open_settings(h: &mut Harness<'_, Option<LauncherUi>>) {
+    from_account_menu(h, "Settings", "Settings");
 }
 
 /// Opens the More actions menu on `app`'s tile: the nearest one right of its name and under it,
@@ -605,6 +623,34 @@ fn links_to_the_website_github_and_each_apps_pages() {
     open_card_menu(&mut h, "Redrob Code");
     h.get_by_label("GitHub repository");
     assert_eq!(h.query_all_by_label_contains("Website").count(), 1, "only the footer's");
+}
+
+#[test]
+fn the_account_menu_holds_settings_quit_and_the_version() {
+    for width in [1180.0, 600.0] {
+        let mut h = harness_sized(width);
+        h.run_steps(6);
+        // No account backend: one row reading Settings, no Settings row of its own.
+        assert_eq!(h.query_all_by_label("Settings").count(), 1, "{width}");
+        let row = h.get_by_label("Settings").rect();
+        h.get_by_label("Settings").click();
+        h.run_steps(4);
+        snapshot(&mut h, &format!("account-menu-no-account-{width}"));
+        let version = h.get_by_label(&format!("Redrob Launcher {}", env!("CARGO_PKG_VERSION"))).rect();
+        let quit = h.get_by_label("Quit Redrob Launcher").rect();
+        let settings = h.get_all_by_label("Settings").map(|n| n.rect()).find(|r| r.bottom() <= row.top() + 0.5).unwrap();
+        // Above the row, in order: Settings, Quit, the version.
+        assert!(settings.top() < quit.top() && quit.top() < version.top() && version.bottom() <= row.top() + 0.5, "{width}");
+        assert!(h.query_by_label("Log in or sign up").is_none(), "{width}: no account item without an account backend");
+        // Escape closes it.
+        h.key_press(egui::Key::Escape);
+        h.run_steps(4);
+        assert!(h.query_by_label("Quit Redrob Launcher").is_none(), "{width}");
+    }
+    let mut h = harness_sized(1180.0);
+    h.run_steps(6);
+    open_settings(&mut h);
+    h.get_by_label("News and source code for every Redrob app");
 }
 
 #[test]

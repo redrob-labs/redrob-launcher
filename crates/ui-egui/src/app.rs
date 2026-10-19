@@ -608,7 +608,7 @@ impl LauncherUi {
             .exact_size(Self::sidebar_width(&ctx))
             .resizable(false)
             .show_separator_line(false)
-            .show(ui, |ui| self.sidebar(ui));
+            .show(ui, |ui| self.sidebar(ui, host));
         egui::Panel::bottom("footer")
             .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin::symmetric(24, 0)))
             .exact_size(crate::views::FOOTER_H)

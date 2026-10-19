@@ -105,6 +105,24 @@ fn harness(state: Rc<RefCell<State>>) -> Harness<'static, Option<LauncherUi>> {
     )
 }
 
+/// Clicks the sidebar's account row labelled `row`, then the item `item` of the menu it opens
+/// above itself.
+fn from_account_menu(h: &mut Harness<'_, Option<LauncherUi>>, row: &str, item: &str) {
+    let row_rect = h.get_by_label(row).rect();
+    h.get_by_label(row).click();
+    h.run_steps(4);
+    {
+        // The menu's item: the nearest one above the row (a page title can share its label).
+        let node = h
+            .get_all_by_label(item)
+            .filter(|n| n.rect().bottom() <= row_rect.top() + 0.5)
+            .max_by(|a, b| a.rect().bottom().total_cmp(&b.rect().bottom()))
+            .unwrap();
+        node.click();
+    }
+    h.run_steps(4);
+}
+
 fn snapshot(h: &mut Harness<'_, Option<LauncherUi>>, name: &str) {
     let Some(dir) = std::env::var_os("REDROB_LAUNCHER_SNAPSHOTS") else { return };
     let img = h.render().unwrap();
@@ -127,9 +145,9 @@ fn signing_in_shows_the_code_then_the_workspace_and_connects_apps() {
     let mut h = harness(state.clone());
     h.run_steps(4);
 
-    // Signed out: the header says so, and the dialog offers the sign-in.
-    h.get_by_label("Sign in").click();
-    h.run_steps(12);
+    // Signed out: the account row says so; its menu leads to the account page and its sign-in.
+    from_account_menu(&mut h, "Log in or sign up", "Log in or sign up");
+    h.run_steps(8);
     h.get_by_label("Redrob account");
     h.get_by_label("Sign in to Redrob").click();
     h.run_steps(2);
@@ -187,9 +205,9 @@ fn signing_in_shows_the_code_then_the_workspace_and_connects_apps() {
     h.get_by_label("Back to apps").click();
     h.run_steps(4);
     assert!(!on_page(&h));
-    // The sidebar's account row opens it again ("Acme" or "Sign in", whichever the fake reports).
-    h.query_by_label("Acme").or_else(|| h.query_by_label("Sign in")).unwrap().click();
-    h.run_steps(6);
+    // The sidebar's account row opens it again, through its menu (the fake still reports Acme).
+    from_account_menu(&mut h, "Acme", "Redrob account");
+    h.run_steps(2);
     assert!(on_page(&h));
     h.key_press(egui::Key::Escape);
     h.run_steps(4);
@@ -204,8 +222,37 @@ fn the_header_names_the_workspace_once_signed_in() {
     }));
     let mut h = harness(state);
     h.run_steps(4);
-    assert!(h.query_by_label("Sign in").is_none());
-    h.get_by_label("Acme").click();
-    h.run_steps(3);
+    assert!(h.query_by_label("Log in or sign up").is_none());
+    from_account_menu(&mut h, "Acme", "Redrob account");
     h.get_by_label("Workspace: Acme");
+}
+
+#[test]
+fn signed_out_the_row_reads_log_in_or_sign_up_and_its_menu_opens_settings() {
+    let state = Rc::new(RefCell::new(State::default()));
+    let mut h = harness(state.clone());
+    h.run_steps(4);
+    // One row, no Settings row of its own.
+    let row = h.get_by_label("Log in or sign up").rect();
+    assert!(h.query_by_label("Settings").is_none());
+    h.get_by_label("Log in or sign up").click();
+    h.run_steps(4);
+    snapshot(&mut h, "account-menu-signed-out");
+    // Log in or sign up first, then Settings and Quit, then the version; all above the row.
+    let login = h.get_all_by_label("Log in or sign up").map(|n| n.rect()).find(|r| r.bottom() <= row.top() + 0.5).unwrap();
+    let settings = h.get_by_label("Settings").rect();
+    let quit = h.get_by_label("Quit Redrob Launcher").rect();
+    assert!(login.top() < settings.top() && settings.top() < quit.top() && quit.bottom() <= row.top() + 0.5);
+    h.get_by_label("Settings").click();
+    h.run_steps(4);
+    h.get_by_label("News and source code for every Redrob app");
+    // While the code waits for approval the row says so; signed in, it names the workspace.
+    state.borrow_mut().connect = Some(ConnectState::Starting);
+    h.run_steps(4);
+    h.get_by_label("Log in or sign up");
+    state.borrow_mut().connect = None;
+    state.borrow_mut().workspace = Some(Workspace { account_name: "Acme".into(), key_name: String::new() });
+    h.run_steps(4);
+    from_account_menu(&mut h, "Acme", "Settings");
+    h.get_by_label("News and source code for every Redrob app");
 }

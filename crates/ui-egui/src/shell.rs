@@ -4,7 +4,7 @@
 
 use egui::{RichText, Sense, Stroke, Ui, vec2};
 
-use crate::app::{LauncherUi, Page};
+use crate::app::{Host, LauncherUi, Page};
 use crate::glyphs::Icon;
 use crate::settings::Filter;
 use crate::theme::{self, Tokens};
@@ -41,9 +41,9 @@ impl LauncherUi {
         (if Self::rail(ctx) { RAIL_W } else { SIDEBAR_W }) + 2.0 * INSET
     }
 
-    /// The floating sidebar card: brand row, the pages, then the theme, Settings and the account
-    /// at its foot. Fills `ui`'s rect (the panel's, inside its 8 px margin).
-    pub(crate) fn sidebar(&mut self, ui: &mut Ui) {
+    /// The floating sidebar card: brand row, the pages, then the theme and the account menu (which
+    /// holds Settings) at its foot. Fills `ui`'s rect (the panel's, inside its 8 px margin).
+    pub(crate) fn sidebar(&mut self, ui: &mut Ui, host: &mut dyn Host) {
         let t = Tokens::get(ui.ctx());
         let rail = Self::rail(ui.ctx());
         let card = ui.max_rect();
@@ -94,29 +94,14 @@ impl LauncherUi {
         self.models_nav(ui, rail);
         self.engine_nav(ui, rail);
 
-        // The foot, from the bottom up: account, a hairline, Settings, the theme.
+        // The foot, from the bottom up: the account row (its menu holds Settings), a hairline, the theme.
         let align = if rail { egui::Align::Center } else { egui::Align::Min };
         ui.with_layout(egui::Layout::bottom_up(align), |ui| {
             ui.add_space(INSET);
-            if self.account_nav(ui, rail) {
-                ui.add_space(theme::space::S1);
-                let (r, _) = ui.allocate_exact_size(vec2(ui.available_width(), 1.0), Sense::hover());
-                ui.painter().hline(r.x_range(), r.center().y, t.hairline());
-                ui.add_space(theme::space::S1);
-            }
-            if widgets::nav_row(
-                ui,
-                Icon::Settings,
-                tl!("Settings"),
-                tl!("Language, updates, appearance"),
-                NavMeta::None,
-                self.page == Page::Settings,
-                rail,
-            )
-            .clicked()
-            {
-                self.set_page(Page::Settings);
-            }
+            self.account_menu(ui, rail, host);
+            ui.add_space(theme::space::S1);
+            let (r, _) = ui.allocate_exact_size(vec2(ui.available_width(), 1.0), Sense::hover());
+            ui.painter().hline(r.x_range(), r.center().y, t.hairline());
             ui.add_space(theme::space::S2);
             let mut choice = self.settings.theme;
             let changed = if rail {

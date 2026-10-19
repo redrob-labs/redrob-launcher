@@ -1,4 +1,4 @@
-//! The account dialog: sign this computer in to a Redrob workspace once, and see which apps can
+//! The account page and the sidebar's account menu: sign this computer in to a Redrob workspace once, and see which apps can
 //! use it. The backend does the work ([`AccountBackend`]); this only shows names and states.
 
 use egui::{RichText, vec2};
@@ -6,7 +6,8 @@ use redrob_launcher_core::SUITE;
 use redrob_launcher_core::account::{AppLink, ConnectState};
 use redrob_launcher_core::protocol::LatestRelease;
 
-use crate::app::{LauncherUi, Page};
+use crate::app::{Host, LauncherUi, Page};
+use crate::glyphs::Icon;
 use crate::i18n::{fmt, msg};
 use crate::theme::{self, Tokens};
 use crate::widgets::{self, Kind};
@@ -30,22 +31,58 @@ impl LauncherUi {
         }
     }
 
-    /// The sidebar's account row: "Sign in", or the workspace's name. Opens the account page.
-    /// Returns whether there is one (no account backend on the web).
-    pub(crate) fn account_nav(&mut self, ui: &mut egui::Ui, rail: bool) -> bool {
-        let (label, tip, initial) = match self.header_account() {
-            HeaderAccount::None => return false,
-            HeaderAccount::SignedOut => (tl!("Sign in").to_string(), tl!("Sign in to Redrob once for every app on this computer").to_string(), None),
-            HeaderAccount::Busy => (tl!("Signing in…").to_string(), tl!("Approve the code on console.redrob.ai").to_string(), None),
+    /// The sidebar foot's one account row (Redrob Cowork's account menu): an avatar, the account
+    /// ("Log in or sign up", or the workspace; "Settings" with no account backend) and a status
+    /// line. A click opens a menu above it: the account page, Settings, Quit and the version. It is
+    /// the one way into Settings. Escape or a click outside closes it.
+    pub(crate) fn account_menu(&mut self, ui: &mut egui::Ui, rail: bool, host: &mut dyn Host) {
+        let version = fmt(tl!("Redrob Launcher {version}"), &[("version", env!("CARGO_PKG_VERSION"))]);
+        let (title, status, initial, account_item) = match self.header_account() {
+            HeaderAccount::None => (tl!("Settings").to_string(), version.clone(), None, None),
+            HeaderAccount::SignedOut => {
+                (tl!("Log in or sign up").to_string(), tl!("One account for every Redrob app").to_string(), None, Some(tl!("Log in or sign up")))
+            }
+            HeaderAccount::Busy => {
+                (tl!("Log in or sign up").to_string(), tl!("Waiting for approval").to_string(), None, Some(tl!("Log in or sign up")))
+            }
             HeaderAccount::SignedIn(name) => {
                 let initial = name.chars().next();
-                (name, tl!("Your Redrob workspace and the apps that use it").to_string(), initial)
+                (name, tl!("Signed in").to_string(), initial, Some(tl!("Redrob account")))
             }
         };
-        if widgets::account_row(ui, &label, tl!("Redrob account"), initial, self.page == Page::Account, rail, &tip).clicked() {
-            self.set_page(Page::Account);
+        let current = matches!(self.page, Page::Account | Page::Settings);
+        let row = widgets::account_row(ui, &title, &status, initial, current, rail, &status);
+        // DS Menu: as wide as the row (at least 220), above it.
+        let width = if rail { 220.0 } else { row.rect.width().max(220.0) } - 2.0 * theme::space::S2;
+        let quit_offered = self.caps.manage_apps;
+        let mut go = None;
+        let mut quit = false;
+        egui::Popup::menu(&row).align(egui::RectAlign::TOP_START).gap(theme::space::S1).show(|ui| {
+            ui.spacing_mut().item_spacing.y = 0.0;
+            if let Some(label) = account_item {
+                if widgets::menu_item(ui, Some(Icon::Account), label, true, width).clicked() {
+                    go = Some(Page::Account);
+                    ui.close();
+                }
+                ui.separator();
+            }
+            if widgets::menu_item(ui, Some(Icon::Settings), tl!("Settings"), true, width).clicked() {
+                go = Some(Page::Settings);
+                ui.close();
+            }
+            if quit_offered && widgets::menu_item(ui, None, tl!("Quit Redrob Launcher"), true, width).clicked() {
+                quit = true;
+                ui.close();
+            }
+            ui.separator();
+            widgets::menu_item(ui, None, &version, false, width);
+        });
+        if let Some(page) = go {
+            self.set_page(page);
         }
-        true
+        if quit {
+            host.quit();
+        }
     }
 
     /// The account page (its title is in the page's top bar).

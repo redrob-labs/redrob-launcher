@@ -143,7 +143,11 @@ fn snapshot(h: &mut Harness<'_, Option<LauncherUi>>, name: &str) {
 fn korean_switches_persists_and_keeps_install_actions() {
     let (mut h, sent) = harness_language(egui::Theme::Dark, true, "en");
     h.run_steps(6);
+    // Settings is in the account row's menu.
+    let row = h.get_by_label("Settings").rect();
     h.get_by_label("Settings").click();
+    h.run_steps(3);
+    h.get_all_by_label("Settings").find(|n| n.rect().bottom() <= row.top() + 0.5).unwrap().click();
     h.run_steps(3);
     h.get_by_value("English").click();
     h.run_steps(2);
@@ -163,6 +167,16 @@ fn korean_switches_persists_and_keeps_install_actions() {
     h.get_by_label("그래픽");
     h.get_by_label_contains("3분 전 확인함 · Redrob API 사용");
     h.get_by_label("0.5.0(으)로 업데이트");
+    // The account row's menu, in Korean.
+    let row = h.get_by_label("설정").rect();
+    h.get_by_label("설정").click();
+    h.run_steps(3);
+    h.get_by_label("Redrob Launcher 종료");
+    snapshot(&mut h, "account-menu-ko-dark");
+    h.key_press(egui::Key::Escape);
+    h.run_steps(3);
+    assert!(h.query_by_label("Redrob Launcher 종료").is_none(), "Escape closed the menu");
+    assert_eq!(h.get_by_label("설정").rect(), row);
     // Product names stay in Latin script.
     h.get_by_label("Redrob Launcher");
     h.get_by_label("Redrob Canvas");
