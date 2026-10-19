@@ -96,20 +96,38 @@ def vs_dev_env(arch: str) -> dict:
     return env
 
 
-def prepare_font(design_system: Path, out_ttf: Path) -> bool:
-    """Pretendard SemiBold. AddFontMemResourceEx needs TTF/OTF; the design system ships woff2."""
-    woff2 = design_system / "fonts" / "Pretendard-SemiBold.woff2"
-    if not woff2.exists():
+FONTS = REPO / "assets" / "fonts"  # the design system's Pretendard TTFs, byte for byte (ATTRIBUTION.md)
+SOURCE = HERE / "redrob_launcher_setup.cpp"
+
+
+def prepare_font(design_system: Path, out_ttf: Path, weight: str = "SemiBold") -> bool:
+    """Pretendard `weight` as a TTF for AddFontMemResourceEx / DirectWrite, cut down to the characters the
+    window can draw: printable ASCII plus every other character in redrob_launcher_setup.cpp (all of its
+    text is in that file). The source is the repo's own assets/fonts TTF, else the design system's woff2.
+    Needs fontTools; without it the window uses Segoe UI Variable."""
+    source = FONTS / f"Pretendard-{weight}.ttf"
+    if not source.exists():
+        source = design_system / "fonts" / f"Pretendard-{weight}.woff2"
+    if not source.exists():
         return False
     try:
-        from fontTools.ttLib import TTFont  # type: ignore
-        font = TTFont(str(woff2))
-        font.flavor = None
-        font.save(str(out_ttf))
-        return out_ttf.exists()
+        from fontTools import subset  # type: ignore
     except Exception:
         print("note: fontTools not available; the window uses Segoe UI Variable.")
         return False
+    text = "".join(chr(c) for c in range(0x20, 0x7F))
+    text += "".join(sorted({ch for ch in SOURCE.read_text(encoding="utf-8") if ord(ch) > 0x7E}))
+    options = subset.Options()
+    options.flavor = None
+    options.layout_features = ["*"]
+    options.name_IDs = ["*"]
+    options.notdef_outline = True
+    font = subset.load_font(str(source), options)
+    subsetter = subset.Subsetter(options)
+    subsetter.populate(text=text)
+    subsetter.subset(font)
+    subset.save_font(font, str(out_ttf), options)
+    return out_ttf.exists()
 
 
 def run_in_env(cmd: list, env: dict, cwd: str) -> None:
@@ -140,7 +158,9 @@ def compile_app(env, out: Path, exe_name: str, font, ver: str, payload, uninstal
         f'#define REDROB_SETUP_KIND "{"Uninstaller" if payload is None else "Setup"}"',
     ]
     if font:
-        lines.append(f'#define REDROB_FONT_PATH "{fwd(font)}"')
+        lines.append(f'#define REDROB_FONT_PATH "{fwd(font[0])}"')
+        if font[1]:
+            lines.append(f'#define REDROB_FONT_BODY_PATH "{fwd(font[1])}"')
     if payload:
         lines.append(f'#define REDROB_PAYLOAD_PATH "{fwd(payload)}"')
     else:
@@ -187,8 +207,10 @@ def main() -> None:
     out.mkdir(parents=True, exist_ok=True)
     env = vs_dev_env(args.arch)
     machine = {"x64": "X64", "x86": "X86", "arm64": "ARM64"}[args.arch]
-    font = out / "Pretendard-SemiBold.ttf"
-    font = font if prepare_font(Path(args.design_system), font) else None
+    semibold, regular = out / "Pretendard-SemiBold.ttf", out / "Pretendard-Regular.ttf"
+    font = None
+    if prepare_font(Path(args.design_system), semibold, "SemiBold"):
+        font = (semibold, regular if prepare_font(Path(args.design_system), regular, "Regular") else None)
 
     if args.uninstaller_only:
         exe = compile_app(env, out / "uninstall", "Uninstall Redrob Launcher.exe", font, args.version,

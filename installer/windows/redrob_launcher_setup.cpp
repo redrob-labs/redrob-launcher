@@ -72,6 +72,7 @@
 #include <d2d1.h>
 #include <d2d1helper.h>
 #include <dwrite.h>
+#include <dwrite_3.h>  // IDWriteFactory5: the in-memory font collection
 #include <wincodec.h>
 #include <shellapi.h>
 #include <shlobj.h>
@@ -551,18 +552,51 @@ void SetupApp::ApplyWindowTheme() {
 }
 
 void SetupApp::LayoutText() {
-  // Load Pretendard SemiBold from the embedded TTF into a private font
-  // collection; fall back to Segoe UI Variable if the resource is absent.
-  HRSRC res = FindResourceW(hinst_, MAKEINTRESOURCEW(IDR_FONT_SANS), RT_RCDATA);
-  if (res) {
-    HGLOBAL h = LoadResource(hinst_, res);
-    void* data = LockResource(h);
-    DWORD sz = SizeofResource(hinst_, res);
-    if (data && sz) {
-      DWORD nFonts = 0;
-      HANDLE added = AddFontMemResourceEx(data, sz, nullptr, &nFonts);
-      if (added) { fontFamily_ = L"Pretendard SemiBold"; bodyFamily_ = fontFamily_; }
+  // Pretendard SemiBold and Regular from the embedded TTFs, as a private in-memory DirectWrite collection
+  // (Windows 10 1703+; nothing is installed). Without them, or on an older Windows, Segoe UI Variable.
+  ComPtr<IDWriteFactory5> f5;
+  if (!fontColl_ && SUCCEEDED(dwFactory_->QueryInterface(__uuidof(IDWriteFactory5), reinterpret_cast<void**>(&f5)))) {
+    ComPtr<IDWriteInMemoryFontFileLoader> loader;
+    ComPtr<IDWriteFontSetBuilder1> builder;
+    if (SUCCEEDED(f5->CreateInMemoryFontFileLoader(&loader)) && SUCCEEDED(f5->RegisterFontFileLoader(loader.p)) &&
+        SUCCEEDED(f5->CreateFontSetBuilder(&builder))) {
+      int added = 0;
+      for (int id : {IDR_FONT_SANS, IDR_FONT_BODY}) {
+        HRSRC res = FindResourceW(hinst_, MAKEINTRESOURCEW(id), RT_RCDATA);
+        if (!res) continue;
+        const void* data = LockResource(LoadResource(hinst_, res));
+        const DWORD sz = SizeofResource(hinst_, res);
+        ComPtr<IDWriteFontFile> file;
+        if (data && sz && SUCCEEDED(loader->CreateInMemoryFontFileReference(f5.p, data, sz, nullptr, &file)) &&
+            SUCCEEDED(builder->AddFontFile(file.p)))
+          ++added;
+      }
+      ComPtr<IDWriteFontSet> set;
+      ComPtr<IDWriteFontCollection1> coll;
+      if (added && SUCCEEDED(builder->CreateFontSet(&set)) && SUCCEEDED(f5->CreateFontCollectionFromFontSet(set.p, &coll))) {
+        fontColl_.p = coll.p;  // IDWriteFontCollection1 is an IDWriteFontCollection; fontColl_ takes the reference
+        coll.p = nullptr;
+      }
     }
+  }
+  if (fontColl_) {
+    // Name each weight's family as the collection reports it ("Pretendard", or "Pretendard SemiBold").
+    std::wstring strong, body;
+    for (UINT32 i = 0; i < fontColl_->GetFontFamilyCount(); ++i) {
+      ComPtr<IDWriteFontFamily> fam;
+      ComPtr<IDWriteLocalizedStrings> names;
+      ComPtr<IDWriteFont> font;
+      if (FAILED(fontColl_->GetFontFamily(i, &fam)) || FAILED(fam->GetFamilyNames(&names)) ||
+          FAILED(fam->GetFont(0, &font)) || names->GetCount() == 0) continue;
+      UINT32 len = 0;
+      names->GetStringLength(0, &len);
+      std::wstring name(len + 1, L'\0');
+      names->GetString(0, &name[0], len + 1);
+      name.resize(len);
+      if (font->GetWeight() >= DWRITE_FONT_WEIGHT_SEMI_BOLD) strong = name; else body = name;
+    }
+    if (!strong.empty()) { fontFamily_ = strong; bodyFamily_ = body.empty() ? strong : body; }
+    else fontColl_.reset();
   }
   auto make = [&](ComPtr<IDWriteTextFormat>& out, const std::wstring& family, DWRITE_FONT_WEIGHT weight, float size,
                   float lineHeight, DWRITE_TEXT_ALIGNMENT align, DWRITE_PARAGRAPH_ALIGNMENT para) {

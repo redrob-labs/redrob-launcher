@@ -4,7 +4,8 @@
 
 // RCDATA
 #define IDR_PAYLOAD          101  // the release's windows zip (absent from the uninstaller)
-#define IDR_FONT_SANS        104  // Pretendard SemiBold, when the design system delivery was present
+#define IDR_FONT_SANS        104  // Pretendard SemiBold (assets/fonts, cut to the window's characters), when fontTools is present
+#define IDR_FONT_BODY        108  // Pretendard Regular, the same way: body copy and labels
 #define IDR_UNINSTALLER      106  // the payload-less build of this app, written into the install folder
 #define IDR_SYMBOL_PNG       107  // assets/brand/symbol-white-192.png -- the white Redrob symbol, for the brand panel
 
