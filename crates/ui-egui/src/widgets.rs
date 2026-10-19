@@ -411,6 +411,72 @@ pub fn button_sized(ui: &mut Ui, text: &str, kind: Kind, size: Size, width: f32)
     if enabled { resp.on_hover_cursor(egui::CursorIcon::PointingHand) } else { resp }
 }
 
+/// The width [`button_sized`] gives `text` at `size` (with no minimum width).
+pub fn button_width(ui: &Ui, text: &str, size: Size) -> f32 {
+    let (_, pad, label) = size.metrics();
+    caps(ui, text, label, theme::mono_bold(), theme::BUTTON_SPACING, Tokens::get(ui.ctx()).ink).size().x + 2.0 * pad
+}
+
+/// The DS search input (sm): 32 tall, radius 8, a 1 px border-subtle on the base ground that
+/// strengthens on hover and while typing, the search glyph (16 px, ink-muted) at the left and the
+/// hint in ink-muted 13 px. One per window: its text field keeps the id `id_salt`, so focus
+/// survives a change of page. Returns the text field's response.
+pub fn search_field(ui: &mut Ui, text: &mut String, hint: &str, width: f32, id_salt: &str) -> Response {
+    let t = Tokens::get(ui.ctx());
+    const GLYPH: f32 = 16.0;
+    const PAD: f32 = 10.0;
+    let (rect, bg) = ui.allocate_exact_size(vec2(width, theme::control::SM), Sense::click());
+    let id = egui::Id::new(("search-field", id_salt));
+    let strong = ui.memory(|m| m.has_focus(id)) || ui.rect_contains_pointer(rect);
+    // Under the text field: drawn first.
+    let p = ui.painter();
+    p.rect(
+        rect,
+        CornerRadius::same(theme::radius::MD),
+        t.bg,
+        Stroke::new(1.0, if strong { t.line_strong } else { t.line }),
+        egui::StrokeKind::Inside,
+    );
+    let glyph = Rect::from_center_size(egui::pos2(rect.left() + PAD + GLYPH / 2.0, rect.center().y), vec2(GLYPH, GLYPH));
+    crate::glyphs::paint(p, glyph, Icon::Search, t.muted);
+    let field = Rect::from_min_max(egui::pos2(glyph.right() + theme::space::S2, rect.top()), egui::pos2(rect.right() - PAD, rect.bottom()));
+    // A child, not `ui.put`: putting would move a right-to-left parent's cursor back to the field.
+    let mut child = ui.new_child(egui::UiBuilder::new().max_rect(field).layout(egui::Layout::left_to_right(egui::Align::Center)));
+    let resp = child.add(
+        egui::TextEdit::singleline(text)
+            .id(id)
+            .frame(egui::Frame::NONE)
+            .hint_text(RichText::new(hint).color(t.muted))
+            .font(egui::FontId::proportional(theme::text::BODY_SM))
+            .text_color(t.ink)
+            .vertical_align(egui::Align::Center)
+            .margin(vec2(0.0, 0.0))
+            .desired_width(field.width()),
+    );
+    // The glyph and padding focus the field too.
+    if bg.clicked() {
+        ui.memory_mut(|m| m.request_focus(id));
+    }
+    resp.on_hover_cursor(egui::CursorIcon::Text)
+}
+
+/// The Redrob group logo as a ghost button (Redrob Cowork's group mark): `image` exactly as
+/// supplied, 28 px in a 32 px target with radius 8; hover tints the button behind it (8% of ink),
+/// never the mark. `label` is the tooltip and the name screen readers read.
+pub fn logo_button(ui: &mut Ui, image: egui::ImageSource<'static>, label: &str) -> Response {
+    let t = Tokens::get(ui.ctx());
+    let (rect, resp) = ui.allocate_exact_size(vec2(theme::control::SM, theme::control::SM), Sense::click());
+    let hovered = resp.hovered() || resp.is_pointer_button_down_on();
+    let k = ui.ctx().animate_bool_with_time(resp.id.with("hover"), hovered, theme::motion::duration(ui.ctx(), theme::motion::FAST));
+    if k > 0.0 {
+        ui.painter().rect_filled(rect, CornerRadius::same(theme::radius::MD), tint(t.ink, 0.08 * k));
+    }
+    egui::Image::new(image).alt_text(label).paint_at(ui, Rect::from_center_size(rect.center(), vec2(28.0, 28.0)));
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, label));
+    focus_ring(ui, &resp, theme::radius::MD);
+    tip(resp, label).on_hover_cursor(egui::CursorIcon::PointingHand)
+}
+
 /// A DS IconButton (ghost): a square `size` (32 or 40) with a drawn icon in `ink-secondary`,
 /// sunken with `ink-primary` on hover, radius 8. `label` is mandatory: it is the tooltip and the
 /// name screen readers read.

@@ -396,6 +396,12 @@ fn switching_filters() {
     h.get_by_label("Redrob Canvas");
 }
 
+/// Opens the Settings page from the sidebar.
+fn open_settings(h: &mut Harness<'_, Option<LauncherUi>>) {
+    h.get_by_label("Settings").click();
+    h.run_steps(4);
+}
+
 /// Opens the More actions menu on `app`'s tile: the nearest one right of its name and under it,
 /// in the same tile.
 fn open_card_menu(h: &mut Harness<'_, Option<LauncherUi>>, app: &str) {
@@ -490,8 +496,7 @@ fn pages_lead_back_to_apps_by_the_back_button_and_escape() {
     h.run_steps(6);
     let on_settings = |h: &Harness<'_, Option<LauncherUi>>| h.query_by_label("News and source code for every Redrob app").is_some();
     // Settings is a page: no Done button, one primary at most (Website is secondary now).
-    h.get_by_label("Settings").click();
-    h.run_steps(4);
+    open_settings(&mut h);
     assert!(on_settings(&h));
     assert!(h.query_by_label("Done").is_none());
     h.get_by_label("Quit Redrob Launcher");
@@ -502,8 +507,7 @@ fn pages_lead_back_to_apps_by_the_back_button_and_escape() {
     h.get_by_label("Update to 0.5.0");
     assert!(h.query_by_label("Back to apps").is_none(), "Apps is where back leads; it has no back button");
     // Escape.
-    h.get_by_label("Settings").click();
-    h.run_steps(4);
+    open_settings(&mut h);
     assert!(on_settings(&h));
     h.key_press(egui::Key::Escape);
     h.run_steps(4);
@@ -517,8 +521,7 @@ fn escape_leaves_a_page_from_a_focused_button_but_not_from_an_open_list() {
     h.run_steps(6);
     let on_settings = |h: &Harness<'_, Option<LauncherUi>>| h.query_by_label("News and source code for every Redrob app").is_some();
     // Keyboard focus on an ordinary button (as after Tab) doesn't swallow Escape.
-    h.get_by_label("Settings").click();
-    h.run_steps(4);
+    open_settings(&mut h);
     h.get_by_label("Quit Redrob Launcher").focus();
     h.run_steps(2);
     assert!(h.ctx.memory(|m| m.focused().is_some()), "the button holds keyboard focus");
@@ -526,8 +529,7 @@ fn escape_leaves_a_page_from_a_focused_button_but_not_from_an_open_list() {
     h.run_steps(4);
     assert!(!on_settings(&h), "Escape from a focused button returns to Apps");
     // An open list takes Escape for itself: it closes, and the page stays.
-    h.get_by_label("Settings").click();
-    h.run_steps(4);
+    open_settings(&mut h);
     h.get_by_value("Automatically").click();
     h.run_steps(4);
     assert!(egui::Popup::is_any_open(&h.ctx), "the check-for-updates list is open");
@@ -580,8 +582,7 @@ fn harness_sized(width: f32) -> Harness<'static, Option<LauncherUi>> {
 fn settings_link_to_redrob() {
     let (mut h, _) = harness(egui::Theme::Dark, true);
     h.run_steps(6);
-    h.get_by_label("Settings").click();
-    h.run_steps(4);
+    open_settings(&mut h);
     snapshot(&mut h, "settings-dark");
     h.get_by_label("News and source code for every Redrob app");
     assert!(h.query_all_by_label_contains("Discord").next().is_none());
@@ -604,6 +605,30 @@ fn links_to_the_website_github_and_each_apps_pages() {
     open_card_menu(&mut h, "Redrob Code");
     h.get_by_label("GitHub repository");
     assert_eq!(h.query_all_by_label_contains("Website").count(), 1, "only the footer's");
+}
+
+#[test]
+fn the_logo_opens_console_redrob_ai() {
+    let (mut h, _) = harness(egui::Theme::Dark, true);
+    h.run_steps(6);
+    assert_eq!(click_opens(&mut h, "Go to console.redrob.ai").as_deref(), Some("https://console.redrob.ai"));
+}
+
+#[test]
+fn typing_in_the_search_on_another_page_shows_the_apps() {
+    let (mut h, _) = harness(egui::Theme::Dark, true);
+    h.run_steps(6);
+    let on_settings = |h: &Harness<'_, Option<LauncherUi>>| h.query_by_label("News and source code for every Redrob app").is_some();
+    open_settings(&mut h);
+    assert!(on_settings(&h));
+    // The search stays in the title bar on every page.
+    let field = h.query_all(egui_kittest::kittest::by().role(egui::accesskit::Role::TextInput)).find(|n| n.rect().bottom() <= 48.0).unwrap();
+    field.focus();
+    field.type_text("canvas");
+    h.run_steps(4);
+    assert!(!on_settings(&h), "typing switched to the apps");
+    h.get_by_label("Redrob Canvas");
+    assert!(h.query_by_label("Redrob Shape").is_none(), "and the grid shows what it finds");
 }
 
 /// Clicks the `n`th widget labelled `label` and returns the URL the app asked to open.
@@ -772,8 +797,7 @@ fn the_current_desktop_setting_is_only_offered_where_the_os_has_desktops() {
     // NoHost has no desktops (Windows, Linux, web): no setting.
     let (mut h, _) = harness(egui::Theme::Dark, true);
     h.run_steps(6);
-    h.get_by_label("Settings").click();
-    h.run_steps(4);
+    open_settings(&mut h);
     assert!(h.query_by_label("Show the window on the current desktop").is_none());
     // On by default for everyone; macOS shows it in Settings (DesktopHost::has_desktops).
     assert!(Settings::default().show_on_current_desktop);
@@ -941,16 +965,32 @@ fn web_build_offers_downloads() {
     assert!(h.query_by_label("Install").is_none());
 }
 
+/// The title bar's search field.
+fn search_field_rect(h: &Harness<'_, Option<LauncherUi>>) -> egui::Rect {
+    h.query_all(egui_kittest::kittest::by().role(egui::accesskit::Role::TextInput)).map(|n| n.rect()).find(|r| r.bottom() <= 48.0).unwrap()
+}
+
 #[test]
-fn a_native_title_bar_draws_no_chrome_and_the_page_starts_at_the_top() {
+fn a_native_title_bar_puts_the_chrome_in_a_row_over_the_page() {
     // NoHost: the OS draws the title bar (or there is none, on the web).
     let (mut h, sent) = harness(egui::Theme::Dark, true);
     h.run_steps(6);
     snapshot(&mut h, "grid-native-dark");
     assert!(h.query_by_label("Minimize").is_none());
-    // No 48 px header above: the page's top bar starts at the top and carries Check for updates.
+    // No title bar of ours: Update, the logo and the search sit in a 48 px row over the page, left to right.
+    let search = search_field_rect(&h);
+    let logo = h.get_by_label("Go to console.redrob.ai").rect();
+    let update = h.get_by_label("Update all (2)").rect();
+    for r in [search, logo, update] {
+        assert!(r.bottom() <= 48.0, "the chrome row is 48 px: {r:?}");
+    }
+    assert!(update.right() <= logo.left() && logo.right() <= search.left(), "{update:?} {logo:?} {search:?}");
+    // The Apps page has no top bar of its own: no "Apps" title over the grid, refresh at the filter row's end.
+    assert_eq!(h.query_all_by_label("Apps").count(), 1, "only the sidebar's row");
     let check = h.get_by_label("Check for updates").rect();
-    assert!(check.bottom() <= 48.0, "Check for updates should sit in the 48 px page top bar: {check:?}");
+    let filters = h.get_by_label_contains("Not installed ").rect();
+    assert!(check.top() > 48.0 && (check.center().y - filters.center().y).abs() < 4.0, "{check:?} vs {filters:?}");
+    assert!(check.left() > filters.right(), "refresh at the right end of the filter row");
     sent.borrow_mut().clear();
     h.get_by_label("Check for updates").click();
     h.run_steps(2);
@@ -965,25 +1005,50 @@ fn custom_title_bar_has_window_buttons() {
             redrob_launcher_ui_egui::TitleBar::Custom
         }
     }
-    let mut backend = Some(Fake { events: events(), sent: Rc::new(RefCell::new(Vec::new())), manage: true, clock: Rc::new(Cell::new(NOW)) });
-    let mut h = Harness::builder().with_size(egui::vec2(1180.0, 900.0)).build_ui_state(
-        move |ui, state: &mut Option<LauncherUi>| {
-            if state.is_none()
-                && let Some(b) = backend.take()
-            {
-                *state = Some(LauncherUi::new(ui.ctx(), Box::new(b), Settings { notify: false, ..Settings::default() }));
-            }
-            if let Some(l) = state.as_mut() {
-                l.logic(&ui.ctx().clone(), &mut FramelessHost);
-                l.ui(ui, &mut FramelessHost);
-            }
-        },
-        None,
-    );
+    let frameless = |width: f32| {
+        let mut backend = Some(Fake { events: events(), sent: Rc::new(RefCell::new(Vec::new())), manage: true, clock: Rc::new(Cell::new(NOW)) });
+        Harness::builder().with_size(egui::vec2(width, 900.0)).build_ui_state(
+            move |ui, state: &mut Option<LauncherUi>| {
+                if state.is_none()
+                    && let Some(b) = backend.take()
+                {
+                    *state = Some(LauncherUi::new(ui.ctx(), Box::new(b), Settings { notify: false, ..Settings::default() }));
+                }
+                if let Some(l) = state.as_mut() {
+                    l.logic(&ui.ctx().clone(), &mut FramelessHost);
+                    l.ui(ui, &mut FramelessHost);
+                }
+            },
+            None,
+        )
+    };
+    // Narrow windows shrink the search first, never under the caption buttons, and leave the bar
+    // room to drag left of Update.
+    for width in [600.0, 960.0] {
+        let mut h = frameless(width);
+        h.run_steps(6);
+        snapshot(&mut h, &format!("grid-title-bar-dark-{width}"));
+        let minimize = h.get_by_label("Minimize").rect();
+        let search = search_field_rect(&h);
+        let update = h.get_by_label("Update all (2)").rect();
+        assert!(search.right() <= minimize.left() && search.width() >= 159.5, "{width}: {search:?}");
+        assert!(update.left() >= 24.0, "{width}: {update:?}");
+    }
+    let mut h = frameless(1180.0);
     h.run_steps(6);
     snapshot(&mut h, "grid-title-bar-dark");
-    // The custom bar keeps its 48 px chrome, Check for updates in it.
-    assert!(h.get_by_label("Check for updates").rect().bottom() <= 48.0);
+    // The custom bar, right to left: window buttons, search, the group logo, Update.
+    let minimize = h.get_by_label("Minimize").rect();
+    let search = search_field_rect(&h);
+    let logo = h.get_by_label("Go to console.redrob.ai").rect();
+    let update = h.get_by_label("Update all (2)").rect();
+    assert!(update.right() <= logo.left() && logo.right() <= search.left() && search.right() <= minimize.left());
+    // One row, inside the caption buttons' band (whose target starts under the 5 px resize edge).
+    for r in [search, logo, update] {
+        assert!(r.top() >= minimize.top() - 5.0 && r.bottom() <= minimize.bottom(), "{r:?} vs {minimize:?}");
+    }
+    // Check for updates moved down to the filter row.
+    assert!(h.get_by_label("Check for updates").rect().top() > 48.0);
     assert!(h.get_all_by_label("Apps").all(|n| n.rect().top() >= 48.0), "the sidebar and page start under the title bar");
     h.get_by_label("Minimize");
     h.get_by_label("Maximize");

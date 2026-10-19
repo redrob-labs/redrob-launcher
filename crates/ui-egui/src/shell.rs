@@ -1,17 +1,14 @@
 //! The window's shell, laid out like Redrob Cowork: a floating sidebar card on the left (the
-//! pages, the theme, Settings and the account) and a 48 px top bar over each page, on one
+//! pages, the theme, Settings and the account) and a 48 px top bar over each page but Apps, on one
 //! continuous base ground so no grey seam shows between them.
 
 use egui::{Rect, RichText, Sense, Stroke, Ui, vec2};
-use redrob_launcher_core::protocol::Command;
-use redrob_launcher_core::status::AppStatus;
 
-use crate::app::{LauncherUi, Page, TitleBar};
+use crate::app::{LauncherUi, Page};
 use crate::glyphs::Icon;
-use crate::i18n::{fmt, tn};
 use crate::settings::Filter;
 use crate::theme::{self, Tokens};
-use crate::widgets::{self, Kind, NavMeta};
+use crate::widgets::{self, NavMeta};
 
 /// The sidebar card's width (Redrob Cowork's defaults to 260, the DS AppShell's to 232).
 pub(crate) const SIDEBAR_W: f32 = 248.0;
@@ -132,12 +129,12 @@ impl LauncherUi {
         });
     }
 
-    /// The page's top bar: its title and a meta line, and the page's own actions at the right.
-    /// With no title bar of ours (`TitleBar::Native`), Check for updates sits here at the right.
-    pub(crate) fn page_top_bar(&mut self, ui: &mut Ui, bar: TitleBar) {
+    /// A page's top bar: back to the apps, its title and a meta line. The Apps page has none: its
+    /// search and Update live in the title bar, its refresh at the end of its filter row.
+    pub(crate) fn page_top_bar(&mut self, ui: &mut Ui) {
         let t = Tokens::get(ui.ctx());
         let (title, meta): (&str, String) = match self.page {
-            Page::Apps => (tl!("Apps"), tn(self.count(Filter::All) as u64, "{n} app", "{n} apps")),
+            Page::Apps => return,
             Page::Models => (tl!("Models"), String::new()),
             Page::Engine => (tl!("Redrob Code engine"), tl!("One engine on this computer; every Redrob app runs its AI through it").to_string()),
             Page::Account => (tl!("Redrob account"), tl!("One sign-in for every Redrob app on this computer").to_string()),
@@ -145,56 +142,16 @@ impl LauncherUi {
         };
         ui.horizontal_centered(|ui| {
             ui.spacing_mut().item_spacing.x = theme::space::S2;
-            // Every page but Apps leads back to it (Escape does too).
-            if self.page != Page::Apps && widgets::icon_button(ui, Icon::ChevronLeft, tl!("Back to apps"), theme::control::SM).clicked() {
+            // Every page leads back to the apps (Escape does too).
+            if widgets::icon_button(ui, Icon::ChevronLeft, tl!("Back to apps"), theme::control::SM).clicked() {
                 self.set_page(Page::Apps);
             }
             // DS AppShell top bar: title 15 / 600, meta 12 ink-muted.
             ui.label(RichText::new(title).size(theme::text::BODY).family(theme::semibold()).color(t.ink));
-            let actions_w = if self.page == Page::Apps { 520.0 } else { 0.0 } + if bar == TitleBar::Native { 40.0 } else { 0.0 };
-            let room = (ui.available_width() - actions_w).max(0.0);
+            let room = ui.available_width().max(0.0);
             if !meta.is_empty() && room > 40.0 {
                 widgets::hud_elided(ui, &meta, t.faint, room);
             }
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if bar == TitleBar::Native
-                    && widgets::icon_button_busy(ui, Icon::Refresh, tl!("Check for updates"), theme::control::SM, self.checking).clicked()
-                {
-                    self.check_now();
-                }
-                if self.page == Page::Apps {
-                    self.apps_actions(ui);
-                }
-            });
         });
-    }
-
-    /// The Apps page's actions: update everything, and search.
-    fn apps_actions(&mut self, ui: &mut Ui) {
-        let updates = self.count(Filter::Updates);
-        if self.caps.manage_apps && updates > 0 {
-            let label =
-                if updates == 1 { tl!("Update 1 app").to_string() } else { fmt(tl!("Update all ({count})"), &[("count", &updates.to_string())]) };
-            if widgets::button_sized(ui, &label, Kind::Primary, widgets::Size::Sm, 0.0).clicked() {
-                let ids: Vec<&str> = self
-                    .entries
-                    .iter()
-                    .filter(|e| e.status(self.platform, true) == AppStatus::UpdateAvailable && e.job.is_none())
-                    .map(|e| e.app.id)
-                    .collect();
-                for id in ids {
-                    self.send(Command::Install { app: id.to_string() });
-                }
-            }
-        }
-        let search_w = (ui.available_width() - 260.0).clamp(120.0, 220.0);
-        ui.add(
-            egui::TextEdit::singleline(&mut self.search)
-                .hint_text(tl!("Search apps"))
-                .desired_width(search_w)
-                .min_size(vec2(0.0, theme::control::SM))
-                .vertical_align(egui::Align::Center)
-                .margin(vec2(10.0, 0.0)),
-        );
     }
 }

@@ -592,8 +592,8 @@ impl LauncherUi {
         // The title bar across the top (Redrob Cowork's 48 px bar on the sunken ground, its hairline
         // under it), then the sidebar card down the left; the footer and each page's top bar span
         // the main area only, on the same base ground as the card's gap.
-        // A window the OS decorates (and the web build) has no chrome of ours to draw: no
-        // header, and Check for updates moves into the page's top bar.
+        // A window the OS decorates (and the web build) has no title bar of ours: the title bar's
+        // search, logo and Update sit in a 48 px row over the main area instead.
         let bar = host.title_bar();
         if bar != TitleBar::Native {
             egui::Panel::top("header")
@@ -614,11 +614,21 @@ impl LauncherUi {
             .exact_size(crate::views::FOOTER_H)
             .resizable(false)
             .show(ui, |ui| self.footer(ui));
-        egui::Panel::top("page-top")
-            .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin::symmetric(24, 0)))
-            .exact_size(crate::shell::PAGE_TOP_H)
-            .resizable(false)
-            .show(ui, |ui| self.page_top_bar(ui, bar));
+        if bar == TitleBar::Native {
+            egui::Panel::top("chrome")
+                .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin::symmetric(24, 0)))
+                .exact_size(crate::views::HEADER_H)
+                .resizable(false)
+                .show(ui, |ui| self.header(ui, bar));
+        }
+        // The Apps page has no top bar: its actions are in the chrome and its filter row.
+        if self.page != Page::Apps {
+            egui::Panel::top("page-top")
+                .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin::symmetric(24, 0)))
+                .exact_size(crate::shell::PAGE_TOP_H)
+                .resizable(false)
+                .show(ui, |ui| self.page_top_bar(ui));
+        }
         egui::CentralPanel::default()
             .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin { left: 24, right: 24, top: 20, bottom: 0 }))
             .show(ui, |ui| match self.page {

@@ -7,7 +7,7 @@ use redrob_launcher_core::protocol::{Command, JobPhase};
 use redrob_launcher_core::status::AppStatus;
 use redrob_launcher_core::{AppGroup, time};
 
-use crate::app::{Dialog, LauncherUi, TitleBar};
+use crate::app::{Dialog, LauncherUi, Page, TitleBar};
 use crate::glyphs::Icon;
 use crate::i18n::{current, fmt, t, tn, tr_ctx};
 use crate::model::{self, AppEntry};
@@ -67,36 +67,85 @@ const CARD_PAD: f32 = 20.0;
 pub(crate) const ACTION_ICON: f32 = theme::control::SM;
 /// Room macOS's traffic lights take at the left of the header.
 const TRAFFIC_LIGHTS_W: f32 = 72.0;
+/// Where the group logo leads (Redrob Cowork's title bar does the same).
+const CONSOLE_URL: &str = "https://console.redrob.ai";
+/// The search field's width: Cowork's clamp, and the least it shrinks to in a narrow window.
+const SEARCH_MIN_W: f32 = 160.0;
+const SEARCH_W: std::ops::RangeInclusive<f32> = 220.0..=360.0;
+/// Empty title bar left of the controls, so the window can always be dragged.
+const DRAG_MIN_W: f32 = 24.0;
 
 /// A run of cards, under an optional meta-line title.
 type Section = (Option<&'static str>, Vec<&'static str>);
 
 impl LauncherUi {
     /// The title bar (Redrob Cowork's): with a custom or macOS title bar the whole bar drags the
-    /// window; at its right end Check for updates and, on a custom bar, the window buttons. The
-    /// pages, Settings and the account live in the sidebar.
+    /// window outside its controls. At its right end, right to left: the window buttons (custom
+    /// bar), the search, the Redrob group logo (console.redrob.ai) and, with updates, Update. With
+    /// `TitleBar::Native` (the OS's bar, or the web) the same cluster is a 48 px row over the page.
     pub(crate) fn header(&mut self, ui: &mut Ui, bar: TitleBar) {
         let h = HEADER_H;
         if bar != TitleBar::Native {
             widgets::title_bar_drag(ui);
         }
+        let bar_w = ui.max_rect().width();
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = 0.0;
             if bar == TitleBar::MacOs {
                 ui.add_space(TRAFFIC_LIGHTS_W);
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if bar == TitleBar::Custom {
-                    widgets::window_buttons(ui, h);
-                } else {
-                    ui.add_space(theme::space::S2);
+                match bar {
+                    TitleBar::Custom => {
+                        widgets::window_buttons(ui, h);
+                        ui.add_space(theme::space::S2);
+                    }
+                    TitleBar::MacOs => ui.add_space(theme::space::S4),
+                    TitleBar::Native => {}
                 }
-                ui.add_space(theme::space::S2);
-                if widgets::icon_button_busy(ui, Icon::Refresh, tl!("Check for updates"), theme::control::SM, self.checking).clicked() {
-                    self.check_now();
-                }
+                self.chrome_cluster(ui, bar_w);
             });
         });
+    }
+
+    /// Search, the group logo and Update all, right to left. The search shrinks first in a narrow
+    /// window (never under [`SEARCH_MIN_W`]), leaving the bar room to drag.
+    fn chrome_cluster(&mut self, ui: &mut Ui, bar_w: f32) {
+        let gap = theme::space::S2;
+        let updates = if self.caps.manage_apps { self.count(Filter::Updates) } else { 0 };
+        let update = (updates > 0).then(|| {
+            if updates == 1 { tl!("Update 1 app").to_string() } else { fmt(tl!("Update all ({count})"), &[("count", &updates.to_string())]) }
+        });
+        let update_w = update.as_ref().map_or(0.0, |l| widgets::button_width(ui, l, widgets::Size::Sm) + gap);
+        let room = ui.available_width() - theme::control::SM - gap - update_w - DRAG_MIN_W;
+        let search_w = (bar_w * 0.29).clamp(*SEARCH_W.start(), *SEARCH_W.end()).min(room).max(SEARCH_MIN_W);
+        // Typing here from another page shows the apps it finds.
+        if widgets::search_field(ui, &mut self.search, tl!("Search apps"), search_w, "apps").changed() && self.page != Page::Apps {
+            self.set_page(Page::Apps);
+        }
+        ui.add_space(gap);
+        if widgets::logo_button(ui, crate::icons::redrob_mark(), tl!("Go to console.redrob.ai")).clicked() {
+            ui.ctx().open_url(egui::OpenUrl::new_tab(CONSOLE_URL));
+        }
+        if let Some(label) = update {
+            ui.add_space(gap);
+            if widgets::button_sized(ui, &label, Kind::Primary, widgets::Size::Sm, 0.0).clicked() {
+                self.update_all();
+            }
+        }
+    }
+
+    /// Updates every installed app that has an update and isn't busy.
+    fn update_all(&mut self) {
+        let ids: Vec<&str> = self
+            .entries
+            .iter()
+            .filter(|e| e.status(self.platform, true) == AppStatus::UpdateAvailable && e.job.is_none())
+            .map(|e| e.app.id)
+            .collect();
+        for id in ids {
+            self.send(Command::Install { app: id.to_string() });
+        }
     }
 
     pub(crate) fn toolbar(&mut self, ui: &mut Ui) {
@@ -178,6 +227,12 @@ impl LauncherUi {
             .map(|(f, label, tip, highlight)| (f, Cell { label, tip, count: Some((self.count(f), highlight)) }))
             .collect();
             widgets::cells(ui, &mut self.settings.filter, &filters);
+            // Check for updates at the row's right end (where the sort was).
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                if widgets::icon_button_busy(ui, Icon::Refresh, tl!("Check for updates"), theme::control::SM, self.checking).clicked() {
+                    self.check_now();
+                }
+            });
         });
     }
 
