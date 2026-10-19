@@ -2,6 +2,7 @@
 
 use std::time::Duration;
 
+use redrob_launcher_core::deep_link::DeepLink;
 use redrob_launcher_core::protocol::{
     Backend, BackendOptions, CANCELLED, Capabilities, Command, Event, INSTALL_CANCELLED, JobPhase, LatestRelease, PAUSED, Source,
 };
@@ -140,6 +141,11 @@ pub struct LauncherUi {
     pub(crate) auto_update_attempted: std::collections::BTreeSet<(String, String)>,
     /// What was last handed to [`Host::language_changed`], so it is called on a change only.
     published_language: Option<LanguageChoice>,
+    /// A `redrob://` link waiting until the backend knows enough about its app to act on it.
+    pending_link: Option<DeepLink>,
+    /// The app whose Install button takes the keyboard focus the next time it is drawn (a
+    /// `redrob://open` link for an app that isn't installed).
+    pub(crate) focus_install: Option<&'static str>,
 }
 
 /// The language to draw in: the preference, or English where it needs a Chinese font the system
@@ -192,6 +198,8 @@ impl LauncherUi {
             was_focused: true,
             auto_update_attempted: std::collections::BTreeSet::new(),
             published_language: None,
+            pending_link: None,
+            focus_install: None,
             page: Page::Apps,
         }
     }
@@ -231,6 +239,54 @@ impl LauncherUi {
         self.backend.send(Command::CheckForUpdates { force: true });
         self.backend.send(Command::Detect);
         self.last_detect = self.backend.now();
+    }
+
+    /// Acts on a `redrob://` link (`deep_link`): shows its app on the apps page, then starts it
+    /// or its install as soon as the backend knows whether it is installed and what's released.
+    pub fn open_link(&mut self, link: DeepLink) {
+        let app = link.app();
+        log::info!("link: {}", link.to_url());
+        self.page = Page::Apps;
+        self.dialog = None;
+        self.settings.filter = Filter::All;
+        self.search = app.name.to_string();
+        self.focus_install = None;
+        self.pending_link = Some(link);
+        self.resolve_link();
+    }
+
+    /// Carries out the pending link once its app's state is known; until then it waits.
+    fn resolve_link(&mut self) {
+        let Some(link) = self.pending_link else { return };
+        let id = link.app().id;
+        let Some(entry) = self.entry(id) else {
+            self.pending_link = None;
+            return;
+        };
+        // The web build, or the app is busy already: showing it is all there is to do.
+        if !self.caps.manage_apps || entry.job.is_some() {
+            self.pending_link = None;
+            return;
+        }
+        let status = entry.status(self.platform, true);
+        let command = match link {
+            DeepLink::Open(_) if !entry.detected => return,
+            DeepLink::Open(_) if entry.installed.is_some() => Some(Command::Launch { app: id.to_string() }),
+            DeepLink::Open(_) => {
+                self.focus_install = Some(id);
+                None
+            }
+            DeepLink::Install(_) => match status {
+                AppStatus::Checking => return,
+                AppStatus::Available | AppStatus::UpdateAvailable => Some(Command::Install { app: id.to_string() }),
+                // Up to date, no release, offline: the card says so.
+                _ => None,
+            },
+        };
+        self.pending_link = None;
+        if let Some(command) = command {
+            self.send(command);
+        }
     }
 
     pub(crate) fn send(&mut self, command: Command) {
@@ -294,6 +350,7 @@ impl LauncherUi {
             }
         }
         self.engine_update_tick();
+        self.resolve_link();
         if self.restart_requested {
             // The helper is waiting for this process to exit before it starts the new launcher.
             self.restart_requested = false;

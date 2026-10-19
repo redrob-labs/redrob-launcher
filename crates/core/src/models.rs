@@ -283,7 +283,7 @@ mod tests {
         let models = builtin();
         let ids: Vec<&str> = models.iter().map(|m| m.id.as_str()).collect();
         assert_eq!(&ids[..4], ["whisper-tiny", "whisper-base", "whisper-small", "kokoro-82m"]);
-        assert_eq!(models.len(), 21, "{ids:?}");
+        assert_eq!(models.len(), 24, "{ids:?}");
         for m in &models {
             assert!(m.shared() || crate::catalog::CraftApp::by_id(&m.app).is_some(), "{}", m.app);
             assert!(!m.task.is_empty(), "{} has no task", m.id);

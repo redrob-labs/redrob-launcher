@@ -9,15 +9,18 @@ mod settings_file;
 #[cfg(target_os = "macos")]
 mod spaces;
 mod tray;
+#[cfg(target_os = "macos")]
+mod url_event;
 
 use std::path::PathBuf;
 use std::process::ExitCode;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc::{Receiver, RecvTimeoutError, SyncSender, channel, sync_channel};
+use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, SyncSender, channel, sync_channel};
 use std::sync::{Arc, Mutex, OnceLock, PoisonError};
 use std::time::Duration;
 
 use eframe::wgpu::rwh::{HasDisplayHandle, RawDisplayHandle};
+use redrob_launcher_core::deep_link::{self, DeepLink};
 use redrob_launcher_core::protocol::Backend;
 use redrob_launcher_native::single_instance::{self, Instance};
 use redrob_launcher_native::{NativeBackend, language, login};
@@ -42,12 +45,16 @@ fn main() -> ExitCode {
         return ExitCode::SUCCESS;
     }
     let mut hidden = args.iter().any(|a| a == login::HIDDEN_FLAG);
+    // Started by the OS for a `redrob:` link (`redrob://open/cad`): see `deep_link`.
+    let link = args.iter().find(|a| deep_link::is_link(a)).cloned();
 
     let wake: Wake = Arc::new(OnceLock::new());
-    let starts = match single_instance::claim(wake.clone()) {
+    let starts = match single_instance::claim(wake.clone(), link.as_deref()) {
         Instance::Secondary => return ExitCode::SUCCESS,
         Instance::Primary(rx) => rx,
     };
+    // Web pages open the launcher with `redrob://` links: make sure they reach this copy.
+    redrob_launcher_native::url_scheme::register();
     let (tray_loop, woken) = sync_channel(1);
     let waker = Arc::new(Waker { window: Mutex::new(None), tray_loop, quit_pending: AtomicBool::new(false) });
     {
@@ -58,6 +65,17 @@ fn main() -> ExitCode {
     let backend_waker = waker.clone();
     let settings_path = settings_file::path(APP_ID);
     let mut launcher = Launcher::new(Box::new(NativeBackend::new(move || backend_waker.wake())), starts, settings_path.clone());
+    launcher.link = link.as_deref().and_then(deep_link::parse);
+    // macOS sends links as Apple Events rather than arguments, to this process even when the
+    // launcher is already running.
+    #[cfg(target_os = "macos")]
+    {
+        let (sent, waker) = (launcher.url_events.0.clone(), waker.clone());
+        url_event::install(move |url| {
+            let _ = sent.send(url);
+            waker.wake();
+        });
+    }
     // Started hidden at login where a window can't hide: start in the tray without mapping one,
     // so no window flashes up. Without a tray to come back from, the window opens after all.
     let mut window = true;
@@ -348,6 +366,12 @@ struct Launcher {
     host: DesktopHost,
     /// Requests from later starts of the launcher.
     starts: Receiver<single_instance::Request>,
+    /// The `redrob://` link this start was given, acted on at the next tick, once the saved
+    /// settings are in.
+    link: Option<DeepLink>,
+    /// Links macOS sends as Apple Events (`url_event`), as the URLs came.
+    #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+    url_events: (Sender<String>, Receiver<String>),
     /// Stands in for a window's context while only the tray exists. A window can't reuse it: a
     /// new window's renderer has none of the textures a used context has already handed out.
     windowless: egui::Context,
@@ -374,6 +398,8 @@ impl Launcher {
             tray: None,
             host: DesktopHost { tray: false, quit: false },
             starts,
+            link: None,
+            url_events: channel(),
             windowless,
             run_again,
             started: false,
@@ -414,6 +440,16 @@ impl Launcher {
     /// one brings the saved settings and the tray icon.
     fn open(&mut self, cc: &eframe::CreationContext<'_>, waker: &Arc<Waker>) {
         waker.set_window(Some(cc.egui_ctx.clone()));
+        // Again now that AppKit has finished launching, in case it put its own handler in place:
+        // the link the launcher was started for comes after this.
+        #[cfg(target_os = "macos")]
+        {
+            let (sent, waker) = (self.url_events.0.clone(), waker.clone());
+            url_event::install(move |url| {
+                let _ = sent.send(url);
+                waker.wake();
+            });
+        }
         if !self.started {
             self.start(cc.storage.and_then(|s| eframe::get_value(s, SETTINGS_KEY)), waker);
         }
@@ -438,6 +474,21 @@ impl Launcher {
             requests.push(Request::Quit);
         } else if !starts.is_empty() {
             requests.push(Request::Show);
+        }
+        let links = starts.iter().filter_map(|s| match s {
+            single_instance::Request::Link(link) => Some(*link),
+            _ => None,
+        });
+        let mut links: Vec<DeepLink> = self.link.take().into_iter().chain(links).collect();
+        for url in self.url_events.1.try_iter() {
+            // Even a link that means nothing brings the launcher forward.
+            requests.push(Request::Show);
+            links.extend(deep_link::parse(&url));
+        }
+        if !requests.contains(&Request::Quit) {
+            for link in links {
+                self.ui.open_link(link);
+            }
         }
         let actions = self.tray.as_ref().map(tray::Tray::actions).unwrap_or_default();
         for action in actions {
