@@ -269,8 +269,23 @@ fn language_labels_come_from_the_registry() {
     for lang in Lang::all() {
         assert_eq!(Settings::language_label(lang.code()), lang.name());
     }
-    assert_eq!(Settings::language_label(Settings::LANGUAGE_AUTO), "Auto");
-    assert_eq!(Settings::language_label("xx"), "Auto");
+    // `cfg(test)` pins the system language to English.
+    assert_eq!(Settings::language_label(Settings::LANGUAGE_AUTO), "Match system (English)");
+    assert_eq!(Settings::language_label("xx"), "Match system (English)");
+}
+
+#[test]
+fn the_setup_language_only_pins_when_it_differs_from_the_system() {
+    use crate::settings::Settings;
+    // Accepting the setup's preselection (the system language) keeps following the system.
+    assert_eq!(Settings::language_from_installer("ko", Lang::KO), Settings::LANGUAGE_AUTO);
+    assert_eq!(Settings::language_from_installer("EN", Lang::EN), Settings::LANGUAGE_AUTO);
+    // A different pick is the person's choice and is kept.
+    assert_eq!(Settings::language_from_installer("ko", Lang::EN), "ko");
+    assert_eq!(Settings::language_from_installer("en", Lang::KO), "en");
+    // Nothing usable recorded: follow the system.
+    assert_eq!(Settings::language_from_installer("", Lang::KO), Settings::LANGUAGE_AUTO);
+    assert_eq!(Settings::language_from_installer("xx", Lang::EN), Settings::LANGUAGE_AUTO);
 }
 
 // The parser.

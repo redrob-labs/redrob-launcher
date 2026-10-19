@@ -136,14 +136,33 @@ impl Settings {
     /// Display name for a language `code`: a language's name in itself, from the registry
     /// ([`LANGUAGES`](crate::i18n::LANGUAGES)). A language needing the system's Chinese font is
     /// named in English, with its own name added only once that font is loaded (labels never load
-    /// it: choosing the language does); "Auto" for `auto` and unknown codes, like
-    /// [`Lang::from_pref`](crate::i18n::Lang::from_pref).
+    /// it: choosing the language does); [`Settings::system_language_label`] for `auto` and
+    /// unknown codes, like [`Lang::from_pref`](crate::i18n::Lang::from_pref).
     pub fn language_label(code: &str) -> String {
         match crate::i18n::Lang::from_code(code) {
             Some(lang) if lang.needs_cjk_font() && crate::theme::cjk_font_loaded() => format!("{} ({})", lang.english_name(), lang.name()),
             Some(lang) if lang.needs_cjk_font() => lang.english_name().to_string(),
             Some(lang) => lang.name().to_string(),
-            None => t("Auto").to_string(),
+            None => Self::system_language_label(),
+        }
+    }
+
+    /// "Match system (한국어)": the `auto` choice, naming the language the system resolves to so
+    /// the person sees what "system" means on this computer.
+    pub fn system_language_label() -> String {
+        let system = crate::i18n::system_lang();
+        crate::i18n::fmt(t("Match system ({language})"), &[("language", system.name())])
+    }
+
+    /// The launcher's language setting on its first run, from the language the Windows setup
+    /// recorded. When that is the system language the person only accepted the setup's default,
+    /// so the launcher keeps following the system (`auto`, published with `chosen: false`) and a
+    /// later change of the system language reaches it. A different language was picked on
+    /// purpose and is kept.
+    pub fn language_from_installer(code: &str, system: crate::i18n::Lang) -> String {
+        match crate::i18n::Lang::from_code(code) {
+            Some(lang) if lang != system => lang.code().to_string(),
+            _ => Self::LANGUAGE_AUTO.to_string(),
         }
     }
 }

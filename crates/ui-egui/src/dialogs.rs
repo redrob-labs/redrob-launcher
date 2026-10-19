@@ -240,7 +240,7 @@ impl LauncherUi {
         let mut lang_code = self.settings.language.clone();
         row(ui, tl!("Language"), &mut |ui| {
             egui::ComboBox::from_id_salt("language").selected_text(Settings::language_label(&lang_code)).width(180.0).show_ui(ui, |ui| {
-                ui.selectable_value(&mut lang_code, Settings::LANGUAGE_AUTO.to_string(), tl!("Auto"));
+                ui.selectable_value(&mut lang_code, Settings::LANGUAGE_AUTO.to_string(), Settings::system_language_label());
                 for lang in crate::i18n::Lang::all() {
                     ui.selectable_value(&mut lang_code, lang.code().to_string(), Settings::language_label(lang.code()));
                 }

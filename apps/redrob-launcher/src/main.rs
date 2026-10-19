@@ -390,11 +390,14 @@ impl Launcher {
         match settings {
             Some(settings) => self.ui.settings = settings,
             // First run: the language the installer asked for (Windows) becomes the launcher's,
-            // so the wizard, the launcher and then every app speak the same language.
+            // so the wizard, the launcher and then every app speak the same language. The
+            // wizard preselects the system language; accepting it keeps the launcher following
+            // the system, and only a different pick pins the language.
             None => {
                 if let Some(code) = language::installer_language() {
-                    log::info!("first run: the installer chose the language {code}");
-                    self.ui.settings.language = code;
+                    let language = Settings::language_from_installer(&code, redrob_launcher_ui_egui::i18n::system_lang());
+                    log::info!("first run: the installer chose the language {code}, so the launcher uses {language}");
+                    self.ui.settings.language = language;
                 }
             }
         }
