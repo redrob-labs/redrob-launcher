@@ -557,6 +557,10 @@ impl LauncherUi {
     /// Draws the launcher.
     pub fn ui(&mut self, ui: &mut egui::Ui, host: &mut dyn Host) {
         let ctx = ui.ctx().clone();
+        // Whether something already open owns Escape this frame, read before drawing: a list or a
+        // text field handles the key while it is drawn (closing, or giving up focus), so by the
+        // page's own check below it would look as if nothing had been open.
+        let escape_taken = egui::Popup::is_any_open(&ctx) || ctx.text_edit_focused();
         // Set the current language for this frame based on settings.
         let lang = effective_lang(&self.settings.language);
         set_current(lang);
@@ -655,13 +659,15 @@ impl LauncherUi {
                 }
             });
         // Escape leaves a page for Apps, when nothing above the page (a dialog, the feed alert, a
-        // menu or a list) would take the key itself.
+        // menu or a list) or a text field being edited would take the key itself. An ordinary
+        // focused control (a button reached by Tab) doesn't use Escape, so it doesn't block it.
         let alert_open = self.alerts.iter().any(|a| !self.settings.dismissed_notices.contains(&a.id));
         if self.page != Page::Apps
             && self.dialog.is_none()
             && !alert_open
+            && !escape_taken
             && !egui::Popup::is_any_open(&ctx)
-            && ctx.memory(|m| m.focused().is_none())
+            && !ctx.text_edit_focused()
             && ctx.input(|i| i.key_pressed(egui::Key::Escape))
         {
             self.set_page(Page::Apps);

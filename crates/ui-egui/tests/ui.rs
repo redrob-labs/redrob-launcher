@@ -544,6 +544,31 @@ fn pages_lead_back_to_apps_by_the_back_button_and_escape() {
 }
 
 #[test]
+fn escape_leaves_a_page_from_a_focused_button_but_not_from_an_open_list() {
+    let (mut h, _) = harness(ViewMode::Grid, egui::Theme::Dark, true);
+    h.run_steps(6);
+    let on_settings = |h: &Harness<'_, Option<LauncherUi>>| h.query_by_label("News and source code for every Redrob app").is_some();
+    // Keyboard focus on an ordinary button (as after Tab) doesn't swallow Escape.
+    h.get_by_label("Settings").click();
+    h.run_steps(4);
+    h.get_by_label("Quit Redrob Launcher").focus();
+    h.run_steps(2);
+    assert!(h.ctx.memory(|m| m.focused().is_some()), "the button holds keyboard focus");
+    h.key_press(egui::Key::Escape);
+    h.run_steps(4);
+    assert!(!on_settings(&h), "Escape from a focused button returns to Apps");
+    // An open list takes Escape for itself: it closes, and the page stays.
+    h.get_by_label("Settings").click();
+    h.run_steps(4);
+    h.get_by_value("Automatically").click();
+    h.run_steps(4);
+    assert!(egui::Popup::is_any_open(&h.ctx), "the check-for-updates list is open");
+    h.key_press(egui::Key::Escape);
+    h.run_steps(4);
+    assert!(on_settings(&h), "Escape closed the list, not the page");
+}
+
+#[test]
 fn the_theme_switch_options_are_big_enough_to_hit_and_switch_the_theme() {
     for width in [1180.0, 600.0] {
         let mut h = harness_sized(width);
