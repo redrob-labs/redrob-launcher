@@ -72,13 +72,22 @@ pub fn hud_elided(ui: &mut Ui, text: &str, color: Color32, max_width: f32) -> Re
     if elided { resp.on_hover_text(text) } else { resp }
 }
 
-/// "01 / Classic apps": a section eyebrow, the index faint.
-pub fn eyebrow(ui: &mut Ui, index: &str, label: &str) {
+/// A DS meta line over a section: the brand's 2 x 12 tick raked at 40 degrees in Redrob Blue,
+/// then the label in 12 px medium ink-secondary, sentence case.
+pub fn meta_line(ui: &mut Ui, label: &str) {
     let t = Tokens::get(ui.ctx());
     ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 0.0;
-        hud(ui, index, t.faint);
-        hud(ui, " / ", t.faint);
+        ui.spacing_mut().item_spacing.x = theme::space::S2;
+        let (r, _) = ui.allocate_exact_size(vec2(8.0, 12.0), Sense::hover());
+        let lean = (40.0_f32).to_radians().tan() * 6.0;
+        let c = r.center();
+        let pts = vec![
+            egui::pos2(c.x - 1.0 - lean, c.y + 6.0),
+            egui::pos2(c.x + 1.0 - lean, c.y + 6.0),
+            egui::pos2(c.x + 1.0 + lean, c.y - 6.0),
+            egui::pos2(c.x - 1.0 + lean, c.y - 6.0),
+        ];
+        ui.painter().add(egui::Shape::convex_polygon(pts, t.accent, Stroke::NONE));
         hud(ui, label, t.muted);
     });
 }

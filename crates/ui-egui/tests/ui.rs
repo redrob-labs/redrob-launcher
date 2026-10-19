@@ -394,9 +394,15 @@ fn switching_views_and_filters() {
     h.get_by_label("Redrob Canvas");
 }
 
-/// How far the middle of these lines of text is below the middle of the app icon beside them, in points.
+/// How far the middle of these lines of text is below the middle of the app icon beside them, in
+/// points. The lines also share one left edge, just right of the icon.
 fn below_icon_centre(h: &Harness<'_, Option<LauncherUi>>, lines: &[&str]) -> f32 {
-    let text = lines.iter().map(|l| h.get_by_label(l).rect()).reduce(|a, b| a.union(b)).unwrap();
+    let rects: Vec<egui::Rect> = lines.iter().map(|l| h.get_by_label(l).rect()).collect();
+    let left = rects[0].left();
+    for (l, r) in lines.iter().zip(&rects) {
+        assert!((r.left() - left).abs() < 0.5, "{l} is not left-aligned with {}: {} vs {left}", lines[0], r.left());
+    }
+    let text = rects.iter().copied().reduce(|a, b| a.union(b)).unwrap();
     let icon = h
         .query_all(egui_kittest::kittest::by().role(egui::accesskit::Role::Image))
         .map(|n| n.rect())
@@ -404,11 +410,12 @@ fn below_icon_centre(h: &Harness<'_, Option<LauncherUi>>, lines: &[&str]) -> f32
         .max_by(|a, b| a.right().total_cmp(&b.right()))
         .unwrap();
     assert!(text.left() - icon.right() < 24.0, "no icon beside {lines:?}");
+    assert!(text.left() > icon.right(), "{lines:?} runs into the icon");
     text.center().y - icon.center().y
 }
 
 #[test]
-fn name_and_tagline_are_centred_on_the_icon() {
+fn name_and_tagline_are_left_aligned_beside_the_icon_and_centred_on_it() {
     for (scale, suffix) in [(1.0, "-1x"), (1.5, "-1.5x"), (2.0, "-2x")] {
         let (mut h, _) = harness_at(ViewMode::Grid, egui::Theme::Dark, true, scale);
         h.run_steps(8);

@@ -5,14 +5,14 @@ use egui::{Color32, CornerRadius, FontId, Rect, RichText, Sense, Stroke, Ui, vec
 use redrob_launcher_core::platform::pick_asset;
 use redrob_launcher_core::protocol::{Command, JobPhase};
 use redrob_launcher_core::status::AppStatus;
-use redrob_launcher_core::{AppGroup, SUITE, time};
+use redrob_launcher_core::{AppGroup, time};
 
 use crate::app::{Dialog, LauncherUi, TitleBar};
 use crate::glyphs::Icon;
 use crate::i18n::{current, fmt, t, tn, tr_ctx};
 use crate::model::{self, AppEntry};
 use crate::settings::{Filter, SortKey, ViewMode};
-use crate::theme::{self, Tokens, rgb, tint};
+use crate::theme::{self, Tokens, tint};
 use crate::widgets::{self, Cell, Kind};
 
 /// Translate a relative timestamp ("just now", "5 min ago", …) into the current language.
@@ -58,17 +58,18 @@ const FOOTER_MIN_STATUS_W: f32 = 300.0;
 
 /// Three tiles across the main area beside the sidebar at the default 1180 px window.
 const CARD_MIN_W: f32 = 272.0;
-const CARD_H: f32 = 280.0;
-/// The card's top strip: number tab and links.
-const STRIP_H: f32 = 40.0;
+/// A tile's height: padding, the icon row, status, version and the actions row.
+const CARD_H: f32 = 236.0;
+/// The space between tiles (DS card gap in a dense grid: space-4).
+const CARD_GAP: f32 = 16.0;
 const CARD_PAD: f32 = 20.0;
 /// The icon buttons beside an app's main action (pause, cancel, More actions): DS IconButton sm.
 pub(crate) const ACTION_ICON: f32 = theme::control::SM;
 /// Room macOS's traffic lights take at the left of the header.
 const TRAFFIC_LIGHTS_W: f32 = 72.0;
 
-/// A run of cards, under an optional (number, title) eyebrow.
-type Section = (Option<(&'static str, &'static str)>, Vec<&'static str>);
+/// A run of cards, under an optional meta-line title.
+type Section = (Option<&'static str>, Vec<&'static str>);
 
 impl LauncherUi {
     /// The title bar (Redrob Cowork's): with a custom or macOS title bar the whole bar drags the
@@ -337,17 +338,17 @@ impl LauncherUi {
 
     pub(crate) fn grid(&mut self, ui: &mut Ui, ids: &[&'static str]) {
         let width = ui.available_width();
-        // Neighbouring cards share their 1 px hairline, like the site's `gap-px` grid.
-        let cols = ((width / CARD_MIN_W).floor() as usize).max(1);
-        let card_w = (width + (cols as f32 - 1.0)) / cols as f32;
+        // DS ConnectorCard tiles, 16 px apart (no shared hairlines).
+        let cols = (((width + CARD_GAP) / (CARD_MIN_W + CARD_GAP)).floor() as usize).max(1);
+        let card_w = (width - (cols as f32 - 1.0) * CARD_GAP) / cols as f32;
         // In suite order, split into the classic apps and the new ones.
         let grouped = self.settings.sort == SortKey::Suite && self.settings.filter == Filter::All && self.search.trim().is_empty();
         let sections: Vec<Section> = if grouped {
-            [(AppGroup::Create, "01", tl!("Create")), (AppGroup::Work, "02", tl!("Work"))]
+            [(AppGroup::Create, tl!("Create")), (AppGroup::Work, tl!("Work"))]
                 .iter()
-                .map(|(g, index, title)| {
+                .map(|(g, title)| {
                     let list = ids.iter().copied().filter(|id| self.entry(id).is_some_and(|e| e.app.group == *g)).collect();
-                    (Some((*index, *title)), list)
+                    (Some(*title), list)
                 })
                 .collect()
         } else {
@@ -358,103 +359,95 @@ impl LauncherUi {
             if list.is_empty() {
                 continue;
             }
-            if let Some((index, title)) = title {
+            if let Some(title) = title {
                 ui.add_space(4.0);
                 ui.horizontal(|ui| {
-                    widgets::eyebrow(ui, index, title);
+                    widgets::meta_line(ui, title);
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         widgets::hud(ui, &tn(list.len() as u64, "{n} app", "{n} apps"), t.faint);
                     });
                 });
-                ui.add_space(10.0);
+                ui.add_space(theme::space::S3);
             }
             let rows = list.len().div_ceil(cols);
-            let height = rows as f32 * (CARD_H - 1.0) + 1.0;
+            let height = rows as f32 * (CARD_H + CARD_GAP) - CARD_GAP;
             let (area, _) = ui.allocate_exact_size(vec2(width, height), Sense::hover());
             for (i, id) in list.iter().enumerate() {
                 let (row, col) = (i / cols, i % cols);
-                let min = area.min + vec2(col as f32 * (card_w - 1.0), row as f32 * (CARD_H - 1.0));
+                let min = area.min + vec2(col as f32 * (card_w + CARD_GAP), row as f32 * (CARD_H + CARD_GAP));
                 self.card(ui, id, Rect::from_min_size(min, vec2(card_w, CARD_H)));
             }
-            ui.add_space(24.0);
+            ui.add_space(theme::space::S6);
         }
     }
 
+    /// One app as a DS ConnectorCard: raised, radius 12, a hairline that strengthens with a
+    /// shadow-md on hover (140 ms); the icon exactly as supplied (no shadow, border or tint) beside
+    /// the name, tagline and kind; the status and the app's pages; the version; the actions.
+    /// The product's colour is only its icon.
     fn card(&mut self, ui: &mut Ui, id: &str, rect: Rect) {
         let Some(entry) = self.entry(id).cloned() else { return };
         let t = Tokens::get(ui.ctx());
         let app = entry.app;
         let hovered = ui.rect_contains_pointer(rect);
-        let lift = ui.ctx().animate_bool_with_time(ui.id().with(("card-hover", id)), hovered, 0.3);
-        let app_color = rgb(app.color);
-        let painter = ui.painter_at(rect.expand(16.0));
-        painter.rect(rect, CornerRadius::ZERO, t.bg, t.hairline(), egui::StrokeKind::Inside);
-        // On hover, a 2 px rule in the app's colour wipes in from the left along the top.
-        if lift > 0.0 {
-            painter.rect_filled(Rect::from_min_size(rect.min, vec2(rect.width() * lift, 2.0)), CornerRadius::ZERO, app_color);
+        let k = ui.ctx().animate_bool_with_time(ui.id().with(("card-hover", id)), hovered, theme::motion::duration(ui.ctx(), theme::motion::FAST));
+        let radius = CornerRadius::same(theme::radius::LG);
+        let painter = ui.painter_at(rect.expand(24.0));
+        if k > 0.0 {
+            let mut shadow = theme::shadow_md(&t);
+            shadow.color = shadow.color.gamma_multiply(k);
+            painter.add(shadow.as_shape(rect, radius));
         }
-
-        // The top strip: the app's number in its colour, and its pages.
-        let strip = Rect::from_min_size(rect.min, vec2(rect.width(), STRIP_H));
-        painter.hline(strip.x_range(), strip.bottom() - 0.5, t.hairline());
-        let number = SUITE.iter().position(|a| a.id == app.id).map_or_else(String::new, |i| format!("{:02}", i + 1));
-        {
-            let mut strip_ui = ui.new_child(
-                egui::UiBuilder::new().max_rect(strip.shrink2(vec2(CARD_PAD, 0.0))).layout(egui::Layout::left_to_right(egui::Align::Center)),
-            );
-            // ink-on-brand: white on the mark, as on every Redrob tile.
-            widgets::tag(&mut strip_ui, &number, app_color, Color32::WHITE);
-            strip_ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                ui.spacing_mut().item_spacing.x = 16.0;
-                widgets::hud_link(ui, tl!("GitHub"), &app.repo_url());
-                if let Some(site) = app.website() {
-                    widgets::hud_link(ui, tl!("Website"), &site);
-                }
-            });
-        }
+        painter.rect(rect, radius, t.raised(), Stroke::new(1.0, theme::mix(t.line, t.line_strong, k)), egui::StrokeKind::Inside);
 
         let status = entry.status(self.platform, self.caps.manage_apps);
-        let inner = Rect::from_min_max(egui::pos2(rect.left() + CARD_PAD, strip.bottom() + 18.0), rect.max - vec2(CARD_PAD, CARD_PAD));
+        let inner = rect.shrink(CARD_PAD);
         // A detached child: the card's contents never move the next card along.
         let mut child = ui.new_child(egui::UiBuilder::new().max_rect(inner).layout(egui::Layout::top_down(egui::Align::Min)));
         child.set_clip_rect(rect.intersect(ui.clip_rect()));
         let ui = &mut child;
         ui.horizontal(|ui| {
-            const ICON: f32 = 56.0;
-            let [name, tagline, like] = [FontId::new(22.0, theme::display()), FontId::proportional(13.5), FontId::proportional(12.0)];
-            const GAP: f32 = 4.0;
+            const ICON: f32 = 48.0;
+            let [name, tagline, like] = [
+                FontId::new(theme::text::TITLE_4, theme::display()),
+                FontId::proportional(theme::text::BODY_SM),
+                FontId::proportional(theme::text::META),
+            ];
+            const GAP: f32 = 2.0;
             // The slot is as tall as the text beside it when that is taller, so the two share a centre.
             let block = lines_height(ui, &[&name, &tagline, &like], GAP);
             let (slot, icon_response) = ui.allocate_exact_size(vec2(ICON, block.max(ICON)), Sense::hover());
             icon_response.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Image, true, fmt(tl!("{name} icon"), &[("name", app.name)])));
-            // The icon rises a little on hover, over a soft drop shadow (the site's only shadow).
-            let icon_rect = Rect::from_center_size(slot.center(), vec2(ICON, ICON)).translate(vec2(0.0, -4.0 * lift));
-            ui.painter().add(
-                egui::epaint::Shadow { offset: [0, 6], blur: 14, spread: 0, color: Color32::from_black_alpha(71) }
-                    .as_shape(icon_rect.shrink(4.0), CornerRadius::same(12)),
-            );
             if let Some(icon) = crate::icons::app(app.id) {
-                egui::Image::new(icon).paint_at(ui, icon_rect);
+                egui::Image::new(icon).paint_at(ui, Rect::from_center_size(slot.center(), vec2(ICON, ICON)));
             }
-            ui.add_space(6.0);
+            ui.add_space(theme::space::S3);
             centered_lines(ui, &[&name, &tagline, &like], GAP, |ui| {
                 // The name's row is as tall as its text, not as a button.
                 ui.spacing_mut().interact_size.y = 0.0;
-                widgets::wordmark(ui, app, 22.0);
+                widgets::wordmark(ui, app, theme::text::TITLE_4);
                 ui.add(egui::Label::new(RichText::new(tr_ctx(current(), app.id, app.tagline)).font(tagline.clone()).color(t.muted)).truncate());
                 ui.add(egui::Label::new(RichText::new(crate::i18n::tr(current(), app.like)).font(like.clone()).color(t.faint)).truncate());
             });
         });
-        ui.add_space(14.0);
+        ui.add_space(theme::space::S4);
         ui.horizontal(|ui| {
             let (text, tone) = model::entry_status_text(&entry, &status, self.caps.manage_apps);
             let r = widgets::badge(ui, &text, widgets::tone_color(&t, tone));
             if let Some(f) = entry.failure() {
                 r.on_hover_text(fmt(tl!("Couldn't check for updates: {f}"), &[("f", f)]));
             }
+            // The app's pages, quiet, at the right of the status.
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                ui.spacing_mut().item_spacing.x = theme::space::S3;
+                widgets::hud_link(ui, tl!("GitHub"), &app.repo_url());
+                if let Some(site) = app.website() {
+                    widgets::hud_link(ui, tl!("Website"), &site);
+                }
+            });
         });
-        ui.add_space(4.0);
-        ui.label(RichText::new(version_line(&entry, &status)).size(12.5).color(t.muted));
+        ui.add_space(theme::space::S2);
+        ui.add(egui::Label::new(RichText::new(version_line(&entry, &status)).size(theme::text::META).color(t.muted)).truncate());
         ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
             ui.horizontal(|ui| self.actions(ui, &entry, &status, inner.width()));
         });
@@ -481,131 +474,156 @@ impl LauncherUi {
             let y = ui.max_rect().bottom() + ui.spacing().item_spacing.y / 2.0;
             ui.ctx().layer_painter(ui.layer_id()).with_clip_rect(clip).hline(span, y, t.hairline());
         };
-        egui::Frame::new().fill(t.bg).stroke(t.hairline()).inner_margin(egui::Margin::symmetric(12, 0)).show(ui, |ui| {
-            TableBuilder::new(ui)
-                .striped(false)
-                .vscroll(false)
-                .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
-                // Sized to fit the main area beside the sidebar at the default 1180 px window.
-                .column(Column::remainder().at_least(140.0).clip(true))
-                .column(Column::exact(96.0).clip(true))
-                .column(Column::exact(136.0).clip(true))
-                .column(Column::exact(64.0))
-                .column(Column::exact(64.0))
-                .column(Column::exact(96.0).clip(true))
-                .column(Column::exact(196.0))
-                .header(42.0, |mut header| {
-                    for (key, label) in [
-                        (Some(SortKey::Name), tl!("App")),
-                        (Some(SortKey::InspiredBy), tl!("Kind")),
-                        (Some(SortKey::Status), tl!("Status")),
-                        (Some(SortKey::Installed), tr_ctx(current(), "column", "Installed")),
-                        (Some(SortKey::Latest), tr_ctx(current(), "column", "Latest")),
-                        (Some(SortKey::Released), tr_ctx(current(), "column", "Released")),
-                        (None, ""),
-                    ] {
-                        header.col(|ui| {
-                            if key == Some(SortKey::Name) {
-                                rule(ui);
-                            }
-                            let Some(k) = key else { return };
-                            let active = k == self.settings.sort;
-                            let tip = if active { tl!("Click to reverse the order") } else { tl!("Click to sort by this column") };
-                            // Measure first so the whole header cell (label + arrow) is the target.
-                            let (rect, resp) = ui.allocate_exact_size(ui.available_size(), Sense::click());
-                            let hovered = resp.hovered();
-                            let color = if active || hovered { t.ink_strong } else { t.faint };
-                            let galley = widgets::hud_galley(ui, label, color);
-                            let text_pos = egui::pos2(rect.left(), rect.center().y - galley.size().y / 2.0);
-                            let arrow_x = text_pos.x + galley.size().x + 4.0;
-                            let p = ui.painter();
-                            p.galley(text_pos, galley, color);
-                            // ▲ / ▼ for the active column; a faint hint on hover.
-                            let arrow = if active {
-                                Some(self.settings.sort_descending)
-                            } else if hovered {
-                                Some(k.starts_descending())
-                            } else {
-                                None
-                            };
-                            if let Some(down) = arrow {
-                                let c = egui::pos2(arrow_x + 4.0, rect.center().y);
-                                let (tip_y, base_y) = if down { (c.y + 3.0, c.y - 2.0) } else { (c.y - 3.0, c.y + 2.0) };
-                                let pts = vec![egui::pos2(c.x - 3.5, base_y), egui::pos2(c.x + 3.5, base_y), egui::pos2(c.x, tip_y)];
-                                let arrow_color = if active { t.accent_ink } else { t.faint };
-                                p.add(egui::Shape::convex_polygon(pts, arrow_color, Stroke::NONE));
-                            }
-                            resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, label));
-                            if resp.on_hover_text(tip).on_hover_cursor(egui::CursorIcon::PointingHand).clicked() {
-                                sort_clicked = Some(k);
-                            }
-                        });
-                    }
-                })
-                .body(|mut body| {
-                    let last = ids.len().saturating_sub(1);
-                    for (i, id) in ids.iter().enumerate() {
-                        let Some(entry) = self.entry(id).cloned() else { continue };
-                        let status = entry.status(self.platform, self.caps.manage_apps);
-                        body.row(62.0, |mut row| {
-                            row.col(|ui| {
-                                if i < last {
+        // Drawn from the first cell, under the row: the header's sunken band (rounded with the
+        // box at the top), and a row's hover.
+        let band = |ui: &Ui, fill: egui::Color32, top: bool| {
+            let cell = ui.max_rect();
+            let gap = ui.spacing().item_spacing.y / 2.0;
+            let r = Rect::from_x_y_ranges(span.shrink(1.0), (cell.top() - if top { 0.0 } else { gap })..=(cell.bottom() + gap));
+            let radius = if top { CornerRadius { nw: theme::radius::LG, ne: theme::radius::LG, sw: 0, se: 0 } } else { CornerRadius::ZERO };
+            ui.ctx().layer_painter(ui.layer_id()).with_clip_rect(clip).rect_filled(r, radius, fill);
+        };
+        // DS Table: a raised box with a radius of 12 and a hairline.
+        egui::Frame::new()
+            .fill(t.raised())
+            .stroke(t.hairline())
+            .corner_radius(CornerRadius::same(theme::radius::LG))
+            .inner_margin(egui::Margin::symmetric(12, 0))
+            .show(ui, |ui| {
+                TableBuilder::new(ui)
+                    .striped(false)
+                    .vscroll(false)
+                    .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
+                    // Sized to fit the main area beside the sidebar at the default 1180 px window.
+                    .column(Column::remainder().at_least(136.0).clip(true))
+                    .column(Column::exact(88.0).clip(true))
+                    .column(Column::exact(136.0).clip(true))
+                    .column(Column::exact(64.0))
+                    .column(Column::exact(64.0))
+                    .column(Column::exact(92.0).clip(true))
+                    .column(Column::exact(196.0))
+                    .header(42.0, |mut header| {
+                        for (key, label) in [
+                            (Some(SortKey::Name), tl!("App")),
+                            (Some(SortKey::InspiredBy), tl!("Kind")),
+                            (Some(SortKey::Status), tl!("Status")),
+                            (Some(SortKey::Installed), tr_ctx(current(), "column", "Installed")),
+                            (Some(SortKey::Latest), tr_ctx(current(), "column", "Latest")),
+                            (Some(SortKey::Released), tr_ctx(current(), "column", "Released")),
+                            (None, ""),
+                        ] {
+                            header.col(|ui| {
+                                if key == Some(SortKey::Name) {
+                                    band(ui, t.sunken, true);
                                     rule(ui);
                                 }
-                                if let Some(icon) = crate::icons::app(entry.app.id) {
-                                    ui.add(egui::Image::new(icon).fit_to_exact_size(vec2(38.0, 38.0)));
+                                let Some(k) = key else { return };
+                                let active = k == self.settings.sort;
+                                let tip = if active { tl!("Click to reverse the order") } else { tl!("Click to sort by this column") };
+                                // Measure first so the whole header cell (label + arrow) is the target.
+                                let (rect, resp) = ui.allocate_exact_size(ui.available_size(), Sense::click());
+                                let hovered = resp.hovered();
+                                // DS table head: 12 / 500 ink-secondary; ink when sorted or hovered.
+                                let color = if active || hovered { t.ink_strong } else { t.muted };
+                                let galley = widgets::hud_galley(ui, label, color);
+                                let text_pos = egui::pos2(rect.left(), rect.center().y - galley.size().y / 2.0);
+                                let arrow_x = text_pos.x + galley.size().x + 4.0;
+                                let p = ui.painter();
+                                p.galley(text_pos, galley, color);
+                                // ▲ / ▼ for the active column; a faint hint on hover.
+                                let arrow = if active {
+                                    Some(self.settings.sort_descending)
+                                } else if hovered {
+                                    Some(k.starts_descending())
+                                } else {
+                                    None
+                                };
+                                if let Some(down) = arrow {
+                                    let c = egui::pos2(arrow_x + 4.0, rect.center().y);
+                                    let (tip_y, base_y) = if down { (c.y + 3.0, c.y - 2.0) } else { (c.y - 3.0, c.y + 2.0) };
+                                    let pts = vec![egui::pos2(c.x - 3.5, base_y), egui::pos2(c.x + 3.5, base_y), egui::pos2(c.x, tip_y)];
+                                    let arrow_color = if active { t.accent_ink } else { t.faint };
+                                    p.add(egui::Shape::convex_polygon(pts, arrow_color, Stroke::NONE));
                                 }
-                                ui.add_space(4.0);
-                                ui.vertical(|ui| {
-                                    const GAP: f32 = 2.0;
-                                    ui.spacing_mut().item_spacing.y = GAP;
-                                    // Name and tagline as one block, centred on the icon.
-                                    let block = title_h + GAP + tagline_h;
-                                    ui.add_space(((ui.available_height() - block) / 2.0).max(0.0));
-                                    widgets::wordmark(ui, entry.app, TITLE_SIZE);
+                                resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, label));
+                                if resp.on_hover_text(tip).on_hover_cursor(egui::CursorIcon::PointingHand).clicked() {
+                                    sort_clicked = Some(k);
+                                }
+                            });
+                        }
+                    })
+                    .body(|mut body| {
+                        let last = ids.len().saturating_sub(1);
+                        for (i, id) in ids.iter().enumerate() {
+                            let Some(entry) = self.entry(id).cloned() else { continue };
+                            let status = entry.status(self.platform, self.caps.manage_apps);
+                            body.row(62.0, |mut row| {
+                                row.col(|ui| {
+                                    let cell = ui.max_rect();
+                                    if ui.rect_contains_pointer(Rect::from_x_y_ranges(span, cell.y_range())) {
+                                        band(ui, t.hover_row(), false);
+                                    }
+                                    if i < last {
+                                        rule(ui);
+                                    }
+                                    if let Some(icon) = crate::icons::app(entry.app.id) {
+                                        ui.add(egui::Image::new(icon).fit_to_exact_size(vec2(38.0, 38.0)));
+                                    }
+                                    ui.add_space(4.0);
+                                    ui.vertical(|ui| {
+                                        const GAP: f32 = 2.0;
+                                        ui.spacing_mut().item_spacing.y = GAP;
+                                        // Name and tagline as one block, centred on the icon.
+                                        let block = title_h + GAP + tagline_h;
+                                        ui.add_space(((ui.available_height() - block) / 2.0).max(0.0));
+                                        widgets::wordmark(ui, entry.app, TITLE_SIZE);
+                                        ui.add(
+                                            egui::Label::new(
+                                                RichText::new(tr_ctx(current(), entry.app.id, entry.app.tagline)).size(TAGLINE_SIZE).color(t.muted),
+                                            )
+                                            .truncate(),
+                                        );
+                                    });
+                                });
+                                row.col(|ui| {
                                     ui.add(
-                                        egui::Label::new(
-                                            RichText::new(tr_ctx(current(), entry.app.id, entry.app.tagline)).size(TAGLINE_SIZE).color(t.muted),
-                                        )
-                                        .truncate(),
+                                        egui::Label::new(RichText::new(crate::i18n::tr(current(), entry.app.like)).size(13.0).color(t.muted))
+                                            .truncate(),
                                     );
                                 });
+                                row.col(|ui| {
+                                    let (text, tone) = model::entry_status_text(&entry, &status, self.caps.manage_apps);
+                                    let r = widgets::task_status(ui, &text, widgets::tone_color(&t, tone));
+                                    if let Some(f) = entry.failure() {
+                                        r.on_hover_text(fmt(tl!("Couldn't check for updates: {f}"), &[("f", f)]));
+                                    }
+                                });
+                                row.col(|ui| {
+                                    let installed = entry.installed_label();
+                                    let color = if installed.is_some() { t.ink } else { t.faint };
+                                    ui.label(RichText::new(installed.unwrap_or_else(|| "—".into())).family(egui::FontFamily::Monospace).color(color));
+                                });
+                                row.col(|ui| {
+                                    let c = if status == AppStatus::UpdateAvailable { t.warn } else { t.ink };
+                                    ui.label(
+                                        RichText::new(entry.latest_label().unwrap_or_else(|| "—".into()))
+                                            .family(egui::FontFamily::Monospace)
+                                            .color(c),
+                                    );
+                                });
+                                row.col(|ui| {
+                                    let when = entry.release().and_then(|r| r.published_at);
+                                    let r =
+                                        ui.label(RichText::new(when.map_or_else(|| "—".into(), date_text)).size(theme::text::BODY_SM).color(t.muted));
+                                    if let Some(w) = when {
+                                        r.on_hover_text(ago_text(w, now));
+                                    }
+                                });
+                                row.col(|ui| self.actions(ui, &entry, &status, 194.0));
                             });
-                            row.col(|ui| {
-                                ui.add(
-                                    egui::Label::new(RichText::new(crate::i18n::tr(current(), entry.app.like)).size(13.0).color(t.muted)).truncate(),
-                                );
-                            });
-                            row.col(|ui| {
-                                let (text, tone) = model::entry_status_text(&entry, &status, self.caps.manage_apps);
-                                let r = widgets::task_status(ui, &text, widgets::tone_color(&t, tone));
-                                if let Some(f) = entry.failure() {
-                                    r.on_hover_text(fmt(tl!("Couldn't check for updates: {f}"), &[("f", f)]));
-                                }
-                            });
-                            row.col(|ui| {
-                                let installed = entry.installed_label();
-                                let color = if installed.is_some() { t.ink } else { t.faint };
-                                ui.label(RichText::new(installed.unwrap_or_else(|| "—".into())).family(egui::FontFamily::Monospace).color(color));
-                            });
-                            row.col(|ui| {
-                                let c = if status == AppStatus::UpdateAvailable { t.warn } else { t.ink };
-                                ui.label(
-                                    RichText::new(entry.latest_label().unwrap_or_else(|| "—".into())).family(egui::FontFamily::Monospace).color(c),
-                                );
-                            });
-                            row.col(|ui| {
-                                let when = entry.release().and_then(|r| r.published_at);
-                                let r = ui.label(RichText::new(when.map_or_else(|| "—".into(), date_text)).color(t.muted));
-                                if let Some(w) = when {
-                                    r.on_hover_text(ago_text(w, now));
-                                }
-                            });
-                            row.col(|ui| self.actions(ui, &entry, &status, 194.0));
-                        });
-                    }
-                });
-        });
+                        }
+                    });
+            });
         if let Some(k) = sort_clicked {
             if self.settings.sort == k {
                 self.settings.sort_descending = !self.settings.sort_descending;
@@ -668,7 +686,7 @@ impl LauncherUi {
                 JobPhase::Downloading { done, total } => {
                     let f = (total > 0).then(|| done as f32 / total as f32);
                     let pct = f.map(|f| format!(" · {:.0}%", f * 100.0)).unwrap_or_default();
-                    let caption = if bar_w < 150.0 {
+                    let caption = if bar_w < 140.0 {
                         match f {
                             Some(f) => {
                                 fmt(tl!("{done} of {total}"), &[("done", &format!("{:.0}%", f * 100.0)), ("total", &widgets::human_bytes(total))])
