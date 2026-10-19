@@ -1,4 +1,4 @@
-//! The header, toolbar, footer, the grid of cards and the table, laid out like the apps page on
+//! The header, toolbar, footer and the grid of cards, laid out like the apps page on
 //! the Redrob design system: hairline cells, quiet labels and square controls.
 
 use egui::{Color32, CornerRadius, FontId, Rect, RichText, Sense, Stroke, Ui, vec2};
@@ -11,7 +11,7 @@ use crate::app::{Dialog, LauncherUi, TitleBar};
 use crate::glyphs::Icon;
 use crate::i18n::{current, fmt, t, tn, tr_ctx};
 use crate::model::{self, AppEntry};
-use crate::settings::{Filter, SortKey, ViewMode};
+use crate::settings::Filter;
 use crate::theme::{self, Tokens};
 use crate::widgets::{self, Cell, Kind};
 
@@ -165,8 +165,6 @@ impl LauncherUi {
             ui.add_space(14.0);
         }
         self.announcements(ui);
-        // A narrow window (the folded sidebar) puts the sort under the filters, not over them.
-        let narrow = ui.available_width() < 640.0;
         ui.horizontal(|ui| {
             let filters: Vec<(Filter, Cell<'_>)> = [
                 (Filter::All, tl!("All"), tl!("Every Redrob app"), None),
@@ -180,49 +178,7 @@ impl LauncherUi {
             .map(|(f, label, tip, highlight)| (f, Cell { label, tip, count: Some((self.count(f), highlight)) }))
             .collect();
             widgets::cells(ui, &mut self.settings.filter, &filters);
-            if !narrow {
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| self.sort_combo(ui));
-            }
         });
-        if narrow && self.settings.view == ViewMode::Grid {
-            ui.add_space(8.0);
-            ui.horizontal(|ui| ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| self.sort_combo(ui)));
-        }
-    }
-
-    /// The grid's sort, with its caption where it fits. Right to left.
-    fn sort_combo(&mut self, ui: &mut Ui) {
-        let t = Tokens::get(ui.ctx());
-        {
-            {
-                if self.settings.view == ViewMode::Grid {
-                    egui::ComboBox::from_id_salt("sort")
-                        .selected_text(RichText::new(sort_label(self.settings.sort)).size(13.0))
-                        .width(140.0)
-                        .show_ui(ui, |ui| {
-                            for key in [
-                                SortKey::Suite,
-                                SortKey::Name,
-                                SortKey::InspiredBy,
-                                SortKey::Status,
-                                SortKey::Installed,
-                                SortKey::Latest,
-                                SortKey::Released,
-                            ] {
-                                if ui.selectable_label(self.settings.sort == key, sort_label(key)).clicked() {
-                                    self.settings.sort = key;
-                                    self.settings.sort_descending = key.starts_descending();
-                                }
-                            }
-                        });
-                    // The caption only where it fits beside the filters (longer in some languages).
-                    let sort = tl!("Sort");
-                    if widgets::hud_galley(ui, sort, t.faint).size().x + ui.spacing().item_spacing.x <= ui.available_width() {
-                        widgets::hud(ui, sort, t.faint);
-                    }
-                }
-            }
-        }
     }
 
     /// The DS EmptyState for a filter or search that matches nothing: left aligned, a 48 px
@@ -371,8 +327,8 @@ impl LauncherUi {
         // DS ConnectorCard tiles, 16 px apart (no shared hairlines).
         let cols = (((width + CARD_GAP) / (CARD_MIN_W + CARD_GAP)).floor() as usize).max(1);
         let card_w = (width - (cols as f32 - 1.0) * CARD_GAP) / cols as f32;
-        // In suite order, split into the classic apps and the new ones.
-        let grouped = self.settings.sort == SortKey::Suite && self.settings.filter == Filter::All && self.search.trim().is_empty();
+        // Every app, unsearched: split into the classic apps and the new ones (always suite order).
+        let grouped = self.settings.filter == Filter::All && self.search.trim().is_empty();
         let sections: Vec<Section> = if grouped {
             [(AppGroup::Create, tl!("Create")), (AppGroup::Work, tl!("Work"))]
                 .iter()
@@ -492,188 +448,6 @@ impl LauncherUi {
         });
     }
 
-    // ---- table ---------------------------------------------------------------------------
-
-    pub(crate) fn table(&mut self, ui: &mut Ui, ids: &[&'static str]) {
-        use egui_extras::{Column, TableBuilder};
-        let t = Tokens::get(ui.ctx());
-        let now = self.backend.now();
-        let mut sort_clicked = None;
-        // The app column's name and tagline line heights, to centre them on the icon.
-        const TITLE_SIZE: f32 = 16.0;
-        const TAGLINE_SIZE: f32 = 12.0;
-        let (title_h, tagline_h) = ui
-            .ctx()
-            .fonts_mut(|f| (f.row_height(&egui::FontId::new(TITLE_SIZE, theme::display())), f.row_height(&egui::FontId::proportional(TAGLINE_SIZE))));
-        // Rows are divided by hairlines across the whole table, drawn from the first cell and
-        // clipped to the scroll area.
-        let clip = ui.clip_rect();
-        let span = ui.available_rect_before_wrap().x_range();
-        let rule = |ui: &Ui| {
-            let y = ui.max_rect().bottom() + ui.spacing().item_spacing.y / 2.0;
-            ui.ctx().layer_painter(ui.layer_id()).with_clip_rect(clip).hline(span, y, t.hairline());
-        };
-        // Drawn from the first cell, under the row: the header's sunken band (rounded with the
-        // box at the top), and a row's hover.
-        let band = |ui: &Ui, fill: egui::Color32, top: bool| {
-            let cell = ui.max_rect();
-            let gap = ui.spacing().item_spacing.y / 2.0;
-            let r = Rect::from_x_y_ranges(span.shrink(1.0), (cell.top() - if top { 0.0 } else { gap })..=(cell.bottom() + gap));
-            let radius = if top { CornerRadius { nw: theme::radius::LG, ne: theme::radius::LG, sw: 0, se: 0 } } else { CornerRadius::ZERO };
-            ui.ctx().layer_painter(ui.layer_id()).with_clip_rect(clip).rect_filled(r, radius, fill);
-        };
-        // DS Table: a raised box with a radius of 12 and a hairline.
-        egui::Frame::new()
-            .fill(t.raised())
-            .stroke(t.hairline())
-            .corner_radius(CornerRadius::same(theme::radius::LG))
-            .inner_margin(egui::Margin::symmetric(12, 0))
-            .show(ui, |ui| {
-                TableBuilder::new(ui)
-                    .striped(false)
-                    .vscroll(false)
-                    .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
-                    // The App column never cuts a product's name short: at least 184 wide, it takes what the
-                    // others leave; a window narrower than the table scrolls it sideways.
-                    .column(Column::remainder().at_least(184.0).clip(true))
-                    .column(Column::exact(76.0).clip(true))
-                    .column(Column::exact(132.0).clip(true))
-                    .column(Column::exact(56.0))
-                    .column(Column::exact(56.0))
-                    .column(Column::exact(84.0).clip(true))
-                    .column(Column::exact(188.0))
-                    .header(42.0, |mut header| {
-                        for (key, label) in [
-                            (Some(SortKey::Name), tl!("App")),
-                            (Some(SortKey::InspiredBy), tl!("Kind")),
-                            (Some(SortKey::Status), tl!("Status")),
-                            (Some(SortKey::Installed), tr_ctx(current(), "column", "Installed")),
-                            (Some(SortKey::Latest), tr_ctx(current(), "column", "Latest")),
-                            (Some(SortKey::Released), tr_ctx(current(), "column", "Released")),
-                            (None, ""),
-                        ] {
-                            header.col(|ui| {
-                                if key == Some(SortKey::Name) {
-                                    band(ui, t.sunken, true);
-                                    rule(ui);
-                                }
-                                let Some(k) = key else { return };
-                                let active = k == self.settings.sort;
-                                let tip = if active { tl!("Click to reverse the order") } else { tl!("Click to sort by this column") };
-                                // Measure first so the whole header cell (label + arrow) is the target.
-                                let (rect, resp) = ui.allocate_exact_size(ui.available_size(), Sense::click());
-                                let hovered = resp.hovered();
-                                // DS table head: 12 / 500 ink-secondary; ink when sorted or hovered.
-                                let color = if active || hovered { t.ink_strong } else { t.muted };
-                                let galley = widgets::hud_galley(ui, label, color);
-                                let text_pos = egui::pos2(rect.left(), rect.center().y - galley.size().y / 2.0);
-                                let arrow_x = text_pos.x + galley.size().x + 4.0;
-                                let p = ui.painter();
-                                p.galley(text_pos, galley, color);
-                                // ▲ / ▼ for the active column; a faint hint on hover.
-                                let arrow = if active {
-                                    Some(self.settings.sort_descending)
-                                } else if hovered {
-                                    Some(k.starts_descending())
-                                } else {
-                                    None
-                                };
-                                if let Some(down) = arrow {
-                                    let c = egui::pos2(arrow_x + 4.0, rect.center().y);
-                                    let (tip_y, base_y) = if down { (c.y + 3.0, c.y - 2.0) } else { (c.y - 3.0, c.y + 2.0) };
-                                    let pts = vec![egui::pos2(c.x - 3.5, base_y), egui::pos2(c.x + 3.5, base_y), egui::pos2(c.x, tip_y)];
-                                    let arrow_color = if active { t.accent_ink } else { t.faint };
-                                    p.add(egui::Shape::convex_polygon(pts, arrow_color, Stroke::NONE));
-                                }
-                                resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, label));
-                                if resp.on_hover_text(tip).on_hover_cursor(egui::CursorIcon::PointingHand).clicked() {
-                                    sort_clicked = Some(k);
-                                }
-                            });
-                        }
-                    })
-                    .body(|mut body| {
-                        let last = ids.len().saturating_sub(1);
-                        for (i, id) in ids.iter().enumerate() {
-                            let Some(entry) = self.entry(id).cloned() else { continue };
-                            let status = entry.status(self.platform, self.caps.manage_apps);
-                            body.row(62.0, |mut row| {
-                                row.col(|ui| {
-                                    let cell = ui.max_rect();
-                                    if ui.rect_contains_pointer(Rect::from_x_y_ranges(span, cell.y_range())) {
-                                        band(ui, t.hover_row(), false);
-                                    }
-                                    if i < last {
-                                        rule(ui);
-                                    }
-                                    if let Some(icon) = crate::icons::app(entry.app.id) {
-                                        ui.add(egui::Image::new(icon).fit_to_exact_size(vec2(38.0, 38.0)));
-                                    }
-                                    ui.add_space(4.0);
-                                    ui.vertical(|ui| {
-                                        const GAP: f32 = 2.0;
-                                        ui.spacing_mut().item_spacing.y = GAP;
-                                        // Name and tagline as one block, centred on the icon.
-                                        let block = title_h + GAP + tagline_h;
-                                        ui.add_space(((ui.available_height() - block) / 2.0).max(0.0));
-                                        widgets::wordmark(ui, entry.app, TITLE_SIZE);
-                                        ui.add(
-                                            egui::Label::new(
-                                                RichText::new(tr_ctx(current(), entry.app.id, entry.app.tagline)).size(TAGLINE_SIZE).color(t.muted),
-                                            )
-                                            .truncate(),
-                                        );
-                                    });
-                                });
-                                row.col(|ui| {
-                                    ui.add(
-                                        egui::Label::new(RichText::new(crate::i18n::tr(current(), entry.app.like)).size(13.0).color(t.muted))
-                                            .truncate(),
-                                    );
-                                });
-                                row.col(|ui| {
-                                    let (text, tone) = model::entry_status_text(&entry, &status, self.caps.manage_apps);
-                                    let r = widgets::task_status(ui, &text, widgets::tone_color(&t, tone));
-                                    if let Some(f) = entry.failure() {
-                                        r.on_hover_text(fmt(tl!("Couldn't check for updates: {f}"), &[("f", f)]));
-                                    }
-                                });
-                                row.col(|ui| {
-                                    let installed = entry.installed_label();
-                                    let color = if installed.is_some() { t.ink } else { t.faint };
-                                    ui.label(RichText::new(installed.unwrap_or_else(|| "—".into())).family(egui::FontFamily::Monospace).color(color));
-                                });
-                                row.col(|ui| {
-                                    let c = if status == AppStatus::UpdateAvailable { t.warn } else { t.ink };
-                                    ui.label(
-                                        RichText::new(entry.latest_label().unwrap_or_else(|| "—".into()))
-                                            .family(egui::FontFamily::Monospace)
-                                            .color(c),
-                                    );
-                                });
-                                row.col(|ui| {
-                                    let when = entry.release().and_then(|r| r.published_at);
-                                    let r =
-                                        ui.label(RichText::new(when.map_or_else(|| "—".into(), date_text)).size(theme::text::BODY_SM).color(t.muted));
-                                    if let Some(w) = when {
-                                        r.on_hover_text(ago_text(w, now));
-                                    }
-                                });
-                                row.col(|ui| self.actions(ui, &entry, &status, 186.0));
-                            });
-                        }
-                    });
-            });
-        if let Some(k) = sort_clicked {
-            if self.settings.sort == k {
-                self.settings.sort_descending = !self.settings.sort_descending;
-            } else {
-                self.settings.sort = k;
-                self.settings.sort_descending = k.starts_descending();
-            }
-        }
-    }
-
     // ---- actions -------------------------------------------------------------------------
 
     fn primary_action(&self, entry: &AppEntry, status: &AppStatus) -> Primary {
@@ -771,7 +545,7 @@ impl LauncherUi {
             let pct = if p.total > 0 { format!(" · {:.0}%", p.done as f32 / p.total as f32 * 100.0) } else { String::new() };
             // Resume, then discard and the menu (two squares).
             let resume_w = (width - 2.0 * (ACTION_ICON + gap)).max(90.0);
-            // Narrow (the table): just tl!("Resume"); the tooltip says how far it got.
+            // Narrow: just tl!("Resume"); the tooltip says how far it got.
             let label = match resume_w {
                 w if w < 150.0 => tl!("Resume").to_string(),
                 w if w < 220.0 => format!("{}{pct}", tl!("Resume")),
@@ -902,18 +676,6 @@ impl LauncherUi {
                 }
             }
         });
-    }
-}
-
-fn sort_label(k: SortKey) -> &'static str {
-    match k {
-        SortKey::Suite => tl!("Suite order"),
-        SortKey::Name => tl!("Name"),
-        SortKey::InspiredBy => tl!("Kind"),
-        SortKey::Status => tl!("Status"),
-        SortKey::Installed => tl!("Installed version"),
-        SortKey::Latest => tl!("Latest version"),
-        SortKey::Released => tl!("Newest release"),
     }
 }
 

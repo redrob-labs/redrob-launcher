@@ -304,19 +304,6 @@ pub fn badge_sized(ui: &mut Ui, text: &str, color: Color32, size: Size) -> Respo
     resp
 }
 
-/// The DS TaskStatus: a 7 px dot in `color` and the state as a word (12 px medium, ink).
-pub fn task_status(ui: &mut Ui, text: &str, color: Color32) -> Response {
-    let t = Tokens::get(ui.ctx());
-    let galley = caps(ui, text, theme::text::META, theme::medium(), 0.0, t.ink);
-    let dot = 7.0;
-    let gap = theme::space::S2;
-    let (rect, resp) = ui.allocate_exact_size(vec2(dot + gap + galley.size().x, galley.size().y.max(dot)), Sense::hover());
-    ui.painter().circle_filled(egui::pos2(rect.left() + dot / 2.0, rect.center().y), dot / 2.0, color);
-    paint_left(ui, rect.with_min_x(rect.left() + dot + gap), galley, t.ink);
-    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Label, true, text));
-    resp
-}
-
 /// Which of the design system's button variants.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Kind {

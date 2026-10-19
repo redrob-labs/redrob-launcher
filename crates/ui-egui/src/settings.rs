@@ -8,6 +8,8 @@ use serde::{Deserialize, Serialize};
 use crate::i18n::t;
 use crate::theme::ThemeChoice;
 
+/// The grid or the table. Kept so saved settings still load: the launcher shows the grid only and
+/// ignores it.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ViewMode {
     #[default]
@@ -24,6 +26,8 @@ pub enum Filter {
     NotInstalled,
 }
 
+/// The order of the apps. Kept so saved settings still load: the grid is always in suite order and
+/// ignores it.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SortKey {
     /// Suite order: classic apps, then new.
@@ -39,14 +43,6 @@ pub enum SortKey {
     Latest,
     /// Release date.
     Released,
-}
-
-impl SortKey {
-    /// The direction a first click sorts in: newest and highest first for dates and versions,
-    /// A to Z for text.
-    pub fn starts_descending(self) -> bool {
-        matches!(self, Self::Installed | Self::Latest | Self::Released)
-    }
 }
 
 /// How often to look for updates in the background.
@@ -83,9 +79,12 @@ impl CheckEvery {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Settings {
+    /// Kept for compatibility, ignored: the grid is the only view.
     pub view: ViewMode,
     pub filter: Filter,
+    /// Kept for compatibility, ignored: the grid is always in suite order.
     pub sort: SortKey,
+    /// Kept for compatibility, ignored.
     pub sort_descending: bool,
     pub theme: ThemeChoice,
     /// Interface language: `auto` (follow the system) or a language code from the registry

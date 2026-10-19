@@ -9,9 +9,9 @@ use redrob_launcher_core::status::AppStatus;
 use crate::app::{LauncherUi, Page, TitleBar};
 use crate::glyphs::Icon;
 use crate::i18n::{fmt, tn};
-use crate::settings::{Filter, ViewMode};
+use crate::settings::Filter;
 use crate::theme::{self, Tokens};
-use crate::widgets::{self, Cell, Kind, NavMeta};
+use crate::widgets::{self, Kind, NavMeta};
 
 /// The sidebar card's width (Redrob Cowork's defaults to 260, the DS AppShell's to 232).
 pub(crate) const SIDEBAR_W: f32 = 248.0;
@@ -169,7 +169,7 @@ impl LauncherUi {
         });
     }
 
-    /// The Apps page's actions: update everything, search, and grid or table.
+    /// The Apps page's actions: update everything, and search.
     fn apps_actions(&mut self, ui: &mut Ui) {
         let updates = self.count(Filter::Updates);
         if self.caps.manage_apps && updates > 0 {
@@ -195,14 +195,6 @@ impl LauncherUi {
                 .min_size(vec2(0.0, theme::control::SM))
                 .vertical_align(egui::Align::Center)
                 .margin(vec2(10.0, 0.0)),
-        );
-        widgets::cells(
-            ui,
-            &mut self.settings.view,
-            &[
-                (ViewMode::Grid, Cell { label: tl!("Grid"), tip: tl!("Show apps as cards"), count: None }),
-                (ViewMode::Table, Cell { label: tl!("Table"), tip: tl!("Show apps as a table"), count: None }),
-            ],
         );
     }
 }

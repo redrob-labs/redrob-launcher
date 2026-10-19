@@ -11,7 +11,6 @@ use redrob_launcher_core::protocol::{Backend, Capabilities, Command, Event, JobP
 use redrob_launcher_core::release::{Asset, Release};
 use redrob_launcher_core::status::InstallSource;
 use redrob_launcher_core::{Arch, Installed, Os, Platform, SUITE, version};
-use redrob_launcher_ui_egui::settings::ViewMode;
 use redrob_launcher_ui_egui::{Host, LauncherUi, Settings};
 
 const NOW: i64 = 1_791_500_000;
@@ -104,17 +103,12 @@ fn events() -> Vec<Event> {
     ev
 }
 
-fn harness_language(
-    view: ViewMode,
-    theme: egui::Theme,
-    manage: bool,
-    language: &str,
-) -> (Harness<'static, Option<LauncherUi>>, Rc<RefCell<Vec<Command>>>) {
+fn harness_language(theme: egui::Theme, manage: bool, language: &str) -> (Harness<'static, Option<LauncherUi>>, Rc<RefCell<Vec<Command>>>) {
     redrob_launcher_ui_egui::i18n::set_test_lang(redrob_launcher_ui_egui::i18n::Lang::EN);
     let sent = Rc::new(RefCell::new(Vec::new()));
     let sent2 = sent.clone();
     let mut backend = Some(Fake { events: events(), sent: sent2, manage, clock: Rc::new(Cell::new(NOW)) });
-    let settings = Settings { view, notify: false, language: language.into(), ..Settings::default() };
+    let settings = Settings { notify: false, language: language.into(), ..Settings::default() };
     let harness = Harness::builder().with_size(egui::vec2(1180.0, 900.0)).with_theme(theme).build_ui_state(
         move |ui, state: &mut Option<LauncherUi>| {
             if state.is_none()
@@ -147,7 +141,7 @@ fn snapshot(h: &mut Harness<'_, Option<LauncherUi>>, name: &str) {
 // One test: the UI language is process-wide.
 #[test]
 fn korean_switches_persists_and_keeps_install_actions() {
-    let (mut h, sent) = harness_language(ViewMode::Grid, egui::Theme::Dark, true, "en");
+    let (mut h, sent) = harness_language(egui::Theme::Dark, true, "en");
     h.run_steps(6);
     h.get_by_label("Settings").click();
     h.run_steps(3);
@@ -178,12 +172,12 @@ fn korean_switches_persists_and_keeps_install_actions() {
     let installs: Vec<_> = sent.borrow().iter().filter_map(|c| if let Command::Install { app } = c { Some(app.clone()) } else { None }).collect();
     assert_eq!(installs, ["redrob-canvas", "redrob-browser"]);
 
-    let (mut table, _) = harness_language(ViewMode::Table, egui::Theme::Light, true, &restored.language);
-    table.run_steps(6);
-    table.get_by_label("출시일");
-    assert!(table.query_all_by_label_contains("2026년 10월").count() >= 1);
-    snapshot(&mut table, "table-ko-light");
-    let (mut web, _) = harness_language(ViewMode::Grid, egui::Theme::Dark, false, &restored.language);
+    // Release dates in Korean, on the tiles' version lines.
+    let (mut light, _) = harness_language(egui::Theme::Light, true, &restored.language);
+    light.run_steps(6);
+    assert!(light.query_all_by_label_contains("2026년 10월").count() >= 1);
+    snapshot(&mut light, "grid-ko-light");
+    let (mut web, _) = harness_language(egui::Theme::Dark, false, &restored.language);
     web.run_steps(6);
     assert!(web.query_all_by_label("macOS용 다운로드").count() >= 3);
 }

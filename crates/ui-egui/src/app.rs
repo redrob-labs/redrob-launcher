@@ -11,7 +11,7 @@ use redrob_launcher_core::{Platform, SUITE};
 
 use crate::i18n::set_current;
 use crate::model::AppEntry;
-use crate::settings::{Filter, Settings, SortKey, ViewMode};
+use crate::settings::{Filter, Settings};
 use crate::theme::{self, Tokens};
 
 /// Who draws the window's title bar.
@@ -640,19 +640,11 @@ impl LauncherUi {
                     self.toolbar(ui);
                     ui.add_space(16.0);
                     let ids = self.visible_ids();
-                    // The table is wider than a narrow window: let it scroll sideways too.
-                    let scroll = match self.settings.view {
-                        ViewMode::Grid => egui::ScrollArea::vertical(),
-                        ViewMode::Table => egui::ScrollArea::both(),
-                    };
-                    scroll.auto_shrink(false).show(ui, |ui| {
+                    egui::ScrollArea::vertical().auto_shrink(false).show(ui, |ui| {
                         if ids.is_empty() {
                             self.empty_state(ui);
                         } else {
-                            match self.settings.view {
-                                ViewMode::Grid => self.grid(ui, &ids),
-                                ViewMode::Table => self.table(ui, &ids),
-                            }
+                            self.grid(ui, &ids);
                         }
                         ui.add_space(16.0);
                     });
@@ -679,14 +671,12 @@ impl LauncherUi {
         }
     }
 
-    /// The ids to show, filtered and sorted.
+    /// The ids to show, filtered, in suite order (the grid's only order).
     pub(crate) fn visible_ids(&self) -> Vec<&'static str> {
         let needle = self.search.trim().to_lowercase();
-        let mut list: Vec<(usize, &AppEntry)> = self
-            .entries
+        self.entries
             .iter()
-            .enumerate()
-            .filter(|(_, e)| {
+            .filter(|e| {
                 let s = e.status(self.platform, self.caps.manage_apps);
                 let keep = match self.settings.filter {
                     Filter::All => true,
@@ -699,46 +689,8 @@ impl LauncherUi {
                     || e.app.tagline.to_lowercase().contains(&needle)
                     || e.app.like.to_lowercase().contains(&needle))
             })
-            .collect();
-        let platform = self.platform;
-        let manage = self.caps.manage_apps;
-        let desc = self.settings.sort_descending;
-        let dir = |o: std::cmp::Ordering| if desc { o.reverse() } else { o };
-        // Empty cells (not installed, no release) go last whichever way the column sorts.
-        let opt = |a: Option<std::cmp::Ordering>, a_some: bool, b_some: bool| match (a_some, b_some) {
-            (true, true) => dir(a.unwrap_or(std::cmp::Ordering::Equal)),
-            (true, false) => std::cmp::Ordering::Less,
-            (false, true) => std::cmp::Ordering::Greater,
-            (false, false) => std::cmp::Ordering::Equal,
-        };
-        let installed = |e: &AppEntry| e.installed.as_ref().and_then(|i| i.version.clone());
-        let latest = |e: &AppEntry| e.release().and_then(|r| r.version.clone());
-        list.sort_by(|(ia, a), (ib, b)| {
-            let ord = match self.settings.sort {
-                SortKey::Suite => dir(ia.cmp(ib)),
-                SortKey::Name => dir(a.app.name.cmp(b.app.name)),
-                SortKey::InspiredBy => dir(a.app.like.cmp(b.app.like)),
-                SortKey::Status => {
-                    dir(crate::model::status_rank(&a.status(platform, manage)).cmp(&crate::model::status_rank(&b.status(platform, manage))))
-                }
-                SortKey::Installed => {
-                    let (x, y) = (installed(a), installed(b));
-                    opt(x.as_ref().zip(y.as_ref()).map(|(x, y)| x.cmp_precedence(y)), x.is_some(), y.is_some())
-                }
-                SortKey::Latest => {
-                    let (x, y) = (latest(a), latest(b));
-                    opt(x.as_ref().zip(y.as_ref()).map(|(x, y)| x.cmp_precedence(y)), x.is_some(), y.is_some())
-                }
-                SortKey::Released => {
-                    let at = |e: &AppEntry| e.release().and_then(|r| r.published_at);
-                    let (x, y) = (at(a), at(b));
-                    opt(x.zip(y).map(|(x, y)| x.cmp(&y)), x.is_some(), y.is_some())
-                }
-            };
-            // Ties keep suite order.
-            ord.then(ia.cmp(ib))
-        });
-        list.into_iter().map(|(_, e)| e.app.id).collect()
+            .map(|e| e.app.id)
+            .collect()
     }
 
     /// "Redrob API", "GitHub" or "Redrob API and GitHub": the services behind the releases on
