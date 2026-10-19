@@ -476,6 +476,9 @@ month	Dec	12월
 	A full-size assistant squeezed to fit a small GPU (needs the PrismML runtime)	작은 GPU에 맞게 압축한 큰 어시스턴트 (PrismML 런타임 필요)
 	Makes pictures from a text description	글로 설명하면 그림을 만듦
 	Removes objects from photos and fills the gap	사진에서 물체를 지우고 빈자리를 채움
+	Makes pictures from a text description and edits a photo you give it	글로 설명하면 그림을 만들고, 주는 사진도 고침
+	Makes photo-like pictures from a text description in a few steps	글로 설명하면 사진 같은 그림을 몇 단계 만에 만듦
+	Edits a photo from an instruction: change, add or remove things while keeping the rest	지시대로 사진을 고침: 나머지는 그대로 두고 바꾸거나 더하거나 지움
 	Cuts the background out of a photo	사진에서 배경을 잘라냄
 	Enlarges images four times without blur	이미지를 흐려지지 않게 4배 키움
 	Selects an object with one click	한 번 눌러 물체를 선택
