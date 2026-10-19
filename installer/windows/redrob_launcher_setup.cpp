@@ -1457,8 +1457,12 @@ int SetupApp::RunSilent(HINSTANCE hinst, bool deleteData) {
 }
 
 DWORD SetupApp::RunPayload() {
+  // This is a worker thread: COM is per thread, and without it the shortcut writer's CoCreateInstance
+  // fails, so the install finished with no Start menu entry and Windows search never found the launcher.
+  const HRESULT com = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
   PostMessage(hwnd_, kStageMsg, (WPARAM)Stage::Installing, 0);
   const DWORD result = InstallLauncher();
+  if (SUCCEEDED(com)) CoUninitialize();
   PostMessage(hwnd_, kPayloadMsgDone, (WPARAM)result, 0);
   return result;
 }
