@@ -640,10 +640,7 @@ impl LauncherUi {
                     };
                     scroll.auto_shrink(false).show(ui, |ui| {
                         if ids.is_empty() {
-                            ui.add_space(40.0);
-                            ui.vertical_centered(|ui| {
-                                crate::widgets::hud(ui, tl!("No apps match"), tokens.muted);
-                            });
+                            self.empty_state(ui);
                         } else {
                             match self.settings.view {
                                 ViewMode::Grid => self.grid(ui, &ids),
@@ -761,7 +758,10 @@ impl LauncherUi {
             .count()
     }
 
+    /// DS Toasts: 360 wide, raised, radius 8, shadow-lg, a 20 px status icon in its colour, the
+    /// text, and a close button. Clicking a toast also dismisses it.
     fn draw_toasts(&mut self, ctx: &egui::Context) {
+        use crate::glyphs::Icon;
         let now = ctx.input(|i| i.time);
         self.toasts.retain(|t| t.until > now);
         if self.toasts.is_empty() {
@@ -769,28 +769,41 @@ impl LauncherUi {
         }
         ctx.request_repaint_after(Duration::from_millis(250));
         let t = Tokens::get(ctx);
-        let anchor = egui::vec2(-20.0, -(crate::views::FOOTER_H + 12.0));
+        const W: f32 = 360.0;
+        let anchor = egui::vec2(-24.0, -(crate::views::FOOTER_H + 16.0));
         egui::Area::new(egui::Id::new("toasts")).anchor(egui::Align2::RIGHT_BOTTOM, anchor).order(egui::Order::Foreground).show(ctx, |ui| {
-            ui.set_max_width(380.0);
+            ui.set_width(W);
             let mut dismiss = None;
             for (i, toast) in self.toasts.iter().enumerate() {
-                let accent = if toast.error { t.bad } else { t.good };
+                let (icon, tone) = if toast.error { (Icon::Close, t.bad) } else { (Icon::Check, t.good) };
                 let r = egui::Frame::new()
-                    .fill(t.bg)
-                    .stroke(egui::Stroke::new(1.0, t.line_strong))
-                    .shadow(theme::shadow(&t))
-                    .inner_margin(egui::Margin::symmetric(14, 10))
+                    .fill(t.raised())
+                    .stroke(t.hairline())
+                    .corner_radius(egui::CornerRadius::same(theme::radius::MD))
+                    .shadow(theme::shadow_lg(&t))
+                    .inner_margin(16)
                     .show(ui, |ui| {
-                        ui.horizontal(|ui| {
-                            let (rect, _) = ui.allocate_exact_size(egui::vec2(6.0, 6.0), egui::Sense::hover());
-                            ui.painter().rect_filled(rect, egui::CornerRadius::ZERO, accent);
-                            ui.add(egui::Label::new(egui::RichText::new(crate::i18n::msg(&toast.text)).color(t.ink)).wrap());
-                        });
+                        ui.set_width(W - 32.0);
+                        ui.horizontal_top(|ui| {
+                            ui.spacing_mut().item_spacing.x = theme::space::S3;
+                            let (r, _) = ui.allocate_exact_size(egui::vec2(20.0, 20.0), egui::Sense::hover());
+                            crate::glyphs::paint(ui.painter(), r, icon, tone);
+                            let text_w = W - 32.0 - 20.0 - theme::control::SM - 2.0 * theme::space::S3;
+                            ui.allocate_ui(egui::vec2(text_w, 0.0), |ui| {
+                                ui.set_width(text_w);
+                                ui.add(
+                                    egui::Label::new(egui::RichText::new(crate::i18n::msg(&toast.text)).size(theme::text::BODY_SM).color(t.ink))
+                                        .wrap(),
+                                );
+                            });
+                            crate::widgets::icon_button(ui, Icon::Close, tl!("Dismiss notification"), theme::control::SM).clicked()
+                        })
+                        .inner
                     });
-                if r.response.interact(egui::Sense::click()).clicked() {
+                if r.inner || r.response.interact(egui::Sense::click()).clicked() {
                     dismiss = Some(i);
                 }
-                ui.add_space(6.0);
+                ui.add_space(theme::space::S2);
             }
             if let Some(i) = dismiss {
                 self.toasts.remove(i);

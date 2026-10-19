@@ -178,6 +178,16 @@ impl Tokens {
         tint(Color32::WHITE, if self.dark { 0.07 } else { 0.40 })
     }
 
+    /// `overlay-scrim` behind a modal: redrob-black at 55% (dark: black at 66%).
+    pub fn scrim(&self) -> Color32 {
+        if self.dark { tint(Color32::BLACK, 0.66) } else { tint(self.invert_bg, 0.55) }
+    }
+
+    /// A brand Alert's edge (DS Alert: blue-2 light): the derived selection blue.
+    pub fn alert_edge(&self) -> Color32 {
+        self.selection()
+    }
+
     /// Danger button hover (DS: `status-danger` at `brightness(0.92)`).
     pub fn bad_hover(&self) -> Color32 {
         scale(self.bad, 0.92)

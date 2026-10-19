@@ -381,6 +381,25 @@ fn table_view_and_light_theme() {
 }
 
 #[test]
+fn a_search_that_matches_nothing_says_what_to_relax_and_clears() {
+    let (mut h, _) = harness(ViewMode::Grid, egui::Theme::Light, true);
+    h.run_steps(6);
+    let field = h.query_all(egui_kittest::kittest::by().role(egui::accesskit::Role::TextInput)).next().unwrap();
+    field.focus();
+    field.type_text("zzz");
+    h.run_steps(4);
+    snapshot(&mut h, "empty-search-light");
+    // A DS empty state: what happened, what to relax, and the way back.
+    h.get_by_label("No apps match");
+    h.get_by_label_contains("Nothing matches");
+    assert!(h.query_by_label("Redrob Canvas").is_none());
+    h.get_by_label("Clear search").click();
+    h.run_steps(4);
+    assert!(h.query_by_label("No apps match").is_none());
+    h.get_by_label("Redrob Canvas");
+}
+
+#[test]
 fn switching_views_and_filters() {
     let (mut h, _) = harness(ViewMode::Grid, egui::Theme::Dark, true);
     h.run_steps(6);
@@ -667,6 +686,7 @@ fn launcher_update_prompts_to_relaunch_with_updated_version() {
     h.get_by_label_contains("Redrob Launcher 0.2.0 is available");
     h.get_by_label("A new version is available. Would you like to relaunch with the updated version?");
     h.get_by_label("What's new");
+    snapshot(&mut h, "launcher-update-dialog-dark");
     // Clicking "Later" dismisses the modal dialog
     h.get_by_label("Later").click();
     h.run_steps(3);

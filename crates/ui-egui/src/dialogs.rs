@@ -6,6 +6,7 @@ use redrob_launcher_core::protocol::Command;
 use redrob_launcher_core::{Os, PackageKind};
 
 use crate::app::{Dialog, Host, LauncherUi};
+use crate::glyphs::Icon;
 use crate::settings::{CheckEvery, Settings};
 use crate::theme::{self, ThemeChoice, Tokens};
 use crate::widgets::{self, Cell, Kind};
@@ -16,36 +17,114 @@ impl LauncherUi {
             self.alert_popup(ctx);
             return;
         };
-        let t = Tokens::get(ctx);
-        let modal = egui::Modal::new(egui::Id::new("dialog"))
-            .frame(egui::Frame::new().fill(t.bg).stroke(egui::Stroke::new(1.0, t.line_strong)).shadow(theme::shadow(&t)).inner_margin(24));
         let mut close = false;
-        let response = match &dialog {
-            Dialog::Notes(id) => modal.show(ctx, |ui| close = self.notes_dialog(ui, id)),
-            Dialog::ConfirmUninstall(id) => modal.show(ctx, |ui| close = self.uninstall_dialog(ui, id)),
-            Dialog::LauncherUpdate(r) => modal.show(ctx, |ui| close = self.launcher_update_dialog(ui, r)),
-        };
+        let response = Self::modal("dialog", ctx).show(ctx, |ui| {
+            close = match &dialog {
+                Dialog::Notes(id) => self.notes_dialog(ui, id),
+                Dialog::ConfirmUninstall(id) => self.uninstall_dialog(ui, id),
+                Dialog::LauncherUpdate(r) => self.launcher_update_dialog(ui, r),
+            }
+        });
         if close || response.should_close() {
             self.dialog = None;
         }
     }
 
+    /// A DS Modal: surface-base, radius 16, a hairline, shadow-lg, on the DS scrim. Its head, body
+    /// and footer bring their own padding ([`Self::modal_head`], [`Self::modal_body`],
+    /// [`Self::modal_foot`]).
+    fn modal(id: &str, ctx: &egui::Context) -> egui::Modal {
+        let t = Tokens::get(ctx);
+        egui::Modal::new(egui::Id::new(id)).backdrop_color(t.scrim()).frame(
+            egui::Frame::new()
+                .fill(t.bg)
+                .stroke(t.hairline())
+                .corner_radius(egui::CornerRadius::same(theme::radius::XL))
+                .shadow(theme::shadow_lg(&t))
+                .inner_margin(0),
+        )
+    }
+
+    /// A modal's width: `max` (DS Modal 480), or less in a small window.
+    fn modal_width(ui: &egui::Ui, max: f32) -> f32 {
+        max.min(ui.ctx().content_rect().width() - 48.0)
+    }
+
+    /// DS Modal head (padding 20 20 0): an optional 40 px icon, the title in 21 / 600 with a meta
+    /// line under it, and a close icon button (sm 32) when `closable`. Returns whether it was pressed.
+    fn modal_head(ui: &mut egui::Ui, width: f32, icon: Option<egui::ImageSource<'static>>, title: &str, subtitle: &str, closable: bool) -> bool {
+        let t = Tokens::get(ui.ctx());
+        let mut close = false;
+        egui::Frame::new().inner_margin(egui::Margin { left: 20, right: 20, top: 20, bottom: 0 }).show(ui, |ui| {
+            ui.set_width(width - 40.0);
+            // A row, not a free right-to-left layout: the modal's area has no height to centre in.
+            ui.horizontal_top(|ui| {
+                if let Some(icon) = icon {
+                    ui.add(egui::Image::new(icon).fit_to_exact_size(vec2(40.0, 40.0)));
+                    ui.add_space(theme::space::S1);
+                }
+                let text_w = (ui.available_width() - if closable { theme::control::SM + theme::space::S2 } else { 0.0 }).max(0.0);
+                ui.allocate_ui(vec2(text_w, 0.0), |ui| {
+                    ui.set_width(text_w);
+                    ui.vertical(|ui| {
+                        ui.spacing_mut().item_spacing.y = 2.0;
+                        ui.add(egui::Label::new(widgets::heading(title, theme::text::TITLE_3, t.ink)).wrap());
+                        if !subtitle.is_empty() {
+                            widgets::hud(ui, subtitle, t.faint);
+                        }
+                    });
+                });
+                if closable {
+                    close = widgets::icon_button(ui, Icon::Close, tl!("Close"), theme::control::SM).clicked();
+                }
+            });
+        });
+        close
+    }
+
+    /// DS Modal body: padding 12 20 20, 14 px ink-secondary text.
+    fn modal_body(ui: &mut egui::Ui, width: f32, add: impl FnOnce(&mut egui::Ui)) {
+        egui::Frame::new().inner_margin(egui::Margin { left: 20, right: 20, top: 12, bottom: 20 }).show(ui, |ui| {
+            ui.set_width(width - 40.0);
+            add(ui);
+        });
+    }
+
+    /// DS Modal footer: right aligned, on surface-raised under a hairline, padding 16 20. `add`
+    /// runs right to left, so the first thing added is the rightmost (the main action).
+    fn modal_foot(ui: &mut egui::Ui, width: f32, add: impl FnOnce(&mut egui::Ui)) {
+        let t = Tokens::get(ui.ctx());
+        let radius = theme::radius::XL - 1;
+        let r = egui::Frame::new()
+            .fill(t.raised())
+            .corner_radius(egui::CornerRadius { nw: 0, ne: 0, sw: radius, se: radius })
+            .outer_margin(egui::Margin { left: 1, right: 1, top: 0, bottom: 1 })
+            .inner_margin(egui::Margin::symmetric(19, 16))
+            .show(ui, |ui| {
+                ui.set_width(width - 40.0);
+                ui.horizontal(|ui| ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), add));
+            });
+        ui.painter().hline(r.response.rect.x_range(), r.response.rect.top(), t.hairline());
+    }
+
+    /// The modal's body text: DS Modal body, 14 px ink-secondary.
+    fn body_text(ui: &mut egui::Ui, text: &str) {
+        let t = Tokens::get(ui.ctx());
+        ui.add(egui::Label::new(RichText::new(text).size(theme::text::CONTROL).color(t.muted)).wrap());
+    }
+
     /// The first alert from the release feed the user hasn't acknowledged, as a popup.
     fn alert_popup(&mut self, ctx: &egui::Context) {
         let Some(alert) = self.alerts.iter().find(|a| !self.settings.dismissed_notices.contains(&a.id)).cloned() else { return };
-        let t = Tokens::get(ctx);
-        let modal = egui::Modal::new(egui::Id::new("feed_alert"))
-            .frame(egui::Frame::new().fill(t.bg).stroke(egui::Stroke::new(1.0, t.line_strong)).shadow(theme::shadow(&t)).inner_margin(24));
         let mut ok = false;
-        modal.show(ctx, |ui| {
-            ui.set_width(440.0f32.min(ctx.content_rect().width() - 80.0));
-            ui.label(RichText::new(&alert.title).size(18.0).family(theme::semibold()).color(t.ink_strong));
-            ui.add_space(6.0);
-            egui::ScrollArea::vertical().max_height(ctx.content_rect().height() * 0.5).show(ui, |ui| {
-                ui.add(egui::Label::new(RichText::new(&alert.body).color(t.muted)).wrap());
+        Self::modal("feed_alert", ctx).show(ctx, |ui| {
+            let width = Self::modal_width(ui, 480.0);
+            // Only OK acknowledges it: no close button, and Escape or a click outside leaves it for later.
+            Self::modal_head(ui, width, None, &alert.title, "", false);
+            Self::modal_body(ui, width, |ui| {
+                egui::ScrollArea::vertical().max_height(ctx.content_rect().height() * 0.5).show(ui, |ui| Self::body_text(ui, &alert.body));
             });
-            ui.add_space(14.0);
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            Self::modal_foot(ui, width, |ui| {
                 ok = widgets::button(ui, tl!("OK"), Kind::Primary, 90.0).clicked();
                 if let Some(link) = &alert.link
                     && widgets::button(ui, tl!("Open link"), Kind::Secondary, 110.0).on_hover_text(link.as_str()).clicked()
@@ -54,83 +133,62 @@ impl LauncherUi {
                 }
             });
         });
-        // Only OK acknowledges it: Escape or a click outside leaves it for later.
         if ok {
             self.settings.dismissed_notices.insert(alert.id);
         }
     }
 
-    pub(crate) fn title(ui: &mut egui::Ui, icon: Option<egui::ImageSource<'static>>, title: &str, subtitle: &str) {
-        let t = Tokens::get(ui.ctx());
-        ui.horizontal(|ui| {
-            if let Some(icon) = icon {
-                ui.add(egui::Image::new(icon).fit_to_exact_size(vec2(40.0, 40.0)));
-            }
-            ui.add_space(4.0);
-            ui.vertical(|ui| {
-                ui.spacing_mut().item_spacing.y = 4.0;
-                ui.label(widgets::heading(title, 22.0, t.ink_strong));
-                if !subtitle.is_empty() {
-                    widgets::hud(ui, subtitle, t.faint);
-                }
-            });
-        });
-        ui.add_space(14.0);
-    }
-
     fn notes_dialog(&mut self, ui: &mut egui::Ui, id: &str) -> bool {
         let Some(entry) = self.entry(id).cloned() else { return true };
         let Some(release) = entry.release().cloned() else { return true };
-        ui.set_width(560.0f32.min(ui.ctx().content_rect().width() - 80.0));
+        // Release notes read better a little wider than the DS's 480.
+        let width = Self::modal_width(ui, 560.0);
         let date = release.published_at.map(|d| fmt(tl!("Released {date}"), &[("date", &crate::views::date_text(d))])).unwrap_or_default();
-        Self::title(ui, crate::icons::app(id), &format!("{} {}", entry.app.name, release.version_label()), &date);
-        egui::ScrollArea::vertical().max_height(ui.ctx().content_rect().height() * 0.6).show(ui, |ui| {
-            if release.notes.is_empty() {
-                ui.label(tl!("These notes weren't fetched (GitHub's request limit was reached). They're on the release page."));
-            } else {
-                crate::notes::show(ui, &release.notes);
-            }
-        });
-        ui.add_space(12.0);
-        let mut close = false;
-        ui.horizontal(|ui| {
-            widgets::hud_link(ui, tl!("Open on GitHub"), &release.html_url);
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                close = widgets::button(ui, tl!("Close"), Kind::Secondary, 90.0).clicked();
+        let close = Self::modal_head(ui, width, crate::icons::app(id), &format!("{} {}", entry.app.name, release.version_label()), &date, true);
+        Self::modal_body(ui, width, |ui| {
+            egui::ScrollArea::vertical().max_height(ui.ctx().content_rect().height() * 0.6).show(ui, |ui| {
+                ui.set_width(ui.available_width());
+                if release.notes.is_empty() {
+                    Self::body_text(ui, tl!("These notes weren't fetched (GitHub's request limit was reached). They're on the release page."));
+                } else {
+                    crate::notes::show(ui, &release.notes);
+                }
             });
+        });
+        Self::modal_foot(ui, width, |ui| {
+            widgets::hud_link(ui, tl!("Open on GitHub"), &release.html_url);
         });
         close
     }
 
     fn launcher_update_dialog(&mut self, ui: &mut egui::Ui, r: &redrob_launcher_core::Release) -> bool {
-        let t = Tokens::get(ui.ctx());
-        ui.set_width(480.0f32.min(ui.ctx().content_rect().width() - 80.0));
+        let width = Self::modal_width(ui, 480.0);
         let title = fmt(tl!("Redrob Launcher {version} is available."), &[("version", &r.version_label())]);
-        Self::title(ui, Some(crate::icons::redrob_mark()), &title, "");
-        ui.label(RichText::new(tl!("A new version is available. Would you like to relaunch with the updated version?")).color(t.muted));
-        ui.add_space(14.0);
-        let mut close = false;
-        ui.horizontal(|ui| {
-            widgets::hud_link(ui, tl!("What's new"), &r.html_url);
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if self.caps.self_update {
-                    if widgets::button(ui, tl!("Update and restart"), Kind::Primary, 0.0)
-                        .on_hover_text(tl!("Downloads the new version, replaces this one and opens it again"))
-                        .clicked()
-                    {
-                        self.send(Command::UpdateLauncher);
-                        close = true;
-                    }
-                } else {
-                    let url = self.platform.and_then(|p| crate::views::launcher_download(r, p)).unwrap_or_else(|| r.html_url.clone());
-                    if widgets::button(ui, tl!("Download"), Kind::Primary, 0.0).clicked() {
-                        ui.ctx().open_url(egui::OpenUrl::new_tab(url));
-                        close = true;
-                    }
-                }
-                if widgets::button(ui, tl!("Later"), Kind::Secondary, 80.0).clicked() {
+        let mut close = Self::modal_head(ui, width, Some(crate::icons::redrob_mark()), &title, "", true);
+        Self::modal_body(ui, width, |ui| {
+            Self::body_text(ui, tl!("A new version is available. Would you like to relaunch with the updated version?"))
+        });
+        Self::modal_foot(ui, width, |ui| {
+            if self.caps.self_update {
+                if widgets::button(ui, tl!("Update and restart"), Kind::Primary, 0.0)
+                    .on_hover_text(tl!("Downloads the new version, replaces this one and opens it again"))
+                    .clicked()
+                {
+                    self.send(Command::UpdateLauncher);
                     close = true;
                 }
+            } else {
+                let url = self.platform.and_then(|p| crate::views::launcher_download(r, p)).unwrap_or_else(|| r.html_url.clone());
+                if widgets::button(ui, tl!("Download"), Kind::Primary, 0.0).clicked() {
+                    ui.ctx().open_url(egui::OpenUrl::new_tab(url));
+                    close = true;
+                }
+            }
+            if widgets::button(ui, tl!("Later"), Kind::Secondary, 80.0).clicked() {
+                close = true;
+            }
+            ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                widgets::hud_link(ui, tl!("What's new"), &r.html_url);
             });
         });
         close
@@ -138,9 +196,8 @@ impl LauncherUi {
 
     fn uninstall_dialog(&mut self, ui: &mut egui::Ui, id: &str) -> bool {
         let Some(entry) = self.entry(id).cloned() else { return true };
-        let t = Tokens::get(ui.ctx());
-        ui.set_width(420.0);
-        Self::title(ui, crate::icons::app(id), &fmt(tl!("Uninstall {name}?"), &[("name", entry.app.name)]), "");
+        let width = Self::modal_width(ui, 480.0);
+        let mut close = Self::modal_head(ui, width, crate::icons::app(id), &fmt(tl!("Uninstall {name}?"), &[("name", entry.app.name)]), "", true);
         let how = match entry.installed.as_ref().map(|i| i.source) {
             Some(redrob_launcher_core::InstallSource::MacApp) => tl!("The app will be moved to the Trash. Your documents and settings stay."),
             Some(redrob_launcher_core::InstallSource::Msi) => {
@@ -151,10 +208,8 @@ impl LauncherUi {
             ) => tl!("Your system's package manager will remove it, and may ask for your password. Your documents and settings stay."),
             _ => tl!("The app will be removed. Your documents and settings stay."),
         };
-        ui.label(RichText::new(how).color(t.muted));
-        ui.add_space(20.0);
-        let mut close = false;
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+        Self::modal_body(ui, width, |ui| Self::body_text(ui, how));
+        Self::modal_foot(ui, width, |ui| {
             if widgets::button(ui, tl!("Uninstall"), Kind::Danger, 110.0).clicked() {
                 self.send(Command::Uninstall { app: id.to_string() });
                 close = true;

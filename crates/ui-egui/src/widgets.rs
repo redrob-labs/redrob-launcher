@@ -92,14 +92,14 @@ pub fn meta_line(ui: &mut Ui, label: &str) {
     });
 }
 
-/// A solid chip with a bold mono label: an app's number tab (the site's `AppTab`).
-pub fn tag(ui: &mut Ui, text: &str, fill: Color32, ink: Color32) -> Response {
-    let galley = caps(ui, text, theme::HUD_SIZE, theme::mono_bold(), theme::HUD_SPACING, ink);
-    let (rect, resp) = ui.allocate_exact_size(galley.size() + vec2(16.0, 8.0), Sense::hover());
-    ui.painter().rect_filled(rect, CornerRadius::ZERO, fill);
-    paint_centred(ui, rect, galley, ink);
-    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Label, true, text));
-    resp
+/// The DS Alert, brand tone: surface-brand-subtle with a blue-2 edge, radius 8, padding 16 / 12.
+/// For things that stay until they are dealt with (an update, an announcement).
+pub fn alert_frame(t: &Tokens) -> egui::Frame {
+    egui::Frame::new()
+        .fill(t.brand_subtle())
+        .stroke(Stroke::new(1.0, t.alert_edge()))
+        .corner_radius(CornerRadius::same(theme::radius::MD))
+        .inner_margin(egui::Margin::symmetric(16, 12))
 }
 
 /// How far in from the window's edges a custom title bar's window resizes ([`window_edges`]).

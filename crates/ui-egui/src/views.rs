@@ -12,7 +12,7 @@ use crate::glyphs::Icon;
 use crate::i18n::{current, fmt, t, tn, tr_ctx};
 use crate::model::{self, AppEntry};
 use crate::settings::{Filter, SortKey, ViewMode};
-use crate::theme::{self, Tokens, tint};
+use crate::theme::{self, Tokens};
 use crate::widgets::{self, Cell, Kind};
 
 /// Translate a relative timestamp ("just now", "5 min ago", …) into the current language.
@@ -104,66 +104,64 @@ impl LauncherUi {
         if self.dialog.is_none()
             && let Some(r) = self.launcher_update.clone()
         {
-            egui::Frame::new()
-                .fill(tint(t.accent, if t.dark { 0.10 } else { 0.07 }))
-                .stroke(Stroke::new(1.0, tint(t.accent, 0.6)))
-                .inner_margin(egui::Margin::symmetric(16, 10))
-                .show(ui, |ui| {
-                    ui.horizontal(|ui| {
-                        widgets::tag(ui, tl!("Update"), t.accent, Color32::WHITE);
-                        ui.add_space(4.0);
-                        ui.label(
-                            RichText::new(fmt(tl!("Redrob Launcher {version} is available."), &[("version", &r.version_label())]))
-                                .family(theme::medium())
-                                .color(t.ink_strong),
-                        );
-                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            if let Some(phase) = self.launcher_job {
-                                let (fraction, caption) = match phase {
-                                    JobPhase::Downloading { done, total } if total > 0 => (
-                                        Some(done as f32 / total as f32),
-                                        fmt(
-                                            tl!("Downloading {done} of {total}"),
-                                            &[("done", &widgets::human_bytes(done)), ("total", &widgets::human_bytes(total))],
-                                        ),
+            widgets::alert_frame(&t).show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    // DS Alert: a 20 px icon in the tone's ink, then the title.
+                    let (icon, _) = ui.allocate_exact_size(vec2(20.0, 20.0), Sense::hover());
+                    crate::glyphs::paint(ui.painter(), icon, Icon::Download, t.accent_ink);
+                    ui.add_space(4.0);
+                    ui.label(
+                        RichText::new(fmt(tl!("Redrob Launcher {version} is available."), &[("version", &r.version_label())]))
+                            .family(theme::semibold())
+                            .color(t.ink_strong),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if let Some(phase) = self.launcher_job {
+                            let (fraction, caption) = match phase {
+                                JobPhase::Downloading { done, total } if total > 0 => (
+                                    Some(done as f32 / total as f32),
+                                    fmt(
+                                        tl!("Downloading {done} of {total}"),
+                                        &[("done", &widgets::human_bytes(done)), ("total", &widgets::human_bytes(total))],
                                     ),
-                                    JobPhase::Downloading { .. } | JobPhase::Reconnecting { .. } => (None, tl!("Downloading…").to_string()),
-                                    JobPhase::Verifying => (None, tl!("Verifying…").to_string()),
-                                    JobPhase::Waiting => (None, tl!("Waiting for other installs…").to_string()),
-                                    JobPhase::Installing | JobPhase::Removing => (None, tl!("Installing, then restarting…").to_string()),
-                                };
-                                // Another app's install can hang on a password prompt: the wait can be called off.
-                                if phase == JobPhase::Waiting
-                                    && widgets::icon_button(ui, crate::glyphs::Icon::Close, tl!("Cancel update"), crate::theme::CONTROL_H)
-                                        .on_hover_text(tl!("Stop waiting; the update can be started again later"))
-                                        .clicked()
-                                {
-                                    self.send(Command::Cancel { app: redrob_launcher_core::catalog::LAUNCHER_ID.to_string() });
-                                }
-                                widgets::progress(ui, fraction, &caption, t.accent, 220.0);
-                                return;
-                            }
-                            if widgets::icon_button(ui, crate::glyphs::Icon::Close, tl!("Dismiss"), crate::theme::CONTROL_H).clicked() {
-                                self.launcher_update = None;
-                            }
-                            if self.caps.self_update {
-                                if widgets::button_sized(ui, tl!("Update and restart"), Kind::Primary, widgets::Size::Sm, 0.0)
-                                    .on_hover_text(tl!("Downloads the new version, replaces this one and opens it again"))
+                                ),
+                                JobPhase::Downloading { .. } | JobPhase::Reconnecting { .. } => (None, tl!("Downloading…").to_string()),
+                                JobPhase::Verifying => (None, tl!("Verifying…").to_string()),
+                                JobPhase::Waiting => (None, tl!("Waiting for other installs…").to_string()),
+                                JobPhase::Installing | JobPhase::Removing => (None, tl!("Installing, then restarting…").to_string()),
+                            };
+                            // Another app's install can hang on a password prompt: the wait can be called off.
+                            if phase == JobPhase::Waiting
+                                && widgets::icon_button(ui, crate::glyphs::Icon::Close, tl!("Cancel update"), theme::control::SM)
+                                    .on_hover_text(tl!("Stop waiting; the update can be started again later"))
                                     .clicked()
-                                {
-                                    self.send(Command::UpdateLauncher);
-                                }
-                            } else {
-                                let url = self.platform.and_then(|p| launcher_download(&r, p)).unwrap_or_else(|| r.html_url.clone());
-                                if widgets::button_sized(ui, tl!("Download"), Kind::Primary, widgets::Size::Sm, 0.0).clicked() {
-                                    ui.ctx().open_url(egui::OpenUrl::new_tab(url));
-                                }
+                            {
+                                self.send(Command::Cancel { app: redrob_launcher_core::catalog::LAUNCHER_ID.to_string() });
                             }
-                            ui.add_space(8.0);
-                            widgets::hud_link(ui, tl!("What's new"), &r.html_url);
-                        });
+                            widgets::progress(ui, fraction, &caption, t.accent, 220.0);
+                            return;
+                        }
+                        if widgets::icon_button(ui, crate::glyphs::Icon::Close, tl!("Dismiss"), crate::theme::CONTROL_H).clicked() {
+                            self.launcher_update = None;
+                        }
+                        if self.caps.self_update {
+                            if widgets::button_sized(ui, tl!("Update and restart"), Kind::Primary, widgets::Size::Sm, 0.0)
+                                .on_hover_text(tl!("Downloads the new version, replaces this one and opens it again"))
+                                .clicked()
+                            {
+                                self.send(Command::UpdateLauncher);
+                            }
+                        } else {
+                            let url = self.platform.and_then(|p| launcher_download(&r, p)).unwrap_or_else(|| r.html_url.clone());
+                            if widgets::button_sized(ui, tl!("Download"), Kind::Primary, widgets::Size::Sm, 0.0).clicked() {
+                                ui.ctx().open_url(egui::OpenUrl::new_tab(url));
+                            }
+                        }
+                        ui.add_space(8.0);
+                        widgets::hud_link(ui, tl!("What's new"), &r.html_url);
                     });
                 });
+            });
             ui.add_space(14.0);
         }
         self.announcements(ui);
@@ -227,16 +225,48 @@ impl LauncherUi {
         }
     }
 
+    /// The DS EmptyState for a filter or search that matches nothing: left aligned, a 48 px
+    /// brand-subtle disc with the search glyph, a title, what to relax, and the way back.
+    pub(crate) fn empty_state(&mut self, ui: &mut Ui) {
+        let t = Tokens::get(ui.ctx());
+        let query = self.search.trim().to_string();
+        ui.add_space(theme::space::S12);
+        ui.vertical(|ui| {
+            ui.spacing_mut().item_spacing.y = theme::space::S3;
+            let (disc, _) = ui.allocate_exact_size(vec2(48.0, 48.0), Sense::hover());
+            ui.painter().circle_filled(disc.center(), 24.0, t.brand_subtle());
+            crate::glyphs::paint(ui.painter(), Rect::from_center_size(disc.center(), vec2(22.0, 22.0)), Icon::Search, t.accent_ink);
+            ui.label(widgets::heading(tl!("No apps match"), theme::text::TITLE_3, t.ink));
+            let text = if query.is_empty() {
+                tl!("No app is in this group right now. Show every app instead.").to_string()
+            } else {
+                fmt(tl!("Nothing matches “{query}”. Try a shorter or different word."), &[("query", &query)])
+            };
+            ui.scope(|ui| {
+                ui.set_max_width(420.0);
+                ui.add(egui::Label::new(RichText::new(text).size(theme::text::BODY_SM).color(t.muted)).wrap());
+            });
+            ui.horizontal(|ui| {
+                if !query.is_empty() && widgets::button(ui, tl!("Clear search"), Kind::Secondary, 0.0).clicked() {
+                    self.search.clear();
+                }
+                if self.settings.filter != Filter::All && widgets::button(ui, tl!("Show all apps"), Kind::Secondary, 0.0).clicked() {
+                    self.settings.filter = Filter::All;
+                }
+            });
+        });
+    }
+
     /// News from the release feed (and app renames), until the user dismisses each.
     fn announcements(&mut self, ui: &mut Ui) {
         let t = Tokens::get(ui.ctx());
         let shown: Vec<redrob_launcher_core::feed::Notice> =
             self.announcements.iter().filter(|n| !self.settings.dismissed_notices.contains(&n.id)).take(3).cloned().collect();
         for notice in shown {
-            egui::Frame::new().fill(t.sunken).stroke(t.hairline()).inner_margin(egui::Margin::symmetric(14, 10)).show(ui, |ui| {
+            widgets::alert_frame(&t).show(ui, |ui| {
                 ui.horizontal(|ui| {
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
-                        if widgets::icon_button(ui, crate::glyphs::Icon::Close, tl!("Dismiss"), crate::theme::CONTROL_H).clicked() {
+                        if widgets::icon_button(ui, crate::glyphs::Icon::Close, tl!("Dismiss"), theme::control::SM).clicked() {
                             self.settings.dismissed_notices.insert(notice.id.clone());
                         }
                         if let Some(link) = &notice.link {
@@ -820,11 +850,6 @@ impl LauncherUi {
                     self.send(Command::Install { app: id.clone() });
                     ui.close();
                 }
-                ui.separator();
-                if ui.button(RichText::new(tl!("Uninstall…")).color(Tokens::get(ui.ctx()).bad)).clicked() {
-                    self.dialog = Some(Dialog::ConfirmUninstall(id.clone()));
-                    ui.close();
-                }
             }
             if !manage && let (Some(r), Some(p)) = (entry.release(), self.platform) {
                 let stems: Vec<&str> = entry.app.stems().collect();
@@ -858,6 +883,14 @@ impl LauncherUi {
             }
             link(ui, tl!("GitHub repository"), entry.app.repo_url());
             link(ui, tl!("All releases"), entry.app.releases_url());
+            // DS Menu: the destructive action last, in status-danger.
+            if manage && status.is_installed() {
+                ui.separator();
+                if ui.button(RichText::new(tl!("Uninstall…")).color(Tokens::get(ui.ctx()).bad)).clicked() {
+                    self.dialog = Some(Dialog::ConfirmUninstall(id.clone()));
+                    ui.close();
+                }
+            }
         });
     }
 }

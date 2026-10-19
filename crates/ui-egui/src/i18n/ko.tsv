@@ -567,3 +567,8 @@ month	Dec	12월
 	Last seen	마지막 확인
 @plural	{n} tool|{n} tools	도구 {n}개
 	More actions	작업 더 보기
+	No app is in this group right now. Show every app instead.	지금 이 그룹에 있는 앱이 없어요. 대신 모든 앱을 보세요.
+	Nothing matches “{query}”. Try a shorter or different word.	‘{query}’와(과) 일치하는 앱이 없어요. 더 짧거나 다른 단어로 찾아보세요.
+	Clear search	검색 지우기
+	Show all apps	모든 앱 보기
+	Dismiss notification	알림 닫기
