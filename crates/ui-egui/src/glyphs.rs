@@ -322,6 +322,32 @@ pub fn loader(painter: &Painter, rect: Rect, rest: Color32, active: Color32, tim
 mod tests {
     use super::*;
 
+    /// The DS has no spinning ring: every "working" indicator in the UI is the raked Loader
+    /// ([`loader`], `widgets::loader_inline`). The needles are built at run time so this file
+    /// does not match itself.
+    #[test]
+    fn production_ui_draws_no_spinner() {
+        let sources = [
+            ("account.rs", include_str!("account.rs")),
+            ("app.rs", include_str!("app.rs")),
+            ("channels.rs", include_str!("channels.rs")),
+            ("dialogs.rs", include_str!("dialogs.rs")),
+            ("engine.rs", include_str!("engine.rs")),
+            ("glyphs.rs", include_str!("glyphs.rs")),
+            ("models.rs", include_str!("models.rs")),
+            ("notes.rs", include_str!("notes.rs")),
+            ("shell.rs", include_str!("shell.rs")),
+            ("views.rs", include_str!("views.rs")),
+            ("widgets.rs", include_str!("widgets.rs")),
+        ];
+        let needles = [format!(".{}()", "spinner"), format!("{}::", "Spinner")];
+        for (file, source) in sources {
+            for needle in &needles {
+                assert!(!source.contains(needle.as_str()), "{file} draws a spinner ({needle}); use widgets::loader_inline");
+            }
+        }
+    }
+
     #[test]
     fn every_icon_draws_inside_its_box() {
         let rect = Rect::from_min_size(pos2(100.0, 100.0), vec2(24.0, 24.0));

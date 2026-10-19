@@ -92,6 +92,29 @@ pub fn meta_line(ui: &mut Ui, label: &str) {
     });
 }
 
+/// The DS Loader inline (three bars raked at 40 degrees passing from border-strong to `active`
+/// in turn), `size` tall: the launcher's only "working" indicator; no spinning ring. With motion
+/// off (egui `animation_time` 0, the shell's reduced-motion setting) the bars stand still,
+/// halfway lit, and ask for no repaints.
+pub fn loader_inline(ui: &mut Ui, size: f32, active: Color32) -> Response {
+    let t = Tokens::get(ui.ctx());
+    let (rect, resp) = ui.allocate_exact_size(vec2(size, size), Sense::hover());
+    paint_loader(ui, rect, active, t.line_strong);
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::ProgressIndicator, true, tl!("Working…")));
+    resp
+}
+
+/// Paints the DS Loader into `rect`, animated unless motion is off.
+fn paint_loader(ui: &Ui, rect: Rect, active: Color32, rest: Color32) {
+    if theme::motion::duration(ui.ctx(), 1.0) == 0.0 {
+        let still = theme::mix(rest, active, 0.5);
+        crate::glyphs::loader(ui.painter(), rect, still, still, 0.0);
+    } else {
+        crate::glyphs::loader(ui.painter(), rect, rest, active, ui.input(|i| i.time));
+        ui.ctx().request_repaint();
+    }
+}
+
 /// A DS Card on a page: surface-raised, a border-subtle hairline, radius 12, padding 20.
 pub fn card_frame(t: &Tokens) -> egui::Frame {
     egui::Frame::new()
@@ -423,8 +446,7 @@ pub fn icon_button_busy(ui: &mut Ui, icon: Icon, label: &str, size: f32, busy: b
     let glyph = if size >= theme::control::MD { 20.0 } else { 16.0 };
     let glyph_rect = Rect::from_center_size(rect.center(), vec2(glyph, glyph));
     if busy {
-        crate::glyphs::loader(p, Rect::from_center_size(rect.center(), vec2(14.0, 14.0)), t.line_strong, t.accent, ui.input(|i| i.time));
-        ui.ctx().request_repaint();
+        paint_loader(ui, Rect::from_center_size(rect.center(), vec2(14.0, 14.0)), t.accent, t.line_strong);
     } else {
         let ink = if hovered { t.ink } else { t.muted };
         crate::glyphs::paint(p, glyph_rect, icon, if ui.is_enabled() { ink } else { ink.gamma_multiply(DISABLED_ALPHA) });

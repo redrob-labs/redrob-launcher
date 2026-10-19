@@ -94,7 +94,7 @@ impl LauncherUi {
                 }
                 EngineState::Busy => {
                     ui.horizontal(|ui| {
-                        ui.spinner();
+                        widgets::loader_inline(ui, 16.0, Tokens::get(ui.ctx()).accent);
                         ui.label(RichText::new(tl!("Working…")).color(t.muted));
                     });
                     ui.ctx().request_repaint_after(std::time::Duration::from_millis(250));
@@ -162,7 +162,7 @@ impl LauncherUi {
                 ui.add_space(6.0);
                 if updating {
                     ui.horizontal(|ui| {
-                        ui.spinner();
+                        widgets::loader_inline(ui, 16.0, Tokens::get(ui.ctx()).accent);
                         ui.label(RichText::new(tl!("Updating the engine…")).size(12.5).color(t.muted));
                     });
                     ui.ctx().request_repaint_after(std::time::Duration::from_millis(250));

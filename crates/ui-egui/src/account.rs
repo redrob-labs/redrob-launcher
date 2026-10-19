@@ -59,7 +59,7 @@ impl LauncherUi {
         match (&workspace, &state) {
             (_, ConnectState::Starting) => {
                 ui.horizontal(|ui| {
-                    ui.spinner();
+                    widgets::loader_inline(ui, 16.0, Tokens::get(ui.ctx()).accent);
                     ui.label(RichText::new(tl!("Asking console.redrob.ai for a code…")).color(t.muted));
                 });
             }
