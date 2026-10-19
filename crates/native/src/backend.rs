@@ -609,7 +609,11 @@ fn planned_asset(
 ) -> Option<(Asset, PackageKind)> {
     let stems: Vec<&str> = app.stems().collect();
     let kinds = install::choose_kinds(existing, record, &options.kinds);
-    pick_asset(release, &stems, platform, &kinds).map(|(a, k)| (a.clone(), k))
+    pick_asset(release, &stems, platform, &kinds)
+        // The release dropped the installed copy's format (Redrob apps moved from MSI to
+        // setup.exe): update with the best format it still ships rather than not at all.
+        .or_else(|| pick_asset(release, &stems, platform, &install::choose_kinds(None, None, &options.kinds)))
+        .map(|(a, k)| (a.clone(), k))
 }
 
 /// Tells the UI whether `app` has a paused download waiting, or a finished one to install.

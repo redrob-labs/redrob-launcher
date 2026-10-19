@@ -86,7 +86,8 @@ pub fn install(
         PackageKind::Setup => windows::run_setup(&file, job.stop, &mut *job.phase).map(|_| {
             // An update from an old MSI copy: the setup installs per user beside it, so remove the
             // MSI product, or Settings > Apps keeps two copies of the app.
-            if existing.is_some_and(|e| matches!(e.source, InstallSource::Msi))
+            // Only `{GUID}` Windows Installer products are removed, never the setup's own entry.
+            if existing.is_some()
                 && let Err(e) = windows::remove_msi_products(app, job.stop, &mut *job.phase)
             {
                 log::warn!("{}: updated, but the old MSI copy stays ({e})", app.name);
