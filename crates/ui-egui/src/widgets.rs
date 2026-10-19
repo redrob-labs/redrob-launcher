@@ -7,6 +7,7 @@ use std::sync::Arc;
 
 use egui::{Color32, CornerRadius, Galley, Rect, Response, RichText, Sense, Stroke, Ui, vec2};
 
+use crate::glyphs::Icon;
 use crate::model::Tone;
 use crate::theme::{self, Tokens};
 
@@ -112,27 +113,6 @@ pub fn nav_link(ui: &mut Ui, text: &str, tip: &str, height: f32, active: bool) -
     paint_centred(ui, rect, galley, if on { t.invert_fg } else { t.muted });
     resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Button, true, active, text));
     resp.on_hover_text(tip).on_hover_cursor(egui::CursorIcon::PointingHand)
-}
-
-/// A square header cell with a symbol and a hairline on its left; inverts on hover. While `busy`
-/// it shows a spinner and can't be clicked.
-pub fn nav_icon(ui: &mut Ui, symbol: &str, tip: &str, height: f32, busy: bool) -> Response {
-    let t = Tokens::get(ui.ctx());
-    let (rect, resp) = ui.allocate_exact_size(vec2(height, height), if busy { Sense::hover() } else { Sense::click() });
-    let p = ui.painter();
-    let hovered = resp.hovered() && !busy;
-    if hovered {
-        p.rect_filled(rect, CornerRadius::ZERO, t.invert_bg);
-    }
-    p.vline(rect.left() + 0.5, rect.y_range(), t.hairline());
-    if busy {
-        egui::Spinner::new().size(16.0).color(t.muted).paint_at(ui, Rect::from_center_size(rect.center(), vec2(16.0, 16.0)));
-    } else {
-        p.text(rect.center(), egui::Align2::CENTER_CENTER, symbol, egui::FontId::proportional(17.0), if hovered { t.invert_fg } else { t.muted });
-    }
-    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, !busy, tip));
-    let resp = resp.on_hover_text(tip);
-    if busy { resp } else { resp.on_hover_cursor(egui::CursorIcon::PointingHand) }
 }
 
 /// How far in from the window's edges a custom title bar's window resizes ([`window_edges`]).
@@ -301,36 +281,144 @@ pub fn badge(ui: &mut Ui, text: &str, color: Color32) -> Response {
     resp
 }
 
-/// Which of the site's button variants.
+/// Which of the design system's button variants.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Kind {
-    /// A solid block in the inverted colours; fades a little on hover.
+    /// `action-primary` blue with white text; `action-primary-hover` on hover. One per view.
     Primary,
-    /// Outlined; inverts on hover.
+    /// The base surface outlined in `border-strong`; sunken on hover.
     Secondary,
-    /// Solid red; fades a little on hover.
+    /// `status-danger` with white text; a little darker on hover.
     Danger,
+    /// No fill, `ink-brand` text; `surface-brand-subtle` on hover.
+    Ghost,
 }
 
-/// A square button with a mono upper-case label, at least `width` wide.
+/// The design system's control sizes.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Size {
+    /// 32 tall, 12 px padding, 13 px label.
+    Sm,
+    /// 40 tall, 16 px padding, 14 px label: the default.
+    #[default]
+    Md,
+    /// 48 tall, 20 px padding, 15 px label.
+    Lg,
+}
+
+impl Size {
+    /// (height, side padding, label size).
+    pub fn metrics(self) -> (f32, f32, f32) {
+        match self {
+            Self::Sm => (theme::control::SM, theme::space::S3, 13.0),
+            Self::Md => (theme::control::MD, theme::space::S4, 14.0),
+            Self::Lg => (theme::control::LG, theme::space::S5, 15.0),
+        }
+    }
+}
+
+/// DS disabled controls: the whole control at 45%.
+const DISABLED_ALPHA: f32 = 0.45;
+
+/// The DS focus ring: 2 px of `focus-ring`, 2 px outside the control, following its radius.
+/// Drawn only when focus arrived from the keyboard (CSS `:focus-visible`): a click draws none.
+pub fn focus_ring(ui: &Ui, resp: &Response, radius: u8) {
+    let id = resp.id.with("focus-visible");
+    if resp.gained_focus() {
+        let by_pointer = ui.input(|i| i.pointer.any_pressed() || i.pointer.any_down());
+        ui.data_mut(|d| d.insert_temp(id, !by_pointer));
+    }
+    let keyboard = ui.data(|d| d.get_temp::<bool>(id)).unwrap_or(false);
+    if resp.has_focus() && keyboard {
+        let t = Tokens::get(ui.ctx());
+        let r = CornerRadius::same(radius.saturating_add(3));
+        ui.painter().rect_stroke(resp.rect.expand(3.0), r, Stroke::new(2.0, t.focus()), egui::StrokeKind::Middle);
+    }
+}
+
+/// A tooltip in the DS's style: a `redrob-black` bubble with 12 px white text (inverted in dark),
+/// radius 6, `shadow-md`, 8 px from its control. egui's own tooltips share the menus' frame, so
+/// our controls draw theirs with this.
+pub fn tip(resp: Response, text: &str) -> Response {
+    let t = Tokens::get(&resp.ctx);
+    let (fill, ink) = t.tooltip();
+    let mut tooltip = egui::Tooltip::for_enabled(&resp).gap(theme::space::S2);
+    tooltip.popup = tooltip.popup.frame(
+        egui::Frame::new()
+            .fill(fill)
+            .corner_radius(CornerRadius::same(theme::radius::SM))
+            .inner_margin(egui::Margin::symmetric(12, 6))
+            .shadow(theme::shadow_md(&t)),
+    );
+    tooltip.show(|ui| {
+        ui.add(egui::Label::new(RichText::new(text).size(theme::text::META).color(ink)).wrap_mode(egui::TextWrapMode::Extend));
+    });
+    resp
+}
+
+/// A DS button, medium size, at least `width` wide.
 pub fn button(ui: &mut Ui, text: &str, kind: Kind, width: f32) -> Response {
+    button_sized(ui, text, kind, Size::Md, width)
+}
+
+/// A DS button: radius 8, a 600-weight label, `size` tall, at least `width` wide.
+pub fn button_sized(ui: &mut Ui, text: &str, kind: Kind, size: Size, width: f32) -> Response {
     let t = Tokens::get(ui.ctx());
-    let galley = caps(ui, text, theme::HUD_SIZE, theme::mono_bold(), theme::BUTTON_SPACING, t.ink);
-    let size = vec2((galley.size().x + 32.0).max(width), theme::CONTROL_H);
-    let (rect, resp) = ui.allocate_exact_size(size, Sense::click());
+    let (height, pad, label) = size.metrics();
+    let galley = caps(ui, text, label, theme::mono_bold(), theme::BUTTON_SPACING, t.ink);
+    let (rect, resp) = ui.allocate_exact_size(vec2((galley.size().x + 2.0 * pad).max(width), height), Sense::click());
     let enabled = ui.is_enabled();
-    let hovered = resp.hovered() && enabled;
-    let (fill, stroke, color) = match kind {
-        Kind::Primary => (t.invert_bg.gamma_multiply(if hovered { 0.8 } else { 1.0 }), Stroke::NONE, t.invert_fg),
-        Kind::Danger => (t.bad.gamma_multiply(if hovered { 0.8 } else { 1.0 }), Stroke::NONE, Color32::WHITE),
-        Kind::Secondary if hovered => (t.invert_bg, Stroke::NONE, t.invert_fg),
-        Kind::Secondary => (t.bg, Stroke::new(1.0, t.line_strong), t.ink),
+    let hovered = (resp.hovered() || resp.is_pointer_button_down_on()) && enabled;
+    let (rest, hover, stroke, color) = match kind {
+        Kind::Primary => (t.accent, t.primary_hover(), Stroke::NONE, t.on_brand()),
+        Kind::Danger => (t.bad, t.bad_hover(), Stroke::NONE, t.on_brand()),
+        Kind::Secondary => (t.bg, t.sunken, Stroke::new(1.0, t.line_strong), t.ink),
+        Kind::Ghost => (Color32::TRANSPARENT, t.brand_subtle(), Stroke::NONE, t.accent_ink),
     };
-    // Disabled: the whole button at half strength, like the site's `opacity-50`.
-    let fade = |c: Color32| if enabled { c } else { c.gamma_multiply(0.5) };
-    ui.painter().rect(rect, CornerRadius::ZERO, fade(fill), Stroke::new(stroke.width, fade(stroke.color)), egui::StrokeKind::Inside);
+    // The fill changes over the DS's 140 ms standard state change.
+    let k = ui.ctx().animate_bool_with_time(resp.id.with("hover"), hovered, theme::motion::duration(ui.ctx(), theme::motion::FAST));
+    let k = theme::motion::Easing::Standard.apply(k);
+    let fill = if kind == Kind::Ghost { hover.gamma_multiply(k) } else { theme::mix(rest, hover, k) };
+    let fade = |c: Color32| if enabled { c } else { c.gamma_multiply(DISABLED_ALPHA) };
+    let radius = CornerRadius::same(theme::radius::MD);
+    ui.painter().rect(rect, radius, fade(fill), Stroke::new(stroke.width, fade(stroke.color)), egui::StrokeKind::Inside);
     paint_centred(ui, rect, galley, fade(color));
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, enabled, text));
+    focus_ring(ui, &resp, theme::radius::MD);
+    if enabled { resp.on_hover_cursor(egui::CursorIcon::PointingHand) } else { resp }
+}
+
+/// A DS IconButton (ghost): a square `size` (32 or 40) with a drawn icon in `ink-secondary`,
+/// sunken with `ink-primary` on hover, radius 8. `label` is mandatory: it is the tooltip and the
+/// name screen readers read.
+pub fn icon_button(ui: &mut Ui, icon: Icon, label: &str, size: f32) -> Response {
+    icon_button_busy(ui, icon, label, size, false)
+}
+
+/// [`icon_button`] that, while `busy`, shows the DS loader instead of its icon and can't be clicked.
+pub fn icon_button_busy(ui: &mut Ui, icon: Icon, label: &str, size: f32, busy: bool) -> Response {
+    let t = Tokens::get(ui.ctx());
+    let (rect, resp) = ui.allocate_exact_size(vec2(size, size), if busy { Sense::hover() } else { Sense::click() });
+    let enabled = ui.is_enabled() && !busy;
+    let hovered = (resp.hovered() || resp.is_pointer_button_down_on()) && enabled;
+    let k = ui.ctx().animate_bool_with_time(resp.id.with("hover"), hovered, theme::motion::duration(ui.ctx(), theme::motion::FAST));
+    let p = ui.painter();
+    if k > 0.0 {
+        p.rect_filled(rect, CornerRadius::same(theme::radius::MD), t.sunken.gamma_multiply(theme::motion::Easing::Standard.apply(k)));
+    }
+    // DS: glyphs 16 px in a 32 control, 20 px in a 40.
+    let glyph = if size >= theme::control::MD { 20.0 } else { 16.0 };
+    let glyph_rect = Rect::from_center_size(rect.center(), vec2(glyph, glyph));
+    if busy {
+        crate::glyphs::loader(p, Rect::from_center_size(rect.center(), vec2(14.0, 14.0)), t.line_strong, t.accent, ui.input(|i| i.time));
+        ui.ctx().request_repaint();
+    } else {
+        let ink = if hovered { t.ink } else { t.muted };
+        crate::glyphs::paint(p, glyph_rect, icon, if ui.is_enabled() { ink } else { ink.gamma_multiply(DISABLED_ALPHA) });
+    }
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, enabled, label));
+    focus_ring(ui, &resp, theme::radius::MD);
+    let resp = tip(resp, label);
     if enabled { resp.on_hover_cursor(egui::CursorIcon::PointingHand) } else { resp }
 }
 

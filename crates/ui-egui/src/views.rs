@@ -8,6 +8,7 @@ use redrob_launcher_core::status::AppStatus;
 use redrob_launcher_core::{AppGroup, SUITE, time};
 
 use crate::app::{Dialog, LauncherUi, Page, TitleBar};
+use crate::glyphs::Icon;
 use crate::i18n::{current, fmt, t, tn, tr_ctx};
 use crate::model::{self, AppEntry};
 use crate::settings::{Filter, SortKey, ViewMode};
@@ -96,13 +97,15 @@ impl LauncherUi {
                 if bar == TitleBar::Custom {
                     widgets::window_buttons(ui, h);
                 }
-                if widgets::nav_icon(ui, "⚙", tl!("Settings"), h, false).clicked() {
+                ui.add_space(theme::space::S1);
+                if widgets::icon_button(ui, Icon::Settings, tl!("Settings"), theme::control::MD).clicked() {
                     self.dialog = Some(Dialog::Settings);
                 }
-                if widgets::nav_icon(ui, "⟳", tl!("Check for updates"), h, self.checking).clicked() {
+                ui.add_space(theme::space::S1);
+                if widgets::icon_button_busy(ui, Icon::Refresh, tl!("Check for updates"), theme::control::MD, self.checking).clicked() {
                     self.check_now();
                 }
-                ui.add_space(6.0);
+                ui.add_space(theme::space::S2);
                 self.account_link(ui, h);
                 self.engine_link(ui, h);
                 ui.add_space(6.0);
@@ -172,7 +175,7 @@ impl LauncherUi {
                                 self.launcher_update = None;
                             }
                             if self.caps.self_update {
-                                if widgets::button(ui, tl!("Update and restart"), Kind::Primary, 0.0)
+                                if widgets::button_sized(ui, tl!("Update and restart"), Kind::Primary, widgets::Size::Sm, 0.0)
                                     .on_hover_text(tl!("Downloads the new version, replaces this one and opens it again"))
                                     .clicked()
                                 {
@@ -180,7 +183,7 @@ impl LauncherUi {
                                 }
                             } else {
                                 let url = self.platform.and_then(|p| launcher_download(&r, p)).unwrap_or_else(|| r.html_url.clone());
-                                if widgets::button(ui, tl!("Download"), Kind::Primary, 0.0).clicked() {
+                                if widgets::button_sized(ui, tl!("Download"), Kind::Primary, widgets::Size::Sm, 0.0).clicked() {
                                     ui.ctx().open_url(egui::OpenUrl::new_tab(url));
                                 }
                             }

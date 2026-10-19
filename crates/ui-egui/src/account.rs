@@ -105,7 +105,7 @@ impl LauncherUi {
                 }
                 ui.label(RichText::new(tl!("Sign in once and every Redrob app on this computer can use your workspace. You approve a short code on console.redrob.ai; nobody copies a key.")).color(t.muted));
                 ui.add_space(10.0);
-                if widgets::button(ui, tl!("Sign in to Redrob"), Kind::Primary, 180.0).clicked() {
+                if widgets::button_sized(ui, tl!("Sign in to Redrob"), Kind::Primary, widgets::Size::Lg, 180.0).clicked() {
                     action = Some(|a| a.connect());
                 }
             }

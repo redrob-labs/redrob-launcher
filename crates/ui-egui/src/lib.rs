@@ -24,6 +24,7 @@ mod cjk_font;
 mod dialogs;
 mod engine;
 mod engine_update;
+pub mod glyphs;
 pub mod i18n;
 pub mod icons;
 pub mod model;
