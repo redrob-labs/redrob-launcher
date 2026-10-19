@@ -105,20 +105,57 @@
 
 namespace {
 
-// ---- design-system colors (deep ground) -----------------------------------
-constexpr D2D1_COLOR_F kRedrobBlack = {0x0A / 255.0f, 0x0B / 255.0f, 0x0C / 255.0f, 1.0f};
-constexpr D2D1_COLOR_F kInkPrimary  = {0xF8 / 255.0f, 0xF9 / 255.0f, 0xFB / 255.0f, 1.0f}; // gray-1
-constexpr D2D1_COLOR_F kInkMuted    = {0x83 / 255.0f, 0x8A / 255.0f, 0x97 / 255.0f, 1.0f}; // ink-muted dark
-constexpr D2D1_COLOR_F kActionBlue  = {0x2B / 255.0f, 0x52 / 255.0f, 0xFF / 255.0f, 1.0f}; // action-primary
-constexpr D2D1_COLOR_F kTrack       = {0xFF / 255.0f, 0xFF / 255.0f, 0xFF / 255.0f, 0.14f}; // border-subtle on dark
-constexpr D2D1_COLOR_F kDanger      = {0xFF / 255.0f, 0x4B / 255.0f, 0x4B / 255.0f, 1.0f}; // accent-red-3 / status-danger
-constexpr D2D1_COLOR_F kWhite       = {1.0f, 1.0f, 1.0f, 1.0f};
+// ---- design-system colors (@redrob-labs/ui semantic roles) ------------------
+constexpr D2D1_COLOR_F Hex(unsigned v, float a = 1.0f) {
+  return {((v >> 16) & 0xFF) / 255.0f, ((v >> 8) & 0xFF) / 255.0f, (v & 0xFF) / 255.0f, a};
+}
+
+// One set per theme. The window follows Windows' app theme (light or dark), like the launcher.
+struct Palette {
+  D2D1_COLOR_F base;         // surface-base: the content column's ground
+  D2D1_COLOR_F sunken;       // surface-sunken: progress track, secondary button hover
+  D2D1_COLOR_F ink;          // ink-primary: titles, labels
+  D2D1_COLOR_F secondary;    // ink-secondary: body copy, caption glyphs
+  D2D1_COLOR_F hairline;     // border-subtle: step connectors
+  D2D1_COLOR_F strong;       // border-strong: control outlines (secondary button, checkbox)
+  D2D1_COLOR_F blue;         // action-primary
+  D2D1_COLOR_F blueHover;    // action-primary-hover (hover and pressed)
+  D2D1_COLOR_F focus;        // focus-ring
+  D2D1_COLOR_F danger;       // status-danger: close-button hover
+  D2D1_COLOR_F inkBrand;     // ink-brand: the current step's number
+  D2D1_COLOR_F brandSubtle;  // surface-brand-subtle: the current step's halo
+};
+constexpr Palette kLight = {Hex(0xFFFFFF), Hex(0xEFF1F4), Hex(0x0A0B0C), Hex(0x576071), Hex(0xDFE2E8), Hex(0x7C8390),
+                            Hex(0x2B52FF), Hex(0x1733D5), Hex(0x2B52FF), Hex(0xA31310), Hex(0x1733D5), Hex(0xEEF4FF)};
+constexpr Palette kDark  = {Hex(0x0A0B0C), Hex(0x1C1F26), Hex(0xF8F9FB), Hex(0xAAB0BB), Hex(0x292E37), Hex(0x7C8390),
+                            Hex(0x2B52FF), Hex(0x507FFF), Hex(0x8AAFFF), Hex(0xFF4B4B), Hex(0x8AAFFF), Hex(0x030C34)};
+constexpr D2D1_COLOR_F kWhite = {1.0f, 1.0f, 1.0f, 1.0f};
+// The brand panel (Redrob Blue radial gradient with two glints), the same in both themes.
+constexpr D2D1_COLOR_F kPanelCore = Hex(0x2E7EFF), kPanelMid = Hex(0x2B52FF), kPanelEdge = Hex(0x2746EE);
+constexpr D2D1_COLOR_F kPanelViolet = Hex(0x8B82FF);
+
+bool g_dark = false;  // set from Windows' AppsUseLightTheme at start (or --theme)
+int g_themeFlag = 0;  // --theme: 0 follow Windows, 1 light, 2 dark (a dev aid, mainly for --render-stages)
+inline const Palette& Pal() { return g_dark ? kDark : kLight; }
+
+// Windows' app theme: HKCU\...\Themes\Personalize\AppsUseLightTheme (0 = dark). Read only. Light if unset.
+static bool SystemPrefersDark() {
+  if (g_themeFlag == 1) return false;
+  if (g_themeFlag == 2) return true;
+  DWORD value = 1, size = sizeof(value);
+  if (RegGetValueW(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+                   L"AppsUseLightTheme", RRF_RT_REG_DWORD, nullptr, &value, &size) != ERROR_SUCCESS)
+    return false;
+  return value == 0;
+}
 
 // ---- geometry (logical px at 96 DPI) ---------------------------------------
-constexpr int   kBaseW   = 660;
-constexpr int   kBaseH   = 400;
-constexpr float kRadius  = 14.0f;   // rounded corners
-constexpr float kCaption = 44.0f;   // top drag strip height
+constexpr int   kBaseW   = 720;
+constexpr int   kBaseH   = 440;
+constexpr float kCaption = 40.0f;   // top drag strip height; the caption buttons are this tall
+constexpr float kPanelW  = 240.0f;  // the brand panel on the left
+constexpr float kPad     = 32.0f;   // the content column's padding
+constexpr float kCapBtnW = 46.0f;   // each caption button
 
 // window messages / timers
 constexpr UINT_PTR kTickTimer = 1;
@@ -202,7 +239,6 @@ class SetupApp {
   void OnTick();
   void LayoutText();
   RECT ToDevice(float x, float y, float w, float h);
-  void computeButtonRects(float minX, float closeX, float cy);
 
   ComPtr<ID2D1Bitmap> LoadPngResource(int resId, ID2D1RenderTarget* rt);
   HRESULT DrawScene();  // BeginDraw..EndDraw on rt_, whatever kind of target it is
@@ -247,12 +283,23 @@ class SetupApp {
   ComPtr<IDWriteFactory>      dwFactory_;
   ComPtr<IWICImagingFactory>  wicFactory_;
   ComPtr<ID2D1RenderTarget> rt_;
-  ComPtr<ID2D1Bitmap>         bgBitmap_;
-  ComPtr<ID2D1Bitmap>         lockupBitmap_;
-  ComPtr<IDWriteTextFormat>   fmtStatus_;
-  ComPtr<IDWriteTextFormat>   fmtButton_;
+  ComPtr<ID2D1Bitmap>         symbolBitmap_;  // assets/brand/symbol-white-192.png, verbatim
+  ComPtr<IDWriteTextFormat>   fmtTitle_;      // 21/600, the screen's one title
+  ComPtr<IDWriteTextFormat>   fmtBody_;       // 14/22, ink-secondary, under the title
+  ComPtr<IDWriteTextFormat>   fmtButton_;     // 14/600, centred in a button
+  ComPtr<IDWriteTextFormat>   fmtLabel_;      // 14, a checkbox label
+  ComPtr<IDWriteTextFormat>   fmtStep_;       // 12/600, the step labels and numbers
+  ComPtr<IDWriteTextFormat>   fmtBrand_;      // 15/600, the product name on the brand panel
   ComPtr<IDWriteFontCollection> fontColl_;
   std::wstring                fontFamily_ = L"Segoe UI Variable Display";
+  std::wstring                bodyFamily_ = L"Segoe UI Variable Text";
+
+  // drawing helpers (DrawScene)
+  float TextWidth(const std::wstring& s, IDWriteTextFormat* f);
+  float DrawBlock(const std::wstring& s, IDWriteTextFormat* f, float x, float y, float w, ID2D1Brush* b);
+  void DrawBrandPanel(float H);
+  void DrawStepper(float x, float y);
+  void ApplyWindowTheme();
 
   // state
   Stage  stage_ = Stage::Preparing;
@@ -291,7 +338,26 @@ std::wstring StatusText(Stage s) {
   return L"";
 }
 
-// What the error screen says for a worker's result. Retry is on the screen, so each one says what to do.
+// The line under each screen's title. The error screen's is the worker's result (ResultSentence).
+std::wstring BodyText(Stage s, Mode m, bool deleteData, const std::wstring& error) {
+  switch (s) {
+    case Stage::Language:
+      return L"Redrob Launcher and every Redrob app will use this language.\n설치 과정, Redrob Launcher, Redrob 앱이 이 언어를 씁니다.";
+    case Stage::Welcome:
+      return Tr(L"Installs for this Windows account. No administrator rights needed.",
+                L"이 Windows 계정에만 설치됩니다. 관리자 권한이 필요하지 않아요.");
+    case Stage::Confirm:
+      return Tr(L"Redrob Launcher will be removed from this PC. The apps it installed stay.",
+                L"이 PC에서 Redrob Launcher를 제거합니다. 런처로 설치한 앱은 그대로 남아요.");
+    case Stage::Removed:
+      return deleteData ? Tr(L"Its settings and downloads were deleted too.", L"설정과 내려받은 파일도 삭제했어요.")
+                        : Tr(L"Its settings stay on this PC for a later install.", L"설정은 다음 설치를 위해 이 PC에 남아 있어요.");
+    case Stage::Error: return error;
+    default: (void)m; return L"";
+  }
+}
+
+// What the error screen says for a worker's result.
 std::wstring ResultSentence(DWORD code, bool uninstall) {
   if (code == kResultAppRunning)
     return uninstall ? Tr(L"Redrob Launcher is open. Quit it from its tray icon, then press Retry.",
@@ -400,8 +466,8 @@ int SetupApp::Run(HINSTANCE hinst) {
   DwmExtendFrameIntoClientArea(hwnd_, &m);
   DWM_WINDOW_CORNER_PREFERENCE corner = DWMWCP_ROUND;
   DwmSetWindowAttribute(hwnd_, DWMWA_WINDOW_CORNER_PREFERENCE, &corner, sizeof(corner));
-  BOOL dark = TRUE;
-  DwmSetWindowAttribute(hwnd_, DWMWA_USE_IMMERSIVE_DARK_MODE, &dark, sizeof(dark));
+  g_dark = SystemPrefersDark();
+  ApplyWindowTheme();
 
   LayoutText();
 
@@ -434,14 +500,25 @@ int SetupApp::Run(HINSTANCE hinst) {
   // Every COM object goes BEFORE CoUninitialize. Left to the destructor, the WIC factory was released after
   // COM was torn down, and the process died with an access violation on its way out of a successful install.
   DiscardDeviceResources();
-  fmtStatus_.reset();
+  fmtTitle_.reset();
+  fmtBody_.reset();
   fmtButton_.reset();
+  fmtLabel_.reset();
+  fmtStep_.reset();
+  fmtBrand_.reset();
   fontColl_.reset();
   wicFactory_.reset();
   dwFactory_.reset();
   d2dFactory_.reset();
   CoUninitialize();
   return (int)msg.wParam;
+}
+
+// The DWM frame follows the theme too (immersive dark mode only for the dark theme).
+void SetupApp::ApplyWindowTheme() {
+  if (!hwnd_) return;
+  BOOL dark = g_dark ? TRUE : FALSE;
+  DwmSetWindowAttribute(hwnd_, DWMWA_USE_IMMERSIVE_DARK_MODE, &dark, sizeof(dark));
 }
 
 void SetupApp::LayoutText() {
@@ -455,23 +532,28 @@ void SetupApp::LayoutText() {
     if (data && sz) {
       DWORD nFonts = 0;
       HANDLE added = AddFontMemResourceEx(data, sz, nullptr, &nFonts);
-      if (added) fontFamily_ = L"Pretendard SemiBold";
+      if (added) { fontFamily_ = L"Pretendard SemiBold"; bodyFamily_ = fontFamily_; }
     }
   }
-  dwFactory_->CreateTextFormat(fontFamily_.c_str(), nullptr, DWRITE_FONT_WEIGHT_SEMI_BOLD,
-                               DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL,
-                               17.0f, L"en-us", &fmtStatus_);
-  if (fmtStatus_) {
-    fmtStatus_->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
-    fmtStatus_->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
-  }
-  dwFactory_->CreateTextFormat(fontFamily_.c_str(), nullptr, DWRITE_FONT_WEIGHT_SEMI_BOLD,
-                               DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL,
-                               13.0f, L"en-us", &fmtButton_);
-  if (fmtButton_) {
-    fmtButton_->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
-    fmtButton_->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
-  }
+  auto make = [&](ComPtr<IDWriteTextFormat>& out, const std::wstring& family, DWRITE_FONT_WEIGHT weight, float size,
+                  float lineHeight, DWRITE_TEXT_ALIGNMENT align, DWRITE_PARAGRAPH_ALIGNMENT para) {
+    out.reset();
+    dwFactory_->CreateTextFormat(family.c_str(), fontColl_.p, weight, DWRITE_FONT_STYLE_NORMAL,
+                                 DWRITE_FONT_STRETCH_NORMAL, size, L"en-us", &out);
+    if (!out) return;
+    out->SetTextAlignment(align);
+    out->SetParagraphAlignment(para);
+    out->SetWordWrapping(DWRITE_WORD_WRAPPING_WRAP);
+    if (lineHeight > 0) out->SetLineSpacing(DWRITE_LINE_SPACING_METHOD_UNIFORM, lineHeight, lineHeight * 0.78f);
+  };
+  const auto L = DWRITE_TEXT_ALIGNMENT_LEADING, C = DWRITE_TEXT_ALIGNMENT_CENTER;
+  const auto T = DWRITE_PARAGRAPH_ALIGNMENT_NEAR, M = DWRITE_PARAGRAPH_ALIGNMENT_CENTER;
+  make(fmtTitle_, fontFamily_, DWRITE_FONT_WEIGHT_SEMI_BOLD, 21.0f, 28.0f, L, T);
+  make(fmtBody_, bodyFamily_, DWRITE_FONT_WEIGHT_REGULAR, 14.0f, 22.0f, L, T);
+  make(fmtButton_, fontFamily_, DWRITE_FONT_WEIGHT_SEMI_BOLD, 14.0f, 0.0f, C, M);
+  make(fmtLabel_, bodyFamily_, DWRITE_FONT_WEIGHT_REGULAR, 14.0f, 20.0f, L, M);
+  make(fmtStep_, fontFamily_, DWRITE_FONT_WEIGHT_SEMI_BOLD, 12.0f, 0.0f, L, M);
+  make(fmtBrand_, fontFamily_, DWRITE_FONT_WEIGHT_SEMI_BOLD, 15.0f, 20.0f, L, T);
 }
 
 LRESULT CALLBACK SetupApp::WndProcThunk(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
@@ -537,6 +619,15 @@ LRESULT SetupApp::WndProc(UINT msg, WPARAM wp, LPARAM lp) {
 
     case WM_SIZE: DiscardDeviceResources(); return 0;
 
+    case WM_SETTINGCHANGE:
+      // Windows switched between light and dark: follow it.
+      if (lp && lstrcmpiW(reinterpret_cast<LPCWSTR>(lp), L"ImmersiveColorSet") == 0) {
+        g_dark = SystemPrefersDark();
+        ApplyWindowTheme();
+        InvalidateRect(hwnd_, nullptr, FALSE);
+      }
+      return 0;
+
     case WM_LBUTTONDOWN: {
       POINT pt{GET_X_LPARAM(lp), GET_Y_LPARAM(lp)};
       if (PtInRect(&rcClose_, pt)) { RequestClose(false); return 0; }
@@ -572,8 +663,8 @@ LRESULT SetupApp::WndProc(UINT msg, WPARAM wp, LPARAM lp) {
         return 0;
       }
       if (stage_ == Stage::Error && PtInRect(&rcErrClose_, pt)) { RequestClose(true); return 0; }
-      // Anywhere else on the caption strip drags the window.
-      if (pt.y < MulDiv((int)kCaption, dpi_, 96)) {
+      // Anywhere else on the caption strip or the brand panel drags the window.
+      if (pt.y < MulDiv((int)kCaption, dpi_, 96) || pt.x < MulDiv((int)kPanelW, dpi_, 96)) {
         ReleaseCapture();
         SendMessage(hwnd_, WM_NCLBUTTONDOWN, HTCAPTION, 0);
       }
@@ -728,13 +819,11 @@ void SetupApp::CreateDeviceResources() {
   rt_.p = hwndRt.p;  // ID2D1HwndRenderTarget is an ID2D1RenderTarget; rt_ takes the reference
   hwndRt.p = nullptr;
   rt_->SetDpi((float)dpi_, (float)dpi_);
-  bgBitmap_ = LoadPngResource(IDR_BACKGROUND_PNG, rt_.p);
-  lockupBitmap_ = LoadPngResource(IDR_LOCKUP_PNG, rt_.p);
+  symbolBitmap_ = LoadPngResource(IDR_SYMBOL_PNG, rt_.p);
 }
 
 void SetupApp::DiscardDeviceResources() {
-  bgBitmap_.reset();
-  lockupBitmap_.reset();
+  symbolBitmap_.reset();
   rt_.reset();
 }
 
@@ -771,170 +860,255 @@ void SetupApp::OnPaint() {
   EndPaint(hwnd_, &ps);
 }
 
+// Where a screen sits among the three steps the stepper shows.
+struct StepState { int current; bool allDone; };
+static StepState StepOf(Stage s, Mode m) {
+  if (m == Mode::Uninstall) {
+    switch (s) {
+      case Stage::Removing: case Stage::Error: return {1, false};
+      case Stage::Removed: return {2, true};
+      default: return {0, false};
+    }
+  }
+  switch (s) {
+    case Stage::Language: return {0, false};
+    case Stage::Opening: return {2, false};
+    default: return {1, false};  // Welcome, Preparing, Installing, Error
+  }
+}
+
+// Korean breaks between words, never inside one (DS 35-korean: keep-all). DirectWrite allows a break
+// between any two Hangul syllables, so a word joiner (U+2060, zero width) is put inside each word.
+static std::wstring KeepAll(const std::wstring& s) {
+  auto hangul = [](wchar_t c) { return (c >= 0xAC00 && c <= 0xD7A3) || (c >= 0x3130 && c <= 0x318F); };
+  std::wstring out;
+  out.reserve(s.size() * 2);
+  for (size_t i = 0; i < s.size(); ++i) {
+    out += s[i];
+    if (i + 1 < s.size() && (hangul(s[i]) || hangul(s[i + 1])) && !iswspace(s[i]) && !iswspace(s[i + 1]))
+      out += L'\u2060';
+  }
+  return out;
+}
+
+float SetupApp::TextWidth(const std::wstring& s, IDWriteTextFormat* f) {
+  ComPtr<IDWriteTextLayout> layout;
+  if (!f || FAILED(dwFactory_->CreateTextLayout(s.c_str(), (UINT32)s.size(), f, 4096.0f, 64.0f, &layout))) return 0;
+  DWRITE_TEXT_METRICS tm{};
+  return SUCCEEDED(layout->GetMetrics(&tm)) ? tm.widthIncludingTrailingWhitespace : 0;
+}
+
+// Left-aligned, wrapped text at (x, y), `w` wide. Returns the height it took.
+float SetupApp::DrawBlock(const std::wstring& s, IDWriteTextFormat* f, float x, float y, float w, ID2D1Brush* b) {
+  if (!f || s.empty()) return 0;
+  const std::wstring text = KeepAll(s);
+  ComPtr<IDWriteTextLayout> layout;
+  if (FAILED(dwFactory_->CreateTextLayout(text.c_str(), (UINT32)text.size(), f, w, 400.0f, &layout))) return 0;
+  layout->SetLocaleName(g_lang == Lang::Ko ? L"ko-kr" : L"en-us", DWRITE_TEXT_RANGE{0, (UINT32)text.size()});
+  rt_->DrawTextLayout(D2D1::Point2F(x, y), layout.p, b);
+  DWRITE_TEXT_METRICS tm{};
+  return SUCCEEDED(layout->GetMetrics(&tm)) ? tm.height : 0;
+}
+
+// The brand panel: Redrob Blue radial gradient (#2E7EFF -> #2B52FF -> #2746EE), a soft white glint top-left
+// and a violet one bottom-right, the white Redrob symbol near the top and the product name at the foot. The
+// symbol is the design system's file, drawn as is: never tinted, shadowed or redrawn.
+void SetupApp::DrawBrandPanel(float H) {
+  const D2D1_RECT_F r = D2D1::RectF(0, 0, kPanelW, H);
+  auto radial = [&](D2D1_POINT_2F c, float rx, float ry, const D2D1_GRADIENT_STOP* stops, UINT n) {
+    ComPtr<ID2D1GradientStopCollection> coll;
+    if (FAILED(rt_->CreateGradientStopCollection(stops, n, &coll))) return;
+    ComPtr<ID2D1RadialGradientBrush> brush;
+    if (FAILED(rt_->CreateRadialGradientBrush(
+            D2D1::RadialGradientBrushProperties(c, D2D1::Point2F(0, 0), rx, ry), coll.p, &brush))) return;
+    rt_->FillRectangle(r, brush.p);
+  };
+  const D2D1_GRADIENT_STOP bed[] = {{0.0f, kPanelCore}, {0.55f, kPanelMid}, {1.0f, kPanelEdge}};
+  radial(D2D1::Point2F(kPanelW * 0.30f, H * 0.34f), kPanelW * 1.25f, H * 0.85f, bed, 3);
+  const D2D1_COLOR_F w0 = {1, 1, 1, 0.30f}, w1 = {1, 1, 1, 0.0f};
+  const D2D1_GRADIENT_STOP glint[] = {{0.0f, w0}, {1.0f, w1}};
+  radial(D2D1::Point2F(kPanelW * 0.06f, H * 0.02f), 150.0f, 150.0f, glint, 2);
+  D2D1_COLOR_F v0 = kPanelViolet, v1 = kPanelViolet, v2 = kPanelViolet;
+  v0.a = 0.70f; v1.a = 0.22f; v2.a = 0.0f;
+  const D2D1_GRADIENT_STOP violet[] = {{0.0f, v0}, {0.5f, v1}, {1.0f, v2}};
+  radial(D2D1::Point2F(kPanelW, H), 230.0f, 230.0f, violet, 3);
+
+  if (symbolBitmap_) {
+    const float s = 40.0f;  // >= 18 px minimum (10-logo.md); drawn down from the 192 px file
+    rt_->DrawBitmap(symbolBitmap_.p, D2D1::RectF(kPad, 44.0f, kPad + s, 44.0f + s), 1.0f,
+                    D2D1_BITMAP_INTERPOLATION_MODE_LINEAR);
+  }
+  ComPtr<ID2D1SolidColorBrush> white;
+  rt_->CreateSolidColorBrush(kWhite, &white);
+  if (white) DrawBlock(L"Redrob Launcher", fmtBrand_.p, kPad, H - kPad - 20.0f, kPanelW - 2 * kPad, white.p);
+}
+
+// The DS Stepper, small: three round markers (done = blue with a white tick, current = blue ring with a
+// halo, next = outline), each with its label, joined by a hairline (blue once passed).
+void SetupApp::DrawStepper(float x, float y) {
+  const Palette& p = Pal();
+  ComPtr<ID2D1SolidColorBrush> ink, secondary, blue, strong, hairline, base, halo, brand, white;
+  rt_->CreateSolidColorBrush(p.ink, &ink);
+  rt_->CreateSolidColorBrush(p.secondary, &secondary);
+  rt_->CreateSolidColorBrush(p.blue, &blue);
+  rt_->CreateSolidColorBrush(p.strong, &strong);
+  rt_->CreateSolidColorBrush(p.hairline, &hairline);
+  rt_->CreateSolidColorBrush(p.base, &base);
+  rt_->CreateSolidColorBrush(p.brandSubtle, &halo);
+  rt_->CreateSolidColorBrush(p.inkBrand, &brand);
+  rt_->CreateSolidColorBrush(kWhite, &white);
+  if (!ink || !white) return;
+  const StepState st = StepOf(stage_, mode_);
+  const wchar_t* labels[3];
+  if (mode_ == Mode::Uninstall) {
+    labels[0] = Tr(L"Confirm", L"확인"); labels[1] = Tr(L"Remove", L"제거"); labels[2] = Tr(L"Done", L"완료");
+  } else {
+    labels[0] = Tr(L"Language", L"언어"); labels[1] = Tr(L"Install", L"설치"); labels[2] = Tr(L"Open", L"열기");
+  }
+  const float d = 20.0f, rr = d / 2;
+  float cx = x;
+  for (int i = 0; i < 3; ++i) {
+    const bool done = i < st.current || st.allDone;
+    const bool cur = i == st.current && !st.allDone;
+    const D2D1_POINT_2F c = D2D1::Point2F(cx + rr, y + rr);
+    if (cur) {
+      rt_->FillEllipse(D2D1::Ellipse(c, rr + 3, rr + 3), halo.p);
+      rt_->FillEllipse(D2D1::Ellipse(c, rr, rr), base.p);
+      rt_->DrawEllipse(D2D1::Ellipse(c, rr - 0.5f, rr - 0.5f), blue.p, 1.0f);
+    } else if (done) {
+      rt_->FillEllipse(D2D1::Ellipse(c, rr, rr), blue.p);
+      rt_->DrawLine(D2D1::Point2F(c.x - 4.0f, c.y + 0.2f), D2D1::Point2F(c.x - 1.2f, c.y + 3.0f), white.p, 1.6f);
+      rt_->DrawLine(D2D1::Point2F(c.x - 1.2f, c.y + 3.0f), D2D1::Point2F(c.x + 4.2f, c.y - 3.2f), white.p, 1.6f);
+    } else {
+      rt_->FillEllipse(D2D1::Ellipse(c, rr, rr), base.p);
+      rt_->DrawEllipse(D2D1::Ellipse(c, rr - 0.5f, rr - 0.5f), strong.p, 1.0f);
+    }
+    if (!done && fmtStep_) {
+      const wchar_t num[2] = {(wchar_t)(L'1' + i), 0};
+      ComPtr<IDWriteTextLayout> layout;
+      if (SUCCEEDED(dwFactory_->CreateTextLayout(num, 1, fmtStep_.p, d, d, &layout))) {
+        layout->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
+        rt_->DrawTextLayout(D2D1::Point2F(cx, y), layout.p, cur ? brand.p : secondary.p);
+      }
+    }
+    const float lw = TextWidth(labels[i], fmtStep_.p);
+    if (fmtStep_) {
+      rt_->DrawTextW(labels[i], (UINT32)wcslen(labels[i]), fmtStep_.p,
+                     D2D1::RectF(cx + d + 8, y, cx + d + 8 + lw + 2, y + d), (done || cur) ? ink.p : secondary.p);
+    }
+    cx += d + 8 + lw;
+    if (i < 2) {
+      rt_->DrawLine(D2D1::Point2F(cx + 10, y + rr), D2D1::Point2F(cx + 34, y + rr),
+                    (i < st.current || st.allDone) ? blue.p : hairline.p, 1.0f);
+      cx += 44;
+    }
+  }
+}
+
 HRESULT SetupApp::DrawScene() {
+  const Palette& p = Pal();
   rt_->BeginDraw();
-  rt_->Clear(kRedrobBlack);
+  rt_->Clear(p.base);
 
   const float W = (float)kBaseW, H = (float)kBaseH;
+  DrawBrandPanel(H);
 
-  // Background art (deep ground + wash-edge), drawn to fill the window.
-  if (bgBitmap_) {
-    rt_->DrawBitmap(bgBitmap_.p, D2D1::RectF(0, 0, W, H), 1.0f,
-                    D2D1_BITMAP_INTERPOLATION_MODE_LINEAR);
-  }
-
-  ComPtr<ID2D1SolidColorBrush> ink, muted, blue, track, danger, white;
-  rt_->CreateSolidColorBrush(kInkPrimary, &ink);
-  rt_->CreateSolidColorBrush(kInkMuted, &muted);
-  rt_->CreateSolidColorBrush(kActionBlue, &blue);
-  rt_->CreateSolidColorBrush(kTrack, &track);
-  rt_->CreateSolidColorBrush(kDanger, &danger);
+  ComPtr<ID2D1SolidColorBrush> ink, secondary, blue, sunken, strong, base, white;
+  rt_->CreateSolidColorBrush(p.ink, &ink);
+  rt_->CreateSolidColorBrush(p.secondary, &secondary);
+  rt_->CreateSolidColorBrush(p.blue, &blue);
+  rt_->CreateSolidColorBrush(p.sunken, &sunken);
+  rt_->CreateSolidColorBrush(p.strong, &strong);
+  rt_->CreateSolidColorBrush(p.base, &base);
   rt_->CreateSolidColorBrush(kWhite, &white);
+  if (!ink || !white) return rt_->EndDraw();
 
-  // ---- caption glyphs (min / close), top-right -----------------------------
-  const float gl = 14.0f;              // glyph half-size
-  const float cy = kCaption / 2.0f;
-  const float closeX = W - 28.0f;
-  const float minX   = W - 64.0f;
-  computeButtonRects(minX, closeX, cy);
-  // close (x)
-  rt_->DrawLine(D2D1::Point2F(closeX - gl / 2, cy - gl / 2),
-                D2D1::Point2F(closeX + gl / 2, cy + gl / 2), ink.p, 1.6f);
-  rt_->DrawLine(D2D1::Point2F(closeX + gl / 2, cy - gl / 2),
-                D2D1::Point2F(closeX - gl / 2, cy + gl / 2), ink.p, 1.6f);
-  // minimize (-)
-  rt_->DrawLine(D2D1::Point2F(minX - gl / 2, cy),
-                D2D1::Point2F(minX + gl / 2, cy), ink.p, 1.6f);
-
-  // ---- lockup (product mark + name), centred in the upper third ---------------
-  // res/lockup.png, built by installer/windows/build-art.py as the design system builds its product
-  // lockups. Same size and place as the Redrob Canvas and Redrob Browser setups'.
-  if (lockupBitmap_) {
-    D2D1_SIZE_F ls = lockupBitmap_->GetSize();
-    float lh = 34.0f;                       // >= 18px min screen (10-logo.md)
-    float lw = ls.width * (lh / ls.height);
-    float lx = (W - lw) / 2.0f;
-    float ly = H * 0.30f;
-    rt_->DrawBitmap(lockupBitmap_.p, D2D1::RectF(lx, ly, lx + lw, ly + lh), 1.0f,
-                    D2D1_BITMAP_INTERPOLATION_MODE_LINEAR);
+  // ---- caption buttons (minimise, close), 46 x 40 each, top-right ------------
+  rcClose_ = ToDevice(W - kCapBtnW, 0, kCapBtnW, kCaption);
+  rcMin_ = ToDevice(W - 2 * kCapBtnW, 0, kCapBtnW, kCaption);
+  {
+    const float cy = kCaption / 2, g = 5.0f;  // 10 dip glyphs
+    const float closeX = W - kCapBtnW / 2, minX = W - kCapBtnW * 1.5f;
+    rt_->DrawLine(D2D1::Point2F(closeX - g, cy - g), D2D1::Point2F(closeX + g, cy + g), secondary.p, 1.0f);
+    rt_->DrawLine(D2D1::Point2F(closeX + g, cy - g), D2D1::Point2F(closeX - g, cy + g), secondary.p, 1.0f);
+    rt_->DrawLine(D2D1::Point2F(minX - g, cy), D2D1::Point2F(minX + g, cy), secondary.p, 1.0f);
   }
 
-  // ---- status line, centered ------------------------------------------------
-  std::wstring status = StatusText(stage_);
-  D2D1_RECT_F statusRc = D2D1::RectF(40, H * 0.46f, W - 40, H * 0.46f + 30);
-  if (fmtStatus_) rt_->DrawTextW(status.c_str(), (UINT32)status.size(), fmtStatus_.p, statusRc,
-                                 (stage_ == Stage::Error ? danger.p : ink.p));
+  // ---- content column: stepper, title, body, controls; left aligned -----------
+  const float x = kPanelW + kPad, cw = W - x - kPad;
+  DrawStepper(x, 52.0f);
+  float y = 104.0f;
+  y += DrawBlock(StatusText(stage_), fmtTitle_.p, x, y, cw, ink.p);
+  y += 8.0f;
+  y += DrawBlock(BodyText(stage_, mode_, deleteData_, errorMessage_), fmtBody_.p, x, y, cw, secondary.p);
 
-  ComPtr<ID2D1SolidColorBrush> black;
-  rt_->CreateSolidColorBrush(kRedrobBlack, &black);
-  // A white pill (the one prominent action, black type) and an outline pill, as the error state draws them.
-  auto pill = [&](float x, float y, float w, float h, const wchar_t* label, bool primary) {
-    D2D1_ROUNDED_RECT rr = {D2D1::RectF(x, y, x + w, y + h), h / 2, h / 2};
-    if (primary) rt_->FillRoundedRectangle(rr, white.p);
-    else rt_->DrawRoundedRectangle(rr, track.p, 1.4f);
-    if (fmtButton_) rt_->DrawTextW(label, (UINT32)wcslen(label), fmtButton_.p,
-                                   D2D1::RectF(x, y, x + w, y + h), primary ? black.p : ink.p);
-  };
-  const float pw = 120.0f, ph = 38.0f, py = H * 0.72f;
-
-  // A 16px box and its label, centred together as one row. The whole row is the hit target, not just the box.
-  auto checkRow = [&](const wchar_t* label, bool checked) {
-    float labelW = 200.0f;
-    ComPtr<IDWriteTextLayout> layout;
-    if (fmtButton_ && SUCCEEDED(dwFactory_->CreateTextLayout(label, (UINT32)wcslen(label), fmtButton_.p,
-                                                             W, 24.0f, &layout))) {
-      layout->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_LEADING);
-      DWRITE_TEXT_METRICS tm{};
-      if (SUCCEEDED(layout->GetMetrics(&tm))) labelW = tm.widthIncludingTrailingWhitespace;
+  // DS Button: radius 8, 40 tall, 20 side padding (min 96); primary Redrob Blue with white type, secondary a
+  // 1 px border-strong outline on the ground. Laid out from the right edge; returns its left edge.
+  const float bh = 40.0f, by = H - kPad - bh;
+  auto button = [&](RECT& rc, float right, const wchar_t* label, bool primary) -> float {
+    const float w = std::max(96.0f, TextWidth(label, fmtButton_.p) + 40.0f);
+    const float l = right - w;
+    const D2D1_RECT_F br = D2D1::RectF(l, by, right, by + bh);
+    if (primary) {
+      rt_->FillRoundedRectangle(D2D1::RoundedRect(br, 8, 8), blue.p);
+    } else {
+      rt_->FillRoundedRectangle(D2D1::RoundedRect(br, 8, 8), base.p);
+      rt_->DrawRoundedRectangle(D2D1::RoundedRect(D2D1::RectF(l + 0.5f, by + 0.5f, right - 0.5f, by + bh - 0.5f), 7.5f, 7.5f),
+                                strong.p, 1.0f);
     }
-    const float box = 16.0f, gap = 10.0f, rowY = H * 0.615f;
-    const float rowX = (W - (box + gap + labelW)) / 2.0f;
-    D2D1_ROUNDED_RECT boxRR = {D2D1::RectF(rowX, rowY, rowX + box, rowY + box), 4.0f, 4.0f};
+    if (fmtButton_) rt_->DrawTextW(label, (UINT32)wcslen(label), fmtButton_.p, br, primary ? white.p : ink.p);
+    rc = ToDevice(l, by, w, bh);
+    return l;
+  };
+  auto twoButtons = [&](const wchar_t* primary, const wchar_t* secondaryLabel) {
+    const float l = button(rcRetry_, W - kPad, primary, true);
+    button(rcErrClose_, l - 8.0f, secondaryLabel, false);
+  };
+  // DS Checkbox: 18 px box, radius 4, 1 px border-strong; checked = blue with a white tick. The row (box and
+  // label) is the hit target.
+  auto checkRow = [&](float rowY, const std::wstring& label, bool checked) {
+    const float box = 18.0f, bx = x, byy = rowY + 1.0f;
+    const D2D1_ROUNDED_RECT boxRR = D2D1::RoundedRect(D2D1::RectF(bx, byy, bx + box, byy + box), 4.0f, 4.0f);
     if (checked) {
       rt_->FillRoundedRectangle(boxRR, blue.p);
-      rt_->DrawLine(D2D1::Point2F(rowX + 4.0f, rowY + 8.5f), D2D1::Point2F(rowX + 7.0f, rowY + 11.5f), white.p, 1.8f);
-      rt_->DrawLine(D2D1::Point2F(rowX + 7.0f, rowY + 11.5f), D2D1::Point2F(rowX + 12.5f, rowY + 5.0f), white.p, 1.8f);
+      rt_->DrawLine(D2D1::Point2F(bx + 4.5f, byy + 9.5f), D2D1::Point2F(bx + 7.75f, byy + 12.5f), white.p, 1.8f);
+      rt_->DrawLine(D2D1::Point2F(bx + 7.75f, byy + 12.5f), D2D1::Point2F(bx + 13.5f, byy + 6.0f), white.p, 1.8f);
     } else {
-      rt_->DrawRoundedRectangle(boxRR, muted.p, 1.4f);
+      rt_->FillRoundedRectangle(boxRR, base.p);
+      rt_->DrawRoundedRectangle(D2D1::RoundedRect(D2D1::RectF(bx + 0.5f, byy + 0.5f, bx + box - 0.5f, byy + box - 0.5f),
+                                                  3.5f, 3.5f), strong.p, 1.0f);
     }
-    if (layout) rt_->DrawTextLayout(D2D1::Point2F(rowX + box + gap, rowY + box / 2 - 12.0f), layout.p, ink.p);
-    rcCheck_ = ToDevice(rowX - 6.0f, rowY - 6.0f, box + gap + labelW + 12.0f, box + 12.0f);
-  };
-  auto bodyLine = [&](const wchar_t* body) {
-    // Tall enough for two lines (the language screen says it in both languages).
-    if (fmtButton_) rt_->DrawTextW(body, (UINT32)wcslen(body), fmtButton_.p,
-                                   D2D1::RectF(60, H * 0.52f, W - 60, H * 0.62f), muted.p);
-  };
-  auto twoPills = [&](const wchar_t* primary, const wchar_t* secondary) {
-    const float ux = W / 2.0f - pw - 8.0f, cx = W / 2.0f + 8.0f;
-    rcRetry_ = ToDevice(ux, py, pw, ph);
-    rcErrClose_ = ToDevice(cx, py, pw, ph);
-    pill(ux, py, pw, ph, primary, true);
-    pill(cx, py, pw, ph, secondary, false);
+    const float lw = TextWidth(label, fmtLabel_.p);
+    if (fmtLabel_) rt_->DrawTextW(label.c_str(), (UINT32)label.size(), fmtLabel_.p,
+                                  D2D1::RectF(bx + box + 8, rowY, bx + box + 8 + lw + 2, rowY + 20), ink.p);
+    rcCheck_ = ToDevice(bx - 4, rowY - 4, box + 8 + lw + 8, 28);
   };
 
+  rcRetry_ = rcErrClose_ = rcCheck_ = RECT{};
   if (stage_ == Stage::Language) {
-    // Bilingual by nature: it comes before the choice. The two pills are the choice; the preselected
+    // Bilingual by nature: it comes before the choice. The two buttons are the choice; the preselected
     // one (a previous install's answer, or the Windows UI language) is drawn as the primary.
-    bodyLine(L"Redrob Launcher and every Redrob app will use this language.\n설치 과정, Redrob Launcher, Redrob 앱이 이 언어를 씁니다.");
-    rcCheck_ = RECT{};
-    const float ux = W / 2.0f - pw - 8.0f, cx = W / 2.0f + 8.0f;
-    rcRetry_ = ToDevice(ux, py, pw, ph);     // English
-    rcErrClose_ = ToDevice(cx, py, pw, ph);  // 한국어
-    pill(ux, py, pw, ph, L"English", g_lang == Lang::En);
-    pill(cx, py, pw, ph, L"한국어", g_lang == Lang::Ko);
+    const float l = button(rcErrClose_, W - kPad, L"한국어", g_lang == Lang::Ko);
+    button(rcRetry_, l - 8.0f, L"English", g_lang == Lang::En);
   } else if (stage_ == Stage::Welcome) {
-    bodyLine(Tr(L"Installs for this Windows account. No administrator rights needed.",
-                L"이 Windows 계정에만 설치됩니다. 관리자 권한이 필요하지 않아요."));
-    checkRow(Tr(L"Create a desktop shortcut", L"바탕 화면에 바로 가기 만들기"), desktopShortcut_);
-    twoPills(Tr(L"Install", L"설치"), Tr(L"Back", L"뒤로"));
+    checkRow(y + 20.0f, Tr(L"Create a desktop shortcut", L"바탕 화면에 바로 가기 만들기"), desktopShortcut_);
+    twoButtons(Tr(L"Install", L"설치"), Tr(L"Back", L"뒤로"));
   } else if (stage_ == Stage::Confirm) {
-    bodyLine(Tr(L"Redrob Launcher will be removed from this PC. The apps it installed stay.",
-                L"이 PC에서 Redrob Launcher를 제거합니다. 런처로 설치한 앱은 그대로 남아요."));
-    checkRow(Tr(L"Also delete its settings and downloads", L"설정과 내려받은 파일도 삭제"), deleteData_);
-    twoPills(Tr(L"Uninstall", L"제거"), Tr(L"Cancel", L"취소"));
+    checkRow(y + 20.0f, Tr(L"Also delete its settings and downloads", L"설정과 내려받은 파일도 삭제"), deleteData_);
+    twoButtons(Tr(L"Uninstall", L"제거"), Tr(L"Cancel", L"취소"));
   } else if (stage_ == Stage::Removed) {
-    const wchar_t* body = deleteData_ ? Tr(L"Its settings and downloads were deleted too.", L"설정과 내려받은 파일도 삭제했어요.")
-                                      : Tr(L"Its settings stay on this PC for a later install.", L"설정은 다음 설치를 위해 이 PC에 남아 있어요.");
-    if (fmtButton_) rt_->DrawTextW(body, (UINT32)wcslen(body), fmtButton_.p,
-                                   D2D1::RectF(60, H * 0.53f, W - 60, H * 0.59f), muted.p);
-    const float x = (W - pw) / 2.0f;
-    rcRetry_ = ToDevice(x, py, pw, ph);  // Close
-    rcErrClose_ = RECT{};
-    pill(x, py, pw, ph, Tr(L"Close", L"닫기"), true);
-
-  } else if (stage_ != Stage::Error) {
-    // ---- progress bar: thin, rounded, blue fill on a faint track -----------
-    const float barW = W * 0.76f, barH = 6.0f;
-    const float barX = (W - barW) / 2.0f, barY = H * 0.60f;
-    D2D1_ROUNDED_RECT trackRR = {D2D1::RectF(barX, barY, barX + barW, barY + barH), barH / 2, barH / 2};
-    rt_->FillRoundedRectangle(trackRR, track.p);
-    float fillW = (float)(barW * progress_);
-    if (fillW > barH) {
-      D2D1_ROUNDED_RECT fillRR = {D2D1::RectF(barX, barY, barX + fillW, barY + barH), barH / 2, barH / 2};
-      rt_->FillRoundedRectangle(fillRR, blue.p);
-    }
+    button(rcRetry_, W - kPad, Tr(L"Close", L"닫기"), true);
+  } else if (stage_ == Stage::Error) {
+    twoButtons(Tr(L"Retry", L"다시 시도"), Tr(L"Close", L"닫기"));
   } else {
-    // ---- error state: message + Retry (white pill, black type) / Close -----
-    D2D1_RECT_F msgRc = D2D1::RectF(60, H * 0.54f, W - 60, H * 0.66f);
-    if (fmtButton_) rt_->DrawTextW(errorMessage_.c_str(), (UINT32)errorMessage_.size(),
-                                   fmtButton_.p, msgRc, muted.p);
-    // Retry pill (white fill, black type) -- the single prominent CTA.
-    const float pw = 120.0f, ph = 38.0f, py = H * 0.72f;
-    const float rx = W / 2.0f - pw - 8.0f, cx = W / 2.0f + 8.0f;
-    rcRetry_ = ToDevice(rx, py, pw, ph);
-    rcErrClose_ = ToDevice(cx, py, pw, ph);
-    D2D1_ROUNDED_RECT pill = {D2D1::RectF(rx, py, rx + pw, py + ph), ph / 2, ph / 2};
-    rt_->FillRoundedRectangle(pill, white.p);
-    D2D1_RECT_F rtxt = D2D1::RectF(rx, py, rx + pw, py + ph);
-    const wchar_t* retry = Tr(L"Retry", L"다시 시도");
-    if (fmtButton_) rt_->DrawTextW(retry, (UINT32)wcslen(retry), fmtButton_.p, rtxt, black.p);
-    // Close (outline)
-    D2D1_ROUNDED_RECT closeRR = {D2D1::RectF(cx, py, cx + pw, py + ph), ph / 2, ph / 2};
-    rt_->DrawRoundedRectangle(closeRR, track.p, 1.4f);
-    D2D1_RECT_F ctxt = D2D1::RectF(cx, py, cx + pw, py + ph);
-    const wchar_t* close = Tr(L"Close", L"닫기");
-    if (fmtButton_) rt_->DrawTextW(close, (UINT32)wcslen(close), fmtButton_.p, ctxt, ink.p);
+    // ---- DS Progress: 8 px pill track (sunken), blue bar ------------------------
+    const float barY = y + 24.0f, barH = 8.0f;
+    rt_->FillRoundedRectangle(D2D1::RoundedRect(D2D1::RectF(x, barY, x + cw, barY + barH), 4, 4), sunken.p);
+    const float fillW = (float)(cw * progress_);
+    if (fillW > 0.5f) {
+      rt_->FillRoundedRectangle(
+          D2D1::RoundedRect(D2D1::RectF(x, barY, x + std::max(fillW, barH), barY + barH), 4, 4), blue.p);
+    }
   }
 
   return rt_->EndDraw();
@@ -950,23 +1124,31 @@ int SetupApp::RenderStages(HINSTANCE hinst, const std::wstring& dir) {
   CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&wicFactory_));
   if (!d2dFactory_ || !dwFactory_ || !wicFactory_) return 2;
   LayoutText();
+  g_dark = SystemPrefersDark();  // --theme light|dark picks one; otherwise Windows' own
   dpi_ = 192;  // 200%: the sharpest the art is drawn for
   const UINT pw = MulDiv(kBaseW, dpi_, 96), ph = MulDiv(kBaseH, dpi_, 96);
   int failures = 0;
-  struct Shot { Stage stage; double progress; const wchar_t* name; Lang lang; };
+  struct Shot { Stage stage; double progress; const wchar_t* name; Lang lang; bool flag; };
   const Shot shots[] = {
-    {Stage::Language, 0.0, L"0-language.png", Lang::En},
-    {Stage::Welcome, 0.0, L"1-welcome.png", Lang::En},
-    {Stage::Welcome, 0.0, L"1-welcome-ko.png", Lang::Ko},
-    {Stage::Installing, 0.55, L"2-installing.png", Lang::En},
-    {Stage::Installing, 0.55, L"2-installing-ko.png", Lang::Ko},
-    {Stage::Opening, 1.0, L"3-opening.png", Lang::En},
-    {Stage::Error, 0.0, L"4-error.png", Lang::En},
-    {Stage::Error, 0.0, L"4-error-ko.png", Lang::Ko},
-    {Stage::Confirm, 0.0, L"5-uninstall-confirm.png", Lang::En},
-    {Stage::Confirm, 0.0, L"5-uninstall-confirm-ko.png", Lang::Ko},
-    {Stage::Removing, 0.4, L"6-removing.png", Lang::En},
-    {Stage::Removed, 1.0, L"7-removed.png", Lang::En},
+    {Stage::Language, 0.0, L"0-language.png", Lang::En, false},
+    {Stage::Language, 0.0, L"0-language-ko.png", Lang::Ko, false},
+    {Stage::Welcome, 0.0, L"1-welcome.png", Lang::En, true},
+    {Stage::Welcome, 0.0, L"1-welcome-ko.png", Lang::Ko, true},
+    {Stage::Welcome, 0.0, L"1-welcome-unchecked.png", Lang::En, false},
+    {Stage::Preparing, 0.04, L"2-preparing.png", Lang::En, false},
+    {Stage::Installing, 0.55, L"2-installing.png", Lang::En, false},
+    {Stage::Installing, 0.55, L"2-installing-ko.png", Lang::Ko, false},
+    {Stage::Opening, 1.0, L"3-opening.png", Lang::En, false},
+    {Stage::Opening, 1.0, L"3-opening-ko.png", Lang::Ko, false},
+    {Stage::Error, 0.0, L"4-error.png", Lang::En, false},
+    {Stage::Error, 0.0, L"4-error-ko.png", Lang::Ko, false},
+    {Stage::Confirm, 0.0, L"5-uninstall-confirm.png", Lang::En, false},
+    {Stage::Confirm, 0.0, L"5-uninstall-confirm-ko.png", Lang::Ko, false},
+    {Stage::Removing, 0.4, L"6-removing.png", Lang::En, false},
+    {Stage::Removing, 0.4, L"6-removing-ko.png", Lang::Ko, false},
+    {Stage::Removed, 1.0, L"7-removed.png", Lang::En, false},
+    {Stage::Removed, 1.0, L"7-removed-ko.png", Lang::Ko, false},
+    {Stage::Removed, 1.0, L"7-removed-deleted-ko.png", Lang::Ko, true},
   };
   for (const Shot& s : shots) {
     ComPtr<IWICBitmap> bitmap;
@@ -978,13 +1160,14 @@ int SetupApp::RenderStages(HINSTANCE hinst, const std::wstring& dir) {
         D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED), (float)dpi_, (float)dpi_);
     DiscardDeviceResources();
     if (FAILED(d2dFactory_->CreateWicBitmapRenderTarget(bitmap.p, props, &rt_))) { ++failures; continue; }
-    bgBitmap_ = LoadPngResource(IDR_BACKGROUND_PNG, rt_.p);
-    lockupBitmap_ = LoadPngResource(IDR_LOCKUP_PNG, rt_.p);
+    symbolBitmap_ = LoadPngResource(IDR_SYMBOL_PNG, rt_.p);
     mode_ = (s.stage == Stage::Confirm || s.stage == Stage::Removing || s.stage == Stage::Removed)
                 ? Mode::Uninstall : Mode::Install;
     stage_ = s.stage;
     progress_ = s.progress;
     g_lang = s.lang;
+    desktopShortcut_ = s.flag;  // Welcome: the box ticked or not
+    deleteData_ = s.flag;       // Removed: settings deleted too, or kept
     if (s.stage == Stage::Error) errorMessage_ = ResultSentence(kResultAppRunning, false);
     if (FAILED(DrawScene())) { ++failures; continue; }
 
@@ -1003,8 +1186,13 @@ int SetupApp::RenderStages(HINSTANCE hinst, const std::wstring& dir) {
     if (!ok) ++failures;
   }
   DiscardDeviceResources();
-  fmtStatus_.reset();
+  fmtTitle_.reset();
+  fmtBody_.reset();
   fmtButton_.reset();
+  fmtLabel_.reset();
+  fmtStep_.reset();
+  fmtBrand_.reset();
+  fontColl_.reset();
   wicFactory_.reset();
   dwFactory_.reset();
   d2dFactory_.reset();
@@ -1019,16 +1207,6 @@ RECT SetupApp::ToDevice(float x, float y, float w, float h) {
   r.left = (LONG)(x * s); r.top = (LONG)(y * s);
   r.right = (LONG)((x + w) * s); r.bottom = (LONG)((y + h) * s);
   return r;
-}
-
-void SetupApp::computeButtonRects(float minX, float closeX, float cy) {
-  float s = dpi_ / 96.0f;
-  auto box = [&](float cx) {
-    RECT r; r.left = (LONG)((cx - 16) * s); r.top = (LONG)((cy - 16) * s);
-    r.right = (LONG)((cx + 16) * s); r.bottom = (LONG)((cy + 16) * s); return r;
-  };
-  rcMin_ = box(minX);
-  rcClose_ = box(closeX);
 }
 
 // ---- payload ---------------------------------------------------------------
@@ -1487,6 +1665,10 @@ int WINAPI wWinMain(HINSTANCE hinst, HINSTANCE, PWSTR, int) {
     else if (lstrcmpiW(argv[i], L"--delete-data") == 0) deleteData = true;
     else if (lstrcmpiW(argv[i], L"--lang") == 0 && i + 1 < argc) lang = argv[++i];
     else if (lstrcmpiW(argv[i], L"--render-stages") == 0 && i + 1 < argc) renderDir = argv[++i];
+    else if (lstrcmpiW(argv[i], L"--theme") == 0 && i + 1 < argc) {
+      ++i;
+      g_themeFlag = lstrcmpiW(argv[i], L"light") == 0 ? 1 : lstrcmpiW(argv[i], L"dark") == 0 ? 2 : 0;
+    }
   }
   if (argv) LocalFree(argv);
   g_lang = DefaultLanguage(lang);
