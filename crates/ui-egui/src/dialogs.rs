@@ -294,18 +294,22 @@ impl LauncherUi {
         });
         self.settings.check_every = every;
         if self.caps.manage_apps
-            && ui.checkbox(&mut self.settings.auto_update, tl!("Automatically download and install updates")).changed()
+            && widgets::switch(ui, &mut self.settings.auto_update, tl!("Automatically download and install updates")).changed()
             && self.settings.auto_update
         {
             self.trigger_auto_updates();
         }
         if self.caps.manage_apps {
-            ui.checkbox(&mut self.settings.engine_auto_update, tl!("Keep the Redrob Code engine up to date on its own (when no app is using it)"));
+            widgets::switch(
+                ui,
+                &mut self.settings.engine_auto_update,
+                tl!("Keep the Redrob Code engine up to date on its own (when no app is using it)"),
+            );
         }
-        ui.checkbox(&mut self.settings.notify, tl!("Notify me when an installed app has an update"));
-        ui.checkbox(&mut self.settings.prereleases, tl!("Include pre-releases (betas and release candidates)"));
+        widgets::switch(ui, &mut self.settings.notify, tl!("Notify me when an installed app has an update"));
+        widgets::switch(ui, &mut self.settings.prereleases, tl!("Include pre-releases (betas and release candidates)"));
         if self.caps.manage_apps {
-            ui.checkbox(&mut self.settings.prism_runtime, tl!("Offer models that need PrismML's llama.cpp fork (Bonsai 2)"));
+            widgets::switch(ui, &mut self.settings.prism_runtime, tl!("Offer models that need PrismML's llama.cpp fork (Bonsai 2)"));
         }
 
         if self.caps.manage_apps && self.platform.is_some_and(|p| p.os == Os::Linux) {
@@ -335,14 +339,14 @@ impl LauncherUi {
         if self.caps.manage_apps {
             section(ui, tl!("Running in the background"));
             if host.has_tray() {
-                ui.checkbox(&mut self.settings.close_to_tray, tl!("Keep running in the tray when the window is closed"));
+                widgets::switch(ui, &mut self.settings.close_to_tray, tl!("Keep running in the tray when the window is closed"));
             }
             if host.has_desktops() {
-                ui.checkbox(&mut self.settings.show_on_current_desktop, tl!("Show the window on the current desktop"))
+                widgets::switch(ui, &mut self.settings.show_on_current_desktop, tl!("Show the window on the current desktop"))
                     .on_hover_text(tl!("When on, opening the launcher from the menu bar brings its window to the desktop you're on. When off, macOS switches you to the desktop the window was on."));
             }
             if let Some(mut on) = host.login_item()
-                && ui.checkbox(&mut on, tl!("Start Redrob Launcher when I log in")).changed()
+                && widgets::switch(ui, &mut on, tl!("Start Redrob Launcher when I log in")).changed()
                 && let Err(e) = host.set_login_item(on)
             {
                 let ctx = ui.ctx().clone();

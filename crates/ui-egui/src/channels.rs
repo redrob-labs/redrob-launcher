@@ -437,7 +437,7 @@ impl LauncherUi {
                                 ui.add(
                                     egui::TextEdit::singleline(id).desired_width(250.0).min_size(vec2(0.0, theme::CONTROL_H)).vertical_align(egui::Align::Center),
                                 );
-                                if widgets::glyph_button(ui, widgets::Glyph::Close, tl!("Remove")).clicked() {
+                                if widgets::icon_button(ui, crate::glyphs::Icon::Close, tl!("Remove"), crate::theme::CONTROL_H).clicked() {
                                     remove = Some(i);
                                 }
                             });

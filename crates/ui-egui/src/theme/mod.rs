@@ -378,7 +378,8 @@ fn visuals(t: &Tokens) -> Visuals {
     v.override_text_color = Some(t.ink);
     v.hyperlink_color = t.accent_ink;
     v.selection.bg_fill = t.selection();
-    v.selection.stroke = Stroke::new(1.0, t.ink);
+    // egui outlines a focused text field with the selection stroke: DS Field focus border.
+    v.selection.stroke = Stroke::new(1.0, t.focus());
     v.text_cursor.stroke = Stroke::new(2.0, t.focus());
     v.warn_fg_color = t.warn;
     v.error_fg_color = t.bad;
@@ -393,12 +394,12 @@ fn visuals(t: &Tokens) -> Visuals {
         w.bg_fill = fill;
         w.weak_bg_fill = fill;
         w.bg_stroke = Stroke::new(1.0, stroke);
-        w.corner_radius = CornerRadius::same(radius::MD);
+        // egui's own controls here are text fields, selects, menu rows and checkboxes: the DS's
+        // field radius (our buttons draw their own 8).
+        w.corner_radius = CornerRadius::same(radius::SM);
         w.fg_stroke = Stroke::new(1.0, fg);
         w.expansion = 0.0;
     }
-    // Labels and separators are not controls: hairlines, no radius to speak of.
-    v.widgets.noninteractive.corner_radius = CornerRadius::same(radius::SM);
     v
 }
 

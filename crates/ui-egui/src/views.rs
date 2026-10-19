@@ -162,7 +162,7 @@ impl LauncherUi {
                                 };
                                 // Another app's install can hang on a password prompt: the wait can be called off.
                                 if phase == JobPhase::Waiting
-                                    && widgets::glyph_button(ui, widgets::Glyph::Close, tl!("Cancel update"))
+                                    && widgets::icon_button(ui, crate::glyphs::Icon::Close, tl!("Cancel update"), crate::theme::CONTROL_H)
                                         .on_hover_text(tl!("Stop waiting; the update can be started again later"))
                                         .clicked()
                                 {
@@ -171,7 +171,7 @@ impl LauncherUi {
                                 widgets::progress(ui, fraction, &caption, t.accent, 220.0);
                                 return;
                             }
-                            if widgets::glyph_button(ui, widgets::Glyph::Close, tl!("Dismiss")).clicked() {
+                            if widgets::icon_button(ui, crate::glyphs::Icon::Close, tl!("Dismiss"), crate::theme::CONTROL_H).clicked() {
                                 self.launcher_update = None;
                             }
                             if self.caps.self_update {
@@ -276,7 +276,7 @@ impl LauncherUi {
             egui::Frame::new().fill(t.sunken).stroke(t.hairline()).inner_margin(egui::Margin::symmetric(14, 10)).show(ui, |ui| {
                 ui.horizontal(|ui| {
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
-                        if widgets::glyph_button(ui, widgets::Glyph::Close, tl!("Dismiss")).clicked() {
+                        if widgets::icon_button(ui, crate::glyphs::Icon::Close, tl!("Dismiss"), crate::theme::CONTROL_H).clicked() {
                             self.settings.dismissed_notices.insert(notice.id.clone());
                         }
                         if let Some(link) = &notice.link {
@@ -618,7 +618,7 @@ impl LauncherUi {
                             });
                             row.col(|ui| {
                                 let (text, tone) = model::entry_status_text(&entry, &status, self.caps.manage_apps);
-                                let r = widgets::badge(ui, &text, widgets::tone_color(&t, tone));
+                                let r = widgets::task_status(ui, &text, widgets::tone_color(&t, tone));
                                 if let Some(f) = entry.failure() {
                                     r.on_hover_text(fmt(tl!("Couldn't check for updates: {f}"), &[("f", f)]));
                                 }
@@ -720,27 +720,33 @@ impl LauncherUi {
                     } else {
                         format!("{} {}{pct}", tl!("Downloading"), amount(done, total))
                     };
-                    (f, caption, rgb(entry.app.color))
+                    (f, caption, t.accent)
                 }
                 JobPhase::Reconnecting { done, total } => {
                     let f = (total > 0).then(|| done as f32 / total as f32);
                     (f, if short { tl!("Reconnecting…").into() } else { format!("{} {}", tl!("Reconnecting…"), amount(done, total)) }, t.warn)
                 }
-                JobPhase::Verifying => (None, tl!("Verifying checksum…").into(), rgb(entry.app.color)),
-                JobPhase::Waiting => (None, tl!("Waiting for another app…").into(), rgb(entry.app.color)),
-                JobPhase::Installing => (None, tl!("Installing…").into(), rgb(entry.app.color)),
-                JobPhase::Removing => (None, tl!("Removing…").into(), rgb(entry.app.color)),
+                JobPhase::Verifying => (None, tl!("Verifying checksum…").into(), t.accent),
+                JobPhase::Waiting => (None, tl!("Waiting for another app…").into(), t.accent),
+                JobPhase::Installing => (None, tl!("Installing…").into(), t.accent),
+                JobPhase::Removing => (None, tl!("Removing…").into(), t.accent),
             };
             let downloading = matches!(phase, JobPhase::Downloading { .. } | JobPhase::Reconnecting { .. });
             // A job waiting for the installer hasn't started it yet, so it can still be called off.
             let waiting = phase == JobPhase::Waiting;
             // Waiting has one square button beside the bar, like the menu otherwise.
             widgets::progress(ui, fraction, &caption, color, if downloading { bar_w } else { main_w });
-            if downloading && widgets::glyph_button(ui, widgets::Glyph::Pause, tl!("Pause download")).clicked() {
+            if downloading && widgets::icon_button(ui, crate::glyphs::Icon::Pause, tl!("Pause download"), crate::theme::CONTROL_H).clicked() {
                 self.send(Command::Pause { app: id.clone() });
             }
             if (downloading || waiting)
-                && widgets::glyph_button(ui, widgets::Glyph::Close, if waiting { tl!("Cancel") } else { tl!("Cancel download") }).clicked()
+                && widgets::icon_button(
+                    ui,
+                    crate::glyphs::Icon::Close,
+                    if waiting { tl!("Cancel") } else { tl!("Cancel download") },
+                    crate::theme::CONTROL_H,
+                )
+                .clicked()
             {
                 self.send(Command::Cancel { app: id });
             }
@@ -767,7 +773,7 @@ impl LauncherUi {
             if resp.on_hover_text(tip).clicked() {
                 self.send(Command::Install { app: id.clone() });
             }
-            if widgets::glyph_button(ui, widgets::Glyph::Close, tl!("Discard download")).clicked() {
+            if widgets::icon_button(ui, crate::glyphs::Icon::Close, tl!("Discard download"), crate::theme::CONTROL_H).clicked() {
                 self.send(Command::Cancel { app: id.clone() });
             }
             self.menu(ui, entry, status);

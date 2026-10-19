@@ -270,13 +270,34 @@ pub fn hud_link(ui: &mut Ui, text: &str, url: &str) -> Response {
     resp
 }
 
-/// A small square status badge: 10 px mono on the sunken surface, in `color`.
+/// The DS Badge (subtle tone, md): a 24 px pill, 12 px semibold text in `color` on a light wash
+/// of it, no extra letter spacing. Never clickable; state is a word, not only a colour.
 pub fn badge(ui: &mut Ui, text: &str, color: Color32) -> Response {
+    badge_sized(ui, text, color, Size::Md)
+}
+
+/// [`badge`] at the DS's sm (20 px, 11 px text) or md (24 px, 12 px text) size.
+pub fn badge_sized(ui: &mut Ui, text: &str, color: Color32, size: Size) -> Response {
     let t = Tokens::get(ui.ctx());
-    let galley = caps(ui, text, 10.0, theme::mono(), 1.0, color);
-    let (rect, resp) = ui.allocate_exact_size(vec2(galley.size().x + 12.0, 20.0), Sense::hover());
-    ui.painter().rect(rect, CornerRadius::ZERO, t.sunken, t.hairline(), egui::StrokeKind::Inside);
+    let (h, pad, font) =
+        if size == Size::Sm { (20.0, theme::space::S2, theme::text::CAPTION) } else { (24.0, theme::space::S3 - 2.0, theme::text::META) };
+    let galley = caps(ui, text, font, theme::semibold(), 0.0, color);
+    let (rect, resp) = ui.allocate_exact_size(vec2(galley.size().x + 2.0 * pad, h), Sense::hover());
+    ui.painter().rect_filled(rect, CornerRadius::same(theme::radius::PILL), t.subtle(color));
     paint_centred(ui, rect, galley, color);
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Label, true, text));
+    resp
+}
+
+/// The DS TaskStatus: a 7 px dot in `color` and the state as a word (12 px medium, ink).
+pub fn task_status(ui: &mut Ui, text: &str, color: Color32) -> Response {
+    let t = Tokens::get(ui.ctx());
+    let galley = caps(ui, text, theme::text::META, theme::medium(), 0.0, t.ink);
+    let dot = 7.0;
+    let gap = theme::space::S2;
+    let (rect, resp) = ui.allocate_exact_size(vec2(dot + gap + galley.size().x, galley.size().y.max(dot)), Sense::hover());
+    ui.painter().circle_filled(egui::pos2(rect.left() + dot / 2.0, rect.center().y), dot / 2.0, color);
+    paint_left(ui, rect.with_min_x(rect.left() + dot + gap), galley, t.ink);
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Label, true, text));
     resp
 }
@@ -430,88 +451,152 @@ pub struct Cell<'a> {
     pub count: Option<(usize, Option<Color32>)>,
 }
 
-/// Mutually exclusive options in a row of hairline cells (the site's share bar); the chosen one
-/// is inverted. Returns whether the choice changed.
+/// Mutually exclusive options as the DS segmented control: a sunken pill track (3 px inset)
+/// holding 30 px pill segments, 13 px semibold; the chosen one raised with `shadow-sm`.
+/// Returns whether the choice changed.
 pub fn cells<T: PartialEq + Copy>(ui: &mut Ui, value: &mut T, options: &[(T, Cell<'_>)]) -> bool {
     let t = Tokens::get(ui.ctx());
     let mut changed = false;
+    const PAD: f32 = 3.0;
+    const SEG_H: f32 = 30.0;
+    const SEG_PAD: f32 = 14.0;
     // In a right-to-left parent the row fills from the right: keep the options' order.
     let rtl = ui.layout().prefer_right_to_left();
     let ordered: Vec<&(T, Cell<'_>)> = if rtl { options.iter().rev().collect() } else { options.iter().collect() };
-    let mut rects = Vec::with_capacity(options.len());
-    ui.scope(|ui| {
-        ui.spacing_mut().item_spacing.x = 0.0;
-        for (opt, cell) in ordered {
-            let on = *value == *opt;
-            let label = hud_galley(ui, cell.label, t.ink);
-            let count = cell.count.map(|(n, highlight)| {
-                let c = if on { t.invert_fg.gamma_multiply(0.6) } else { highlight.filter(|_| n > 0).unwrap_or(t.faint) };
-                (hud_galley(ui, &n.to_string(), c), c)
-            });
-            let w = label.size().x + count.as_ref().map_or(0.0, |(g, _)| g.size().x + 8.0) + 24.0;
-            let (rect, resp) = ui.allocate_exact_size(vec2(w, theme::CONTROL_H), Sense::click());
-            let hovered = resp.hovered();
-            let (fill, ink) = match (on, hovered) {
-                (true, _) => (t.invert_bg, t.invert_fg),
-                (false, true) => (t.sunken, t.ink_strong),
-                (false, false) => (Color32::TRANSPARENT, t.muted),
-            };
-            ui.painter().rect_filled(rect, CornerRadius::ZERO, fill);
-            let text_rect = rect.shrink2(vec2(12.0, 0.0));
-            let label_w = label.size().x;
-            paint_left(ui, text_rect, label, ink);
-            if let Some((g, c)) = count {
-                paint_left(ui, text_rect.with_min_x(text_rect.left() + label_w + 8.0), g, c);
-            }
-            let name = match cell.count {
-                Some((n, _)) => format!("{} {n}", cell.label),
-                None => cell.label.to_string(),
-            };
-            resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Button, true, on, &name));
-            if resp.on_hover_text(cell.tip).on_hover_cursor(egui::CursorIcon::PointingHand).clicked() && !on {
-                *value = *opt;
-                changed = true;
-            }
-            rects.push(rect);
-        }
-    });
-    // The hairlines: an outline, and a rule between neighbours.
-    if let (Some(first), Some(last)) = (rects.first(), rects.last()) {
+    let label_galley = |ui: &Ui, s: &str, c: Color32| caps(ui, s, theme::text::LABEL, theme::semibold(), 0.0, c);
+    // Measure first: the track is drawn under the segments.
+    let widths: Vec<f32> = ordered
+        .iter()
+        .map(|(_, cell)| {
+            let label = label_galley(ui, cell.label, t.ink).size().x;
+            let count = cell.count.map_or(0.0, |(n, _)| hud_galley(ui, &n.to_string(), t.faint).size().x + 6.0);
+            label + count + 2.0 * SEG_PAD
+        })
+        .collect();
+    let total = widths.iter().sum::<f32>() + 2.0 * PAD;
+    let (track, _) = ui.allocate_exact_size(vec2(total, SEG_H + 2.0 * PAD), Sense::hover());
+    let pill = CornerRadius::same(theme::radius::PILL);
+    ui.painter().rect_filled(track, pill, t.sunken);
+    let mut x = if rtl { track.right() - PAD } else { track.left() + PAD };
+    for ((opt, cell), w) in ordered.into_iter().zip(widths) {
+        let on = *value == *opt;
+        let rect = if rtl {
+            x -= w;
+            Rect::from_min_size(egui::pos2(x, track.top() + PAD), vec2(w, SEG_H))
+        } else {
+            let r = Rect::from_min_size(egui::pos2(x, track.top() + PAD), vec2(w, SEG_H));
+            x += w;
+            r
+        };
+        let resp = ui.interact(rect, ui.id().with(("segment", cell.label)), Sense::click());
+        let hovered = resp.hovered();
         let p = ui.painter();
-        p.rect_stroke(first.union(*last), CornerRadius::ZERO, t.hairline(), egui::StrokeKind::Inside);
-        let (top, bottom) = (first.top(), first.bottom());
-        for r in rects.iter().skip(1) {
-            let x = if rtl { r.right() } else { r.left() };
-            p.vline(x, top..=bottom, t.hairline());
+        if on {
+            p.add(theme::shadow_sm(&t).as_shape(rect, pill));
+            p.rect_filled(rect, pill, t.raised());
+        }
+        let ink = if on || hovered { t.ink } else { t.muted };
+        let label = label_galley(ui, cell.label, ink);
+        let label_w = label.size().x;
+        let count_w = cell.count.map_or(0.0, |(n, _)| hud_galley(ui, &n.to_string(), t.faint).size().x + 6.0);
+        let text_rect = Rect::from_center_size(rect.center(), vec2(label_w + count_w, rect.height()));
+        paint_left(ui, text_rect, label, ink);
+        if let Some((n, highlight)) = cell.count {
+            let c = highlight.filter(|_| n > 0).unwrap_or(t.faint);
+            paint_left(ui, text_rect.with_min_x(text_rect.left() + label_w + 6.0), hud_galley(ui, &n.to_string(), c), c);
+        }
+        let name = match cell.count {
+            Some((n, _)) => format!("{} {n}", cell.label),
+            None => cell.label.to_string(),
+        };
+        resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Button, true, on, &name));
+        focus_ring(ui, &resp, theme::radius::PILL);
+        if resp.on_hover_text(cell.tip).on_hover_cursor(egui::CursorIcon::PointingHand).clicked() && !on {
+            *value = *opt;
+            changed = true;
         }
     }
     changed
 }
 
-/// A slim square progress bar with a caption above it.
+/// The DS Switch (md): a 40 x 24 pill, `border-strong` off and `action-primary` on, a white 20 px
+/// thumb with `shadow-sm` that travels in 220 ms with the settle overshoot (instant when motion
+/// is off), then `label`. It acts at once: for settings that apply immediately, never in a form
+/// with Save. Returns the response, `changed()` when flipped.
+pub fn switch(ui: &mut Ui, on: &mut bool, label: &str) -> Response {
+    let t = Tokens::get(ui.ctx());
+    let enabled = ui.is_enabled();
+    let galley = ui.painter().layout(
+        label.to_owned(),
+        egui::FontId::new(theme::text::CONTROL, egui::FontFamily::Proportional),
+        t.ink,
+        ui.available_width() - 52.0,
+    );
+    let (track_w, track_h, thumb) = (40.0, 24.0, 20.0);
+    let height = galley.size().y.max(track_h).max(theme::control::SM);
+    let (rect, mut resp) = ui.allocate_exact_size(vec2(track_w + theme::space::S3 + galley.size().x, height), Sense::click());
+    if resp.clicked() && enabled {
+        *on = !*on;
+        resp.mark_changed();
+    }
+    let k = ui.ctx().animate_bool_with_time(resp.id.with("switch"), *on, theme::motion::duration(ui.ctx(), theme::motion::BASE));
+    let travel = theme::motion::Easing::Settle.apply(k);
+    let track = Rect::from_min_size(egui::pos2(rect.left(), rect.center().y - track_h / 2.0), vec2(track_w, track_h));
+    let fade = |c: Color32| if enabled { c } else { c.gamma_multiply(0.5) };
+    let p = ui.painter();
+    let pill = CornerRadius::same(theme::radius::PILL);
+    p.rect_filled(track, pill, fade(theme::mix(t.line_strong, t.accent, k)));
+    let inset = (track_h - thumb) / 2.0;
+    let x = track.left() + inset + thumb / 2.0 + travel * (track_w - thumb - 2.0 * inset);
+    let thumb_rect = Rect::from_center_size(egui::pos2(x, track.center().y), vec2(thumb, thumb));
+    p.add(theme::shadow_sm(&t).as_shape(thumb_rect, pill));
+    p.rect_filled(thumb_rect, pill, fade(t.on_brand()));
+    let text_pos = egui::pos2(track.right() + theme::space::S3, rect.center().y - galley.size().y / 2.0);
+    p.galley(text_pos, galley, fade(t.ink));
+    resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Checkbox, enabled, *on, label));
+    focus_ring(ui, &resp, theme::radius::PILL);
+    if enabled { resp.on_hover_cursor(egui::CursorIcon::PointingHand) } else { resp }
+}
+
+/// A progress bar (DS Progress): `caption` above an 8 px pill track on the sunken surface, the
+/// bar in `color` (blue, warning when reconnecting). Without a fraction the bar is the DS's
+/// indeterminate 40% slide (1.4 s, ease-in-out); with motion off, a full bar at 60%.
 pub fn progress(ui: &mut Ui, fraction: Option<f32>, caption: &str, color: Color32, width: f32) {
     let t = Tokens::get(ui.ctx());
     let (rect, _) = ui.allocate_exact_size(vec2(width, theme::CONTROL_H), Sense::hover());
     let p = ui.painter();
-    let bar = Rect::from_min_size(egui::pos2(rect.left(), rect.bottom() - 4.0), vec2(width, 4.0));
-    p.rect_filled(bar, CornerRadius::ZERO, t.line);
+    let pill = CornerRadius::same(theme::radius::PILL);
+    let track = Rect::from_min_size(egui::pos2(rect.left(), rect.bottom() - 10.0), vec2(width, 8.0));
+    p.rect_filled(track, pill, t.sunken);
     match fraction {
         Some(f) => {
-            p.rect_filled(Rect::from_min_size(bar.min, vec2(bar.width() * f.clamp(0.0, 1.0), bar.height())), CornerRadius::ZERO, color);
+            let w = track.width() * f.clamp(0.0, 1.0);
+            if w > 0.0 {
+                p.rect_filled(Rect::from_min_size(track.min, vec2(w.max(track.height()), track.height())), pill, color);
+            }
+        }
+        None if theme::motion::duration(ui.ctx(), 1.0) == 0.0 => {
+            p.rect_filled(track, pill, color.gamma_multiply(0.6));
         }
         None => {
-            // Indeterminate: a sweeping segment.
-            let x = (ui.input(|i| i.time) as f32 * 0.8).fract();
-            let seg = Rect::from_min_size(
-                egui::pos2(bar.left() + bar.width() * (x * 1.3 - 0.3).max(0.0), bar.top()),
-                vec2(bar.width() * 0.3, bar.height()),
-            )
-            .intersect(bar);
-            p.rect_filled(seg, CornerRadius::ZERO, color);
+            let s = (ui.input(|i| i.time) / 1.4).fract() as f32;
+            // ease-in-out
+            let e = if s < 0.5 { 2.0 * s * s } else { 1.0 - (-2.0 * s + 2.0).powi(2) / 2.0 };
+            let left = track.left() + track.width() * (-0.4 + 1.4 * e);
+            let seg = Rect::from_min_size(egui::pos2(left, track.top()), vec2(track.width() * 0.4, track.height())).intersect(track);
+            if seg.width() > 0.0 {
+                p.rect_filled(seg, pill, color);
+            }
             ui.ctx().request_repaint();
         }
     }
-    p.text(egui::pos2(rect.left(), rect.top() + 9.0), egui::Align2::LEFT_CENTER, caption, egui::FontId::new(12.0, theme::medium()), t.muted);
+    p.text(
+        egui::pos2(rect.left(), rect.top() + 10.0),
+        egui::Align2::LEFT_CENTER,
+        caption,
+        egui::FontId::new(theme::text::META, theme::medium()),
+        t.muted,
+    );
     let resp = ui.interact(rect, ui.id().with(("progress", caption)), Sense::hover());
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::ProgressIndicator, true, caption));
 }
@@ -528,49 +613,13 @@ pub fn human_bytes(n: u64) -> String {
     }
 }
 
-/// Which drawn glyph a [`glyph_button`] shows (drawn, so no font needs the symbol).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Glyph {
-    Pause,
-    Close,
-}
-
-/// A small outlined square button with a drawn glyph; inverts on hover.
-pub fn glyph_button(ui: &mut Ui, glyph: Glyph, tip: &str) -> Response {
-    let t = Tokens::get(ui.ctx());
-    let (rect, resp) = ui.allocate_exact_size(vec2(theme::CONTROL_H, theme::CONTROL_H), Sense::click());
-    let hovered = resp.hovered();
-    let p = ui.painter();
-    if hovered {
-        p.rect_filled(rect, CornerRadius::ZERO, t.invert_bg);
-    } else {
-        p.rect_stroke(rect, CornerRadius::ZERO, t.hairline(), egui::StrokeKind::Inside);
-    }
-    let c = if hovered { t.invert_fg } else { t.muted };
-    let m = rect.center();
-    match glyph {
-        Glyph::Pause => {
-            for dx in [-3.0, 3.0] {
-                p.rect_filled(Rect::from_center_size(m + vec2(dx, 0.0), vec2(2.5, 10.0)), CornerRadius::ZERO, c);
-            }
-        }
-        Glyph::Close => {
-            let s = 4.5;
-            p.line_segment([m + vec2(-s, -s), m + vec2(s, s)], Stroke::new(1.5, c));
-            p.line_segment([m + vec2(-s, s), m + vec2(s, -s)], Stroke::new(1.5, c));
-        }
-    }
-    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, tip));
-    resp.on_hover_text(tip).on_hover_cursor(egui::CursorIcon::PointingHand)
-}
-
-/// The "…" button that opens an app's menu: an outlined square like [`glyph_button`].
+/// The "more" icon button that opens an app's menu (DS Menu: 8 px radius list, min 200 wide).
 pub fn more_menu<R>(ui: &mut Ui, add_contents: impl FnOnce(&mut Ui) -> R) {
-    let t = Tokens::get(ui.ctx());
-    let btn =
-        egui::Button::new(RichText::new("…").size(15.0).color(t.muted)).fill(Color32::TRANSPARENT).min_size(vec2(theme::CONTROL_H, theme::CONTROL_H));
-    egui::containers::menu::MenuButton::from_button(btn).ui(ui, |ui| {
+    let resp = icon_button(ui, Icon::More, tl!("More actions"), theme::CONTROL_H);
+    egui::Popup::menu(&resp).gap(theme::space::S1).show(|ui| {
         ui.set_min_width(200.0);
+        // DS menu items are about 36 px.
+        ui.spacing_mut().interact_size.y = 36.0;
         add_contents(ui)
     });
 }

@@ -259,7 +259,7 @@ fn a_kept_download_offers_retry_install_and_download_again() {
     sent.borrow_mut().clear();
     // The … menu beside it.
     let beside = |r: egui::Rect| row.y_range().contains(r.center().y) && (row.right()..row.right() + 60.0).contains(&r.left());
-    h.get_all_by_label("…").find(|n| beside(n.rect())).unwrap().click();
+    h.get_all_by_label("More actions").find(|n| beside(n.rect())).unwrap().click();
     h.run_steps(3);
     snapshot(&mut h, "grid-retry-install-menu-dark");
     h.get_by_label("Download again").click();
@@ -302,7 +302,7 @@ fn a_kept_update_names_its_version_and_an_up_to_date_app_is_not_downloaded_again
     assert_eq!(*sent.borrow(), [Command::Install { app: "redrob-browser".into() }]);
     // Redrob Code is up to date: its menu offers Reinstall, which uses the kept file.
     let row = h.get_all_by_label("Redrob Code").next().unwrap().rect().center().y;
-    h.get_all_by_label("…").find(|n| (n.rect().center().y - row).abs() < 25.0).unwrap().click();
+    h.get_all_by_label("More actions").find(|n| (n.rect().center().y - row).abs() < 25.0).unwrap().click();
     h.run_steps(3);
     h.get_by_label("Reinstall");
     assert!(h.query_by_label("Download again").is_none());
@@ -499,7 +499,7 @@ fn links_to_the_website_github_and_each_apps_pages() {
     // The table's … menu has the app's GitHub repo and no website entry.
     let (mut h, _) = harness(ViewMode::Table, egui::Theme::Dark, true);
     h.run_steps(6);
-    h.get_all_by_label("…").nth(7).unwrap().click(); // Redrob Code
+    h.get_all_by_label("More actions").nth(7).unwrap().click(); // Redrob Code
     h.run_steps(3);
     h.get_by_label("GitHub repository");
     assert_eq!(h.query_all_by_label_contains("Website").count(), 1, "only the footer's");
@@ -541,7 +541,7 @@ fn links_open_the_right_pages() {
     assert!(github.contains(&"https://github.com/redrob-labs/redrob-canvas".to_string()), "{github:?}");
     assert_eq!(all_opened(&mut h, "Website"), ["https://redrob.ai"]);
     // The … menu.
-    h.get_all_by_label("…").next().unwrap().click();
+    h.get_all_by_label("More actions").next().unwrap().click();
     h.run_steps(3);
     assert_eq!(click_opens(&mut h, "All releases").as_deref(), Some("https://github.com/redrob-labs/redrob-shape/releases"));
 }
