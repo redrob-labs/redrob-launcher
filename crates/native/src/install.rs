@@ -83,7 +83,16 @@ pub fn install(
         // The app's own setup (Redrob Canvas, Redrob Browser): it registers itself in Settings > Apps,
         // where detection finds it; nothing to record.
         #[cfg(windows)]
-        PackageKind::Setup => windows::run_setup(&file, job.stop, &mut *job.phase).map(|_| None),
+        PackageKind::Setup => windows::run_setup(&file, job.stop, &mut *job.phase).map(|_| {
+            // An update from an old MSI copy: the setup installs per user beside it, so remove the
+            // MSI product, or Settings > Apps keeps two copies of the app.
+            if existing.is_some_and(|e| matches!(e.source, InstallSource::Msi))
+                && let Err(e) = windows::remove_msi_products(app, job.stop, &mut *job.phase)
+            {
+                log::warn!("{}: updated, but the old MSI copy stays ({e})", app.name);
+            }
+            None
+        }),
         // The portable zip, unpacked into the launcher's own apps folder and recorded, like a Linux tree.
         #[cfg(windows)]
         PackageKind::PortableZip => windows::install_portable(app, &file).map(|exe| Some(record(&version, kind, exe, Vec::new(), false))),
@@ -162,6 +171,15 @@ pub fn choose_kinds(existing: Option<&Installed>, record: Option<&Record>, prefe
             InstallSource::AppImage => Some(PackageKind::AppImage),
             InstallSource::Binary => Some(PackageKind::TarGz),
         };
+        // A copy registered in Settings > Apps came from an MSI or from the app's own setup.exe,
+        // and the two look alike there. Releases moved from MSI to setup.exe, so an update of
+        // such a copy takes whichever of the two the release ships (setup first).
+        if matches!(inst.source, InstallSource::Msi) {
+            let registered: Vec<PackageKind> = [PackageKind::Setup, PackageKind::Msi].into_iter().filter(|k| available.contains(k)).collect();
+            if !registered.is_empty() {
+                return registered;
+            }
+        }
         if let Some(k) = kind.filter(|k| available.contains(k)) {
             return vec![k];
         }
@@ -1122,6 +1140,26 @@ pub mod windows {
         })
     }
 
+    /// Removes only the Windows Installer products (`{GUID}` codes) of `app`, leaving a copy the
+    /// app's own setup registered. Used after a setup.exe update replaces an MSI install.
+    pub fn remove_msi_products(app: &CraftApp, stop: &Stop, phase: &mut dyn FnMut(JobPhase)) -> Result<(), String> {
+        let products: Vec<String> =
+            crate::detect::windows::msi_installs(app).into_iter().map(|m| m.product_code).filter(|code| code.starts_with('{')).collect();
+        if products.is_empty() {
+            return Ok(());
+        }
+        in_turn(stop, phase, JobPhase::Removing, || {
+            for code in products {
+                let status = process::command(msiexec())
+                    .args(["/x", &code, "/passive", "/norestart"])
+                    .status()
+                    .map_err(|e| format!("couldn't start the Windows Installer ({e})"))?;
+                explain(status.code())?;
+            }
+            Ok(())
+        })
+    }
+
     /// `"C:\path with spaces\x.exe" --uninstall` -> the exe and its arguments.
     fn split_command(cmd: &str) -> (String, Vec<String>) {
         let cmd = cmd.trim();
@@ -1407,7 +1445,7 @@ mod tests {
         #[cfg(target_os = "macos")]
         assert_eq!(choose_kinds(Some(&inst(InstallSource::MacApp)), None, &[]), [PackageKind::Dmg]);
         #[cfg(windows)]
-        assert_eq!(choose_kinds(Some(&inst(InstallSource::Msi)), None, &[]), [PackageKind::Msi]);
+        assert_eq!(choose_kinds(Some(&inst(InstallSource::Msi)), None, &[]), [PackageKind::Setup, PackageKind::Msi]);
         #[cfg(target_os = "linux")]
         assert_eq!(choose_kinds(Some(&inst(InstallSource::AppImage)), None, &[]), [PackageKind::AppImage]);
         let _ = inst;
