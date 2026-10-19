@@ -123,9 +123,13 @@ impl LauncherUi {
         ui.add_space(6.0);
         let signed_in = workspace.is_some();
         let mut connect: Option<&'static str> = None;
-        // The page scrolls as a whole.
-        {
-            for app in &SUITE {
+        // The page scrolls as a whole; the apps are a card of rows on hairlines.
+        widgets::card_frame(&t).show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            for (i, app) in SUITE.iter().enumerate() {
+                if i > 0 {
+                    widgets::row_rule(ui, 4.0);
+                }
                 let entry = self.entry(app.id);
                 let installed = entry.and_then(|e| e.installed.as_ref()).and_then(|i| i.version.clone());
                 let latest = entry.and_then(|e| e.latest.as_ref()).and_then(|l| match l {
@@ -167,9 +171,8 @@ impl LauncherUi {
                         widgets::badge(ui, text, widgets::tone_color(&t, tone));
                     });
                 });
-                ui.add_space(4.0);
             }
-        }
+        });
         if let Some(id) = connect {
             let ctx = ui.ctx().clone();
             let name = SUITE.iter().find(|a| a.id == id).map_or(id, |a| a.name);

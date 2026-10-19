@@ -71,7 +71,7 @@ impl LauncherUi {
         let error = engine.last_error();
         let mut ask: Option<Ask> = None;
 
-        egui::Frame::new().stroke(t.hairline()).inner_margin(12).show(ui, |ui| {
+        widgets::card_frame(&t).show(ui, |ui| {
             ui.set_width(ui.available_width());
             match &state {
                 EngineState::NotInstalled => {
@@ -116,8 +116,9 @@ impl LauncherUi {
                         ui.label(RichText::new(text).size(12.5).color(t.muted));
                     } else {
                         widgets::hud(ui, tl!("Apps using it"), t.muted);
-                        ui.add_space(4.0);
+                        // The attached apps on hairlines.
                         for a in &r.attached {
+                            widgets::row_rule(ui, 6.0);
                             ui.horizontal(|ui| {
                                 let id = if a.app.starts_with("redrob-") { a.app.clone() } else { format!("redrob-{}", a.app) };
                                 if let Some(icon) = crate::icons::app(&id) {
@@ -129,6 +130,7 @@ impl LauncherUi {
                                 }
                             });
                         }
+                        widgets::row_rule(ui, 6.0);
                     }
                     ui.add_space(10.0);
                     ui.horizontal(|ui| {

@@ -156,7 +156,7 @@ impl LauncherUi {
 
     fn device_card(ui: &mut egui::Ui, t: &Tokens, device: &Device, disk_free: Option<u64>) -> bool {
         let mut remeasure = false;
-        egui::Frame::new().fill(t.sunken).stroke(t.hairline()).inner_margin(12).show(ui, |ui| {
+        widgets::card_frame(t).show(ui, |ui| {
             ui.set_width(ui.available_width());
             ui.horizontal(|ui| {
                 ui.vertical(|ui| {
@@ -304,7 +304,7 @@ impl LauncherUi {
                     }
                     ui.add_space(6.0);
                 }
-                egui::Frame::new().stroke(t.hairline()).inner_margin(12).show(ui, |ui| {
+                widgets::card_frame(&t).show(ui, |ui| {
                     ui.set_width(ui.available_width());
                     ui.vertical(|ui| {
                         ui.spacing_mut().item_spacing.y = 4.0;

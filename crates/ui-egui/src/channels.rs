@@ -262,7 +262,7 @@ impl LauncherUi {
         for (name, card) in &mut panel.cards {
             let name = *name;
             let line = status_line(&t, &live, name, card);
-            egui::Frame::new().stroke(t.hairline()).inner_margin(12).show(ui, |ui| {
+            widgets::card_frame(&t).show(ui, |ui| {
                 ui.set_width(ui.available_width());
                 // Header: mark, name, state dot, on/off.
                 ui.horizontal(|ui| {

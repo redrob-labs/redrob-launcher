@@ -92,6 +92,24 @@ pub fn meta_line(ui: &mut Ui, label: &str) {
     });
 }
 
+/// A DS Card on a page: surface-raised, a border-subtle hairline, radius 12, padding 20.
+pub fn card_frame(t: &Tokens) -> egui::Frame {
+    egui::Frame::new()
+        .fill(t.raised())
+        .stroke(t.hairline())
+        .corner_radius(CornerRadius::same(theme::radius::LG))
+        .inner_margin(egui::Margin::same(theme::space::S5 as i8))
+}
+
+/// A full-width hairline between rows inside a card, with `gap` above and below.
+pub fn row_rule(ui: &mut Ui, gap: f32) {
+    let t = Tokens::get(ui.ctx());
+    ui.add_space(gap);
+    let (r, _) = ui.allocate_exact_size(vec2(ui.available_width(), 1.0), Sense::hover());
+    ui.painter().hline(r.x_range(), r.center().y, t.hairline());
+    ui.add_space(gap);
+}
+
 /// The DS Alert, brand tone: surface-brand-subtle with a blue-2 edge, radius 8, padding 16 / 12.
 /// For things that stay until they are dealt with (an update, an announcement).
 pub fn alert_frame(t: &Tokens) -> egui::Frame {
