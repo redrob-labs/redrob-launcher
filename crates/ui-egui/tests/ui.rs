@@ -1107,8 +1107,8 @@ fn a_native_title_bar_puts_the_chrome_in_a_row_over_the_page() {
         assert!(r.bottom() <= 48.0, "the chrome row is 48 px: {r:?}");
     }
     assert!(update.right() <= logo.left() && logo.right() <= search.left(), "{update:?} {logo:?} {search:?}");
-    // The Apps page has no top bar of its own: no "Apps" title over the grid, refresh at the filter row's end.
-    assert_eq!(h.query_all_by_label("Apps").count(), 1, "only the sidebar's row");
+    // The Apps page has no top bar of its own: no title over the grid, refresh at the filter row's end.
+    assert_eq!(h.query_all_by_label("All apps").count(), 1, "only the sidebar's row");
     let check = h.get_by_label("Check for updates").rect();
     let filters = h.get_by_label_contains("Not installed ").rect();
     assert!(check.top() > 48.0 && (check.center().y - filters.center().y).abs() < 4.0, "{check:?} vs {filters:?}");
@@ -1235,7 +1235,7 @@ fn custom_title_bar_has_window_buttons() {
     }
     // Check for updates moved down to the filter row.
     assert!(h.get_by_label("Check for updates").rect().top() > 48.0);
-    assert!(h.get_all_by_label("Apps").all(|n| n.rect().top() >= 48.0), "the sidebar and page start under the title bar");
+    assert!(h.get_all_by_label("All apps").all(|n| n.rect().top() >= 48.0), "the sidebar and page start under the title bar");
     // Restored, the top 5 px of the caption buttons and close's right 5 px stay the resize band.
     // (The harness insets the bar: its top is minimize's minus that band.)
     h.get_by_label("Maximize");

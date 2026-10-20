@@ -138,24 +138,16 @@ fn fit_rank(fit: Fit) -> u8 {
 }
 
 impl LauncherUi {
-    /// The sidebar's Models row, on backends that can download models. Says so while one is coming in.
+    /// The sidebar's On-device AI row (the models page), on backends that can download models. A
+    /// blue dot while one is coming in; the hover says what the page is for.
     pub(crate) fn models_nav(&mut self, ui: &mut egui::Ui, rail: bool) {
         let Some(models) = self.backend.models() else { return };
         let views = models.models();
         let busy = views.iter().any(|v| matches!(v.state, ModelState::Downloading { .. }) || v.serving == Serving::Starting);
-        let label = if busy { tl!("Models…") } else { tl!("Models") };
         let meta = if busy { widgets::NavMeta::Dot(Tokens::get(ui.ctx()).accent) } else { widgets::NavMeta::None };
-        if widgets::nav_row(
-            ui,
-            crate::glyphs::Icon::Models,
-            label,
-            tl!("Local models: what runs on this computer"),
-            meta,
-            self.page == Page::Models,
-            rail,
-        )
-        .clicked()
-        {
+        let hint =
+            if busy { tl!("A model is downloading or starting") } else { tl!("AI models that run on this computer. What you give them stays here.") };
+        if widgets::nav_row(ui, crate::glyphs::Icon::Models, tl!("On-device AI"), hint, meta, self.page == Page::Models, rail).clicked() {
             self.set_page(Page::Models);
         }
     }

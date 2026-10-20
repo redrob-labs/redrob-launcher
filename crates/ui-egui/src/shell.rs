@@ -86,8 +86,16 @@ impl LauncherUi {
 
         // The pages.
         let updates = if self.caps.manage_apps { self.count(Filter::Updates) } else { 0 };
-        if widgets::nav_row(ui, Icon::Apps, tl!("Apps"), tl!("The Redrob apps"), NavMeta::Count(updates, t.warn), self.page == Page::Apps, rail)
-            .clicked()
+        if widgets::nav_row(
+            ui,
+            Icon::Apps,
+            tl!("All apps"),
+            tl!("Every Redrob app, to install, update and open"),
+            NavMeta::Count(updates, t.warn),
+            self.page == Page::Apps,
+            rail,
+        )
+        .clicked()
         {
             self.set_page(Page::Apps);
         }
@@ -125,8 +133,8 @@ impl LauncherUi {
         let t = Tokens::get(ui.ctx());
         let (title, meta): (&str, String) = match self.page {
             Page::Apps => return,
-            Page::Models => (tl!("Models"), String::new()),
-            Page::Engine => (tl!("Redrob Code engine"), tl!("One engine on this computer; every Redrob app runs its AI through it").to_string()),
+            Page::Models => (tl!("On-device AI"), tl!("AI models that run on this computer. What you give them stays here.").to_string()),
+            Page::Engine => (tl!("AI engine"), tl!("Your Redrob apps use it to reach AI. It starts on its own when one needs it.").to_string()),
             Page::Account => (tl!("Redrob account"), tl!("One sign-in for every Redrob app on this computer").to_string()),
             Page::Settings => (tl!("Settings"), format!("Redrob Launcher {}", env!("CARGO_PKG_VERSION"))),
         };

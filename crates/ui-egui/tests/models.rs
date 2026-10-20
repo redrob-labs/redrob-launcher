@@ -131,7 +131,7 @@ fn every_download_state_offers_the_right_action() {
         view(&m[3], ModelState::NotDownloaded),
     ]);
     // A download is running, so the header says so.
-    h.get_by_label("Models…").click();
+    h.get_by_label("On-device AI").click();
     h.run_steps(12);
     // Plain words first, the model's name small under them.
     h.get_by_label("Subtitles for most videos, a good balance of speed and accuracy");
@@ -178,7 +178,7 @@ fn served_models_show_their_verdict_and_start_or_stop() {
         ModelView { serving: Serving::Running { url: "http://127.0.0.1:4100".into() }, fit: Fit::Slow, ..view(&qwen, ModelState::Installed) },
         ModelView { fit: Fit::WontRun, ..view(&coder, ModelState::Installed) },
     ]);
-    h.get_by_label("Models").click();
+    h.get_by_label("On-device AI").click();
     h.run_steps(12);
     h.get_all_by_label("for Every app").next().unwrap();
     h.get_by_label("llama-server is installed on first start");
@@ -206,7 +206,7 @@ fn every_row_starts_its_verdict_on_one_edge_and_ends_its_actions_on_another() {
         view(&m[2], ModelState::Partial { done: 300 << 20, total: 924 << 20 }),
         view(&m[3], ModelState::NotDownloaded),
     ]);
-    h.get_by_label("Models…").click();
+    h.get_by_label("On-device AI").click();
     h.run_steps(12);
     // The verdict chips line up on the content edge, whatever the headline's length.
     let lefts: Vec<f32> = h.get_all_by_label("Runs here").map(|n| n.rect().left()).collect();

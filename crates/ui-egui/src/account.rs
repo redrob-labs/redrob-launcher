@@ -40,7 +40,7 @@ impl LauncherUi {
         let (title, status, initial, account_item) = match self.header_account() {
             HeaderAccount::None => (tl!("Settings").to_string(), version.clone(), None, None),
             HeaderAccount::SignedOut => {
-                (tl!("Log in or sign up").to_string(), tl!("One account for every Redrob app").to_string(), None, Some(tl!("Log in or sign up")))
+                (tl!("Log in or sign up").to_string(), tl!("Not connected").to_string(), None, Some(tl!("Log in or sign up")))
             }
             HeaderAccount::Busy => {
                 (tl!("Log in or sign up").to_string(), tl!("Waiting for approval").to_string(), None, Some(tl!("Log in or sign up")))

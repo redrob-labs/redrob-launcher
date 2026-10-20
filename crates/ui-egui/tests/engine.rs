@@ -109,8 +109,8 @@ fn a_running_engine_lists_its_apps_and_offers_stop_and_restart() {
     }));
     let mut h = harness(state.clone());
     h.run_steps(4);
-    // Two apps attached: the header counts them.
-    h.get_by_label("Engine · 2").click();
+    // Two apps attached: the sidebar row says the engine is in use.
+    h.get_by_label("AI engine: In use").click();
     h.run_steps(12);
     h.get_by_label("Running");
     h.get_by_label("version 0.6.0");
@@ -139,7 +139,7 @@ fn a_running_engine_lists_its_apps_and_offers_stop_and_restart() {
     h.key_press(egui::Key::Escape);
     h.run_steps(4);
     assert!(h.query_by_label("Restart").is_none());
-    h.get_by_label("Engine · 2").click();
+    h.get_by_label("AI engine: In use").click();
     h.run_steps(8);
     h.get_by_label("Back to apps").click();
     h.run_steps(4);
@@ -152,7 +152,7 @@ fn an_idle_engine_says_when_it_stops_and_a_stopped_one_can_be_started() {
     let state = Rc::new(RefCell::new(State { state: Some(running(vec![], Some(300))), ..State::default() }));
     let mut h = harness(state.clone());
     h.run_steps(4);
-    h.get_by_label("Engine").click();
+    h.get_by_label("AI engine: Ready").click();
     h.run_steps(12);
     h.get_by_label("No app is using it. It stops on its own in about 5 min.");
     if let Some(dir) = std::env::var_os("REDROB_LAUNCHER_SNAPSHOTS") {
@@ -162,6 +162,8 @@ fn an_idle_engine_says_when_it_stops_and_a_stopped_one_can_be_started() {
     state.borrow_mut().state = Some(EngineState::Stopped);
     h.run_steps(8);
     h.get_by_label("Not running");
+    // Stopped is its resting state: the row says so plainly, not "off".
+    h.get_by_label("AI engine: Standby");
     if let Some(dir) = std::env::var_os("REDROB_LAUNCHER_SNAPSHOTS") {
         h.render().unwrap().save(std::path::Path::new(&dir).join("engine-stopped.png")).unwrap();
     }
@@ -176,7 +178,7 @@ fn without_the_engine_installed_the_dialog_installs_redrob_code() {
     let state = Rc::new(RefCell::new(State { state: Some(EngineState::NotInstalled), ..State::default() }));
     let mut h = harness(state.clone());
     h.run_steps(4);
-    h.get_by_label("Engine").click();
+    h.get_by_label("AI engine: Not installed").click();
     h.run_steps(12);
     h.get_by_label("Not installed");
     if let Some(dir) = std::env::var_os("REDROB_LAUNCHER_SNAPSHOTS") {
@@ -227,7 +229,7 @@ fn a_newer_engine_shows_its_own_alert_and_update_now_stops_it_to_install() {
         Rc::new(RefCell::new(State { state: Some(running(vec![], Some(30))), events: engine_versions("0.5.0", "0.6.0"), ..State::default() }));
     let mut h = harness(state.clone());
     h.run_steps(4);
-    h.get_by_label("Engine").click();
+    h.get_by_label("AI engine: Ready").click();
     h.run_steps(12);
     if let Some(dir) = std::env::var_os("REDROB_LAUNCHER_SNAPSHOTS") {
         h.render().unwrap().save(std::path::Path::new(&dir).join("engine-update.png")).unwrap();

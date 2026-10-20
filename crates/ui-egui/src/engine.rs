@@ -30,23 +30,21 @@ fn minutes(secs: u64) -> String {
 }
 
 impl LauncherUi {
-    /// The sidebar's engine row, on backends that can reach the daemon: its state as a dot.
+    /// The sidebar's AI engine row, on backends that can reach the daemon: a dot and a short state
+    /// word. The engine starts itself when an app needs it and stops after ten idle minutes, so
+    /// "Standby" is its normal state, not a fault.
     pub(crate) fn engine_nav(&mut self, ui: &mut egui::Ui, rail: bool) {
         let t = Tokens::get(ui.ctx());
         let Some(engine) = self.backend.engine() else { return };
-        let (label, tip, dot): (String, String, egui::Color32) = match engine.state() {
-            EngineState::Running(r) => (
-                if r.attached.is_empty() { tl!("Engine").to_string() } else { fmt(tl!("Engine · {n}"), &[("n", &r.attached.len().to_string())]) },
-                tl!("The Redrob Code engine is running; every app shares it").to_string(),
-                t.good,
-            ),
-            EngineState::Busy => (tl!("Engine…").to_string(), tl!("The engine is starting or stopping").to_string(), t.accent),
-            EngineState::Stopped => (tl!("Engine off").to_string(), tl!("The Redrob Code engine is not running").to_string(), t.faint),
-            EngineState::NotInstalled => {
-                (tl!("Engine").to_string(), tl!("Install Redrob Code, the engine every app runs its AI through").to_string(), t.warn)
-            }
+        let (word, tip, dot): (&str, String, egui::Color32) = match engine.state() {
+            EngineState::Running(r) if r.attached.is_empty() => (tl!("Ready"), tl!("Ready. Your Redrob apps use it for AI").to_string(), t.good),
+            EngineState::Running(r) => (tl!("In use"), crate::i18n::tn(r.attached.len() as u64, "In use by {n} app", "In use by {n} apps"), t.good),
+            EngineState::Busy => (tl!("Busy"), tl!("Starting or stopping").to_string(), t.accent),
+            EngineState::Stopped => (tl!("Standby"), tl!("On standby. It starts on its own when an app needs it").to_string(), t.faint),
+            EngineState::NotInstalled => (tl!("Not installed"), tl!("Not installed. Install it to use AI in your apps").to_string(), t.warn),
         };
-        if widgets::nav_row(ui, Icon::Engine, &label, &tip, widgets::NavMeta::Dot(dot), self.page == Page::Engine, rail).clicked() {
+        let label = tl!("AI engine");
+        if widgets::nav_row(ui, Icon::Engine, label, &tip, widgets::NavMeta::State(word, dot), self.page == Page::Engine, rail).clicked() {
             if let Some(engine) = self.backend.engine() {
                 engine.refresh();
             }

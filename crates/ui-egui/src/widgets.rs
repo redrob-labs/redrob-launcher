@@ -917,12 +917,15 @@ pub fn heading(text: &str, size: f32, color: Color32) -> RichText {
 
 /// What a sidebar row shows at its right end.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub enum NavMeta {
+pub enum NavMeta<'a> {
     None,
     /// A count in this colour (DS nav meta: 12 px, right aligned); nothing when zero.
     Count(usize, Color32),
     /// A 7 px status dot (DS TaskStatus).
     Dot(Color32),
+    /// A status dot in this colour and a short state word after it in ink-faint (12 px), for a
+    /// row whose state is worth reading at a glance. The folded rail keeps only the dot.
+    State(&'a str, Color32),
 }
 
 /// Height of a sidebar row (Redrob Cowork: 7 px of padding round a 24 px line).
@@ -932,7 +935,7 @@ pub const NAV_ROW_H: f32 = 38.0;
 /// in ink-secondary, radius 6; hover takes a step of the sunken surface; the current row is
 /// sunken, semibold ink, its icon ink-brand. No accent bar. In the folded `rail` only the icon
 /// shows, the label becomes its tooltip and a meta becomes a dot on the icon.
-pub fn nav_row(ui: &mut Ui, icon: Icon, label: &str, hint: &str, meta: NavMeta, current: bool, rail: bool) -> Response {
+pub fn nav_row(ui: &mut Ui, icon: Icon, label: &str, hint: &str, meta: NavMeta<'_>, current: bool, rail: bool) -> Response {
     let t = Tokens::get(ui.ctx());
     let (rect, resp) = ui.allocate_exact_size(vec2(ui.available_width(), NAV_ROW_H), Sense::click());
     let hovered = resp.hovered();
@@ -960,7 +963,7 @@ pub fn nav_row(ui: &mut Ui, icon: Icon, label: &str, hint: &str, meta: NavMeta, 
     crate::glyphs::paint(p, icon_rect, icon, icon_ink);
     if rail {
         let dot = match meta {
-            NavMeta::Dot(c) => Some(c),
+            NavMeta::Dot(c) | NavMeta::State(_, c) => Some(c),
             NavMeta::Count(n, c) if n > 0 => Some(c),
             _ => None,
         };
@@ -980,6 +983,14 @@ pub fn nav_row(ui: &mut Ui, icon: Icon, label: &str, hint: &str, meta: NavMeta, 
                 p.circle_filled(egui::pos2(right - 3.5, rect.center().y), 3.5, c);
                 right -= 7.0 + pad;
             }
+            NavMeta::State(word, c) => {
+                let g = caps(ui, word, theme::text::META, egui::FontFamily::Proportional, 0.0, t.faint);
+                let w = g.size().x;
+                paint_left(ui, Rect::from_min_max(egui::pos2(right - w, rect.top()), egui::pos2(right, rect.bottom())), g, t.faint);
+                right -= w + theme::space::S1 + 3.5;
+                ui.painter().circle_filled(egui::pos2(right, rect.center().y), 3.5, c);
+                right -= 3.5 + pad;
+            }
             _ => {}
         }
         let text_left = icon_rect.right() + pad;
@@ -990,7 +1001,12 @@ pub fn nav_row(ui: &mut Ui, icon: Icon, label: &str, hint: &str, meta: NavMeta, 
         let g = ui.painter().layout_job(job);
         paint_left(ui, Rect::from_min_max(egui::pos2(text_left, rect.top()), rect.max), g, ink);
     }
-    resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Button, true, current, label));
+    // A state word is part of what the row says, so screen readers hear it too ("AI engine: Standby").
+    let name = match meta {
+        NavMeta::State(word, _) => format!("{label}: {word}"),
+        _ => label.to_owned(),
+    };
+    resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Button, true, current, &name));
     focus_ring(ui, &resp, theme::radius::SM);
     let resp = if rail {
         tip(resp, label)
