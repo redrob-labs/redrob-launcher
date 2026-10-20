@@ -275,6 +275,12 @@ impl LauncherUi {
             ui.add_space(theme::space::S3);
         }
         self.announcements(ui);
+        // The suite's hero banner, above the filter row, on every filter: only a search (whose
+        // results should lead) hides it.
+        if self.search.trim().is_empty() {
+            self.hero(ui);
+            ui.add_space(theme::space::S6);
+        }
         let update = self.update_all_label();
         let mut update_below = false;
         ui.horizontal(|ui| {
@@ -428,11 +434,6 @@ impl LauncherUi {
             vec![(None, ids.to_vec())]
         };
         let t = Tokens::get(ui.ctx());
-        // The suite's hero banner leads the grouped page, above the first shelf.
-        if grouped {
-            self.hero(ui);
-            ui.add_space(theme::space::S8);
-        }
         // Every tile is as tall as the one whose description wraps to the most lines.
         let card_h = card_height(ui, ids, card_w);
         for (title, list) in sections {

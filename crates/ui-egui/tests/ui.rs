@@ -807,10 +807,10 @@ fn custom_title_bar_has_window_buttons() {
         }),
         "… directly right of {main:?}"
     );
-    // The suite's hero leads the grouped page, between the filter row and the first shelf, and
-    // leaves when a filter narrows the page.
+    // The suite's hero leads the page, above the filter row, and stays when a filter narrows the
+    // page (only a search hides it).
     let hero = h.get_by_label("Work, create and build in one suite.").rect();
-    assert!(hero.top() > refresh.bottom() && hero.bottom() < h.get_by_label("For your AI engine").rect().top(), "{hero:?}");
+    assert!(hero.bottom() < refresh.top(), "hero above the filter row: {hero:?} {refresh:?}");
     // A hovered tile rings its icon in violet and lifts it (seen in the snapshot).
     h.get_by_label("Redrob Code icon").hover();
     h.run_steps(12);
@@ -819,7 +819,7 @@ fn custom_title_bar_has_window_buttons() {
         l.settings.filter = redrob_launcher_ui_egui::settings::Filter::Updates;
     }
     h.run_steps(3);
-    assert!(h.query_by_label("Work, create and build in one suite.").is_none(), "no hero on a filtered page");
+    assert!(h.query_by_label("Work, create and build in one suite.").is_some(), "the hero stays on a filtered page");
     if let Some(l) = h.state_mut().as_mut() {
         l.settings.filter = redrob_launcher_ui_egui::settings::Filter::All;
     }

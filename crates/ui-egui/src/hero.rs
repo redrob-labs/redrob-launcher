@@ -1,5 +1,5 @@
 //! The Apps page's hero banner: a vivid, Apple Music-style gradient card that introduces the Redrob
-//! product suite, between the filter row and the first shelf ("For your AI engine").
+//! product suite, at the top of the Apps page above the filter row, on every filter.
 //!
 //! The gradient falls from Apple Music's red in the top-right corner through magenta and violet
 //! into Redrob Blue in the bottom-left, where the white copy sits. It is computed once into a small
