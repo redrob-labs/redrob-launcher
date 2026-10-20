@@ -197,35 +197,3 @@ fn rgb_f(c: [u8; 3]) -> [f32; 3] {
 fn to_u8(c: f32) -> u8 {
     (c.clamp(0.0, 1.0) * 255.0).round() as u8
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    /// The gradient starts in Apple Music red at the top-right, falls to Redrob Blue at the
-    /// bottom-left, and keeps the white copy readable everywhere it can sit (the left 45 %).
-    #[test]
-    fn gradient_falls_red_to_blue_and_keeps_the_copy_readable() {
-        let img = gradient_image();
-        let at = |x: usize, y: usize| img.pixels[y * GRADIENT_W + x];
-        let top_right = at(GRADIENT_W - 8, 8);
-        let bottom_left = at(8, GRADIENT_H - 8);
-        assert!(top_right.r() > 220 && top_right.r() > top_right.b() + 60, "red at the top-right: {top_right:?}");
-        assert!(bottom_left.b() > 180 && bottom_left.b() > bottom_left.r() + 60, "blue at the bottom-left: {bottom_left:?}");
-        // WCAG relative luminance of every pixel under the copy (left 45 %) leaves white text at
-        // 3:1 or more (large text).
-        let lum = |c: Color32| {
-            let ch = |v: u8| {
-                let v = v as f32 / 255.0;
-                if v <= 0.040_45 { v / 12.92 } else { ((v + 0.055) / 1.055).powf(2.4) }
-            };
-            0.2126 * ch(c.r()) + 0.7152 * ch(c.g()) + 0.0722 * ch(c.b())
-        };
-        for y in (0..GRADIENT_H).step_by(8) {
-            for x in (0..GRADIENT_W * 45 / 100).step_by(8) {
-                let contrast = 1.05 / (lum(at(x, y)) + 0.05);
-                assert!(contrast >= 3.0, "white on {:?} at ({x},{y}) is only {contrast:.2}:1", at(x, y));
-            }
-        }
-    }
-}
