@@ -194,11 +194,13 @@ fn grid_shows_every_status_and_installs_on_click() {
     snapshot(&mut h, "grid-dark");
     // Statuses the user asked for: available, installed and up to date, update with version. No
     // chip draws them any more; each card carries its status for screen readers.
-    assert!(h.query_all_by_label("Available to install").count() >= 3);
-    assert!(h.query_all_by_label("Installed · up to date").count() >= 1);
+    assert!(h.query_all_by_label_contains(": Available to install").count() >= 3);
+    assert!(h.query_all_by_label_contains(": Installed · up to date").count() >= 1);
+    // Named by app as well as status, so two cards in the same state never share a name.
+    h.get_by_label("Redrob Shape: Available to install");
     // No links on the cards, and the … button only where the menu holds Uninstall.
     assert!(h.query_by_label("GitHub").is_none() && h.query_by_label("Website").is_none(), "cards carry no links");
-    let installed = ["Installed · up to date", "Update available"].iter().map(|l| h.query_all_by_label(l).count()).sum::<usize>();
+    let installed = [": Installed · up to date", ": Update available"].iter().map(|l| h.query_all_by_label_contains(l).count()).sum::<usize>();
     assert_eq!(h.query_all_by_label("More actions").count(), installed, "a … button on each installed app and no other");
     h.get_by_label("Update to 0.5.0");
     h.get_by_label("Update to 0.6.0");
@@ -230,7 +232,7 @@ fn downloads_can_be_paused_resumed_and_discarded() {
     h.set_size(egui::vec2(1180.0, 1100.0));
     h.run_steps(6);
     snapshot(&mut h, "grid-downloads-dark");
-    h.get_by_label("Download paused");
+    h.get_by_label_contains(": Download paused");
     // The badge, and in a narrow tile the progress caption too.
     assert!(h.query_all_by_label("Reconnecting…").count() >= 1);
     h.get_by_label_contains("· 25%").click();
@@ -266,6 +268,12 @@ fn a_kept_download_offers_retry_install_and_download_again() {
     // Not installed: no … button beside it; right-clicking the card opens the menu.
     let beside = |r: egui::Rect| row.y_range().contains(r.center().y) && (row.right()..row.right() + 60.0).contains(&r.left());
     assert!(h.query_all_by_label("More actions").all(|n| !beside(n.rect())), "no … beside Retry install");
+    // The card's own controls sit over the card and keep the pointer: right-clicking the button
+    // neither opens the card's menu nor presses it.
+    h.get_by_label("Retry install").click_secondary();
+    h.run_steps(3);
+    assert!(h.query_by_label("Download again").is_none(), "a right-click on a button is the button's");
+    assert!(sent.borrow().is_empty(), "{:?}", sent.borrow());
     open_card_menu(&mut h, "Redrob CAD");
     snapshot(&mut h, "grid-retry-install-menu-dark");
     h.get_by_label("Download again").click();
@@ -766,7 +774,7 @@ fn the_page_ends_24_px_from_the_edge_with_its_scroll_bar_beyond_it() {
     h.run_steps(6);
     // The cards (each carries its status as its name) and the refresh above them share the page's
     // right edge, 24 px in: the scroll bar sits in that padding, at the window's edge.
-    let right = h.query_all_by_label("Available to install").map(|n| n.rect().right()).fold(0.0, f32::max);
+    let right = h.query_all_by_label_contains(": Available to install").map(|n| n.rect().right()).fold(0.0, f32::max);
     let refresh = h.get_by_label("Check for updates").rect().right();
     // The harness draws inside an 8 px margin of its own, so its "window" edge is at 1172.
     assert!((right - (1180.0 - 8.0 - 24.0)).abs() <= 1.0, "cards end at {right}");
@@ -788,9 +796,10 @@ fn the_launcher_update_banner_is_one_slim_line() {
     h.run_steps(4);
     snapshot(&mut h, "launcher-update-banner-light");
     h.get_by_label_contains("Redrob Launcher 0.2.0 is available");
-    // One line: its controls are Sm (32), so the bar (12 / 6 padding) is 44 px; with the 12 px gap
-    // and the filter row's own inset the filter cells start at most 70 px under the bar's top
-    // (they started 92 px under it before: a 66 px bar and a 14 px gap).
+    // One line: its controls are Sm (32), so the bar (12 / 6 padding) is 44 px. Under it come the
+    // 12 px gap and the filter row's own 12 px inset (its 40 px row around the 30 px cells, plus
+    // the pill's padding), so the cells start 68 px under the bar's top: 44 + 12 + 12. A bar even
+    // 2 px taller fails (before this, a 66 px bar and a 14 px gap put the cells 92 px down).
     let dismiss = h.get_by_label("Dismiss").rect();
     let action = ["Update and restart", "Download"]
         .iter()
@@ -806,7 +815,7 @@ fn the_launcher_update_banner_is_one_slim_line() {
         .min_by(|a, b| a.top().total_cmp(&b.top()))
         .unwrap();
     let bar_top = dismiss.top() - 6.0;
-    assert!(filters.top() - bar_top <= 70.0, "banner from {bar_top}, filters at {filters:?}");
+    assert!(filters.top() - bar_top <= 44.0 + 12.0 + 12.0 + 1.0, "banner from {bar_top}, filters at {filters:?}");
 }
 
 #[test]

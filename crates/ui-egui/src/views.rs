@@ -400,11 +400,13 @@ impl LauncherUi {
         let app = entry.app;
         let status = entry.status(self.platform, self.caps.manage_apps);
         // The card itself, under its controls (they are added after it, so they win the pointer):
-        // right-click opens the app's menu. With no chip on screen, the card carries its status for
-        // screen readers, and a failed check explains itself on hover.
+        // right-click opens the app's menu. With no chip on screen, the card is named for screen
+        // readers by its app and status ("Redrob Film: Available to install"), and a failed check
+        // explains itself on hover.
         let card = ui.interact(rect, ui.id().with(("card", id)), Sense::click());
         let (status_text, _) = model::entry_status_text(&entry, &status, self.caps.manage_apps);
-        card.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Other, true, status_text.clone()));
+        let card_name = fmt(tl!("{name}: {status}"), &[("name", app.name), ("status", &status_text)]);
+        card.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Other, true, card_name.clone()));
         let card = match entry.failure() {
             Some(f) => card.on_hover_text(fmt(tl!("Couldn't check for updates: {f}"), &[("f", f)])),
             None => card,

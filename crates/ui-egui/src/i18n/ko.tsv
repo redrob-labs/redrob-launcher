@@ -320,8 +320,8 @@ month	Dec	12월
 	Signing in…	로그인하는 중…
 	Use this sign-in	이 로그인 사용
 	Uses this sign-in	이 로그인 사용 중
-	Next release uses this sign-in	다음 버전부터 지원
-	Update to use this sign-in	업데이트하면 사용 가능
+	Next release uses this sign-in	다음 버전부터 이 로그인 사용
+	Update to use this sign-in	업데이트하면 이 로그인 사용 가능
 	Needs no sign-in	로그인 필요 없음
 	Workspace: {name}	워크스페이스: {name}
 	Your Redrob workspace and the apps that use it	내 Redrob 워크스페이스와 연결된 앱
@@ -577,3 +577,4 @@ month	Dec	12월
 	One account for every Redrob app	모든 Redrob 앱을 하나의 계정으로
 	Signed in	로그인됨
 	Waiting for approval	승인을 기다리는 중
+	{name}: {status}	{name}: {status}
