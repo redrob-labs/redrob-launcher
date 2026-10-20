@@ -7,8 +7,11 @@ leaves the machine, and counts which apps are attached. The design of record is 
 
 ## What the launcher does
 
-The launcher is where a person sees that daemon. The header's **Engine** link (and the tray's
-**Redrob Code engine** item) opens a dialog with:
+The launcher is where a person sees that daemon. The sidebar's **AI engine** row (and the tray's
+**AI engine** item) opens the AI engine page with the state below. The row itself shows a dot and
+a short word: Ready, In use, Busy, Standby (stopped, its normal resting state: the first app that
+needs it starts it) or Not installed. The user-facing name is "AI engine" on purpose: the people
+using Redrob apps need to know what it is for, not that it is Redrob Code. The page:
 
 | State | Shown | Buttons |
 | --- | --- | --- |

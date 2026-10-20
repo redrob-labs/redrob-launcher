@@ -218,7 +218,7 @@ impl LauncherUi {
     }
 
     /// Looks for updates now (the tray's "Check for Updates").
-    /// Open the engine page (the tray's "Redrob Code engine" item).
+    /// Open the engine page (the tray's "AI engine" item).
     pub fn show_engine(&mut self) {
         if let Some(engine) = self.backend.engine() {
             engine.refresh();

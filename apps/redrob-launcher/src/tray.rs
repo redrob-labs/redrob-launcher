@@ -44,7 +44,7 @@ impl Tray {
     pub fn new(wake: impl Fn() + Send + Sync + Clone + 'static, on_quit: impl Fn() + Send + Sync + 'static) -> Result<Self, String> {
         let show = MenuItem::new(i18n::t("Show Redrob Launcher"), true, None);
         let check = MenuItem::new(i18n::t("Check for Updates"), true, None);
-        let engine = MenuItem::new(i18n::t("Redrob Code engine"), true, None);
+        let engine = MenuItem::new(i18n::t("AI engine"), true, None);
         use redrob_launcher_core::catalog::{GITHUB_URL, WEBSITE_URL};
         let website = MenuItem::new(i18n::t("Visit redrob.ai"), true, None);
         let github = MenuItem::new(i18n::t("Redrob on GitHub"), true, None);
@@ -98,7 +98,7 @@ impl Tray {
         let labels = vec![
             (show, "Show Redrob Launcher"),
             (check, "Check for Updates"),
-            (engine, "Redrob Code engine"),
+            (engine, "AI engine"),
             (website, "Visit redrob.ai"),
             (github, "Redrob on GitHub"),
             (quit, "Quit Redrob Launcher"),
