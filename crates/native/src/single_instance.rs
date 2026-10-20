@@ -45,7 +45,7 @@ const LINK: &str = "redrob-launcher:link ";
 const MAX_MESSAGE: usize = 64 + deep_link::MAX_LEN;
 
 /// What another start asks of the running launcher.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Request {
     /// Bring the window forward.
     Show,

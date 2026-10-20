@@ -213,6 +213,17 @@ pub fn open(target: &std::ffi::OsStr) -> Result<(), String> {
     spawn_detached(cmd)
 }
 
+/// Opens a macOS `.app` bundle with `args` for the app (`open <app> --args …`). With no args it
+/// is [`open`]. macOS only: elsewhere an app is started with [`launch_binary`].
+pub fn open_app(app: &std::ffi::OsStr, args: &[&str]) -> Result<(), String> {
+    if args.is_empty() || !cfg!(target_os = "macos") {
+        return open(app);
+    }
+    let mut cmd = command("open");
+    cmd.arg(app).arg("--args").args(args);
+    spawn_detached(cmd)
+}
+
 /// Shows `path` selected in the file manager.
 pub fn reveal(path: &Path) -> Result<(), String> {
     if cfg!(target_os = "macos") {

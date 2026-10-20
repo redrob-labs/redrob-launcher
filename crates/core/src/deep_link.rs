@@ -8,21 +8,102 @@
 //! comes from a web page, so it is hostile: it is parsed strictly, nothing from it reaches a
 //! shell or a path, and anything this module doesn't recognise is `None` (the launcher then just
 //! opens its home).
+//!
+//! `open` links may carry two query parameters, which reach the started app as arguments
+//! ([`OpenArgs::to_args`]): `file=<dfl_ + 32 hex>` (a Redrob Design cloud file, `--open-file`) and
+//! `link=<token>` (a view-link token, at most [`MAX_TOKEN`] of `[A-Za-z0-9._~-]` after
+//! percent-decoding, `--open-link`). A value that doesn't fit is dropped, as is any other
+//! parameter; the link itself still opens the app.
 
 use crate::catalog::{CraftApp, SUITE};
 
 /// The URL scheme the launcher registers with the OS.
 pub const SCHEME: &str = "redrob";
-/// Longer links are refused outright.
-pub const MAX_LEN: usize = 256;
+/// Longer links are refused outright. Room for a `link` token of [`MAX_TOKEN`] percent-encoded.
+pub const MAX_LEN: usize = 2048;
+/// The longest `link` token passed on, decoded.
+pub const MAX_TOKEN: usize = 512;
 /// The prefix every catalog id carries.
 const ID_PREFIX: &str = "redrob-";
+/// The prefix of a Redrob Design cloud file id.
+const FILE_PREFIX: &str = "dfl_";
+
+/// What an `open` link hands the app it starts. Every value has been checked against its
+/// allowlist: it is plain ASCII with no separators, so it is safe as a single argument.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct OpenArgs {
+    /// `file=`: a cloud file id, `dfl_` and 32 lowercase hex digits.
+    pub file: Option<String>,
+    /// `link=`: a view-link token.
+    pub link: Option<String>,
+}
+
+impl OpenArgs {
+    /// The arguments the app is started with: `--open-file <id>`, `--open-link <token>`.
+    pub fn to_args(&self) -> Vec<String> {
+        let mut args = Vec::new();
+        if let Some(file) = &self.file {
+            args.extend(["--open-file".to_string(), file.clone()]);
+        }
+        if let Some(link) = &self.link {
+            args.extend(["--open-link".to_string(), link.clone()]);
+        }
+        args
+    }
+
+    /// Reads the allowlisted parameters from a query string (without its `?`).
+    fn from_query(query: &str) -> Self {
+        let mut args = Self::default();
+        for pair in query.split('&') {
+            let (key, value) = pair.split_once('=').unwrap_or((pair, ""));
+            let Some(value) = percent_decode(value) else { continue };
+            match key {
+                "file" if args.file.is_none() && is_file_id(&value) => args.file = Some(value),
+                "link" if args.link.is_none() && is_token(&value) => args.link = Some(value),
+                _ => {}
+            }
+        }
+        args
+    }
+}
+
+/// `dfl_` and 32 lowercase hex digits.
+fn is_file_id(value: &str) -> bool {
+    value.strip_prefix(FILE_PREFIX).is_some_and(|hex| hex.len() == 32 && hex.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)))
+}
+
+/// 1 to [`MAX_TOKEN`] of `[A-Za-z0-9._~-]`.
+fn is_token(value: &str) -> bool {
+    !value.is_empty() && value.len() <= MAX_TOKEN && value.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'_' | b'~' | b'-'))
+}
+
+/// Decodes `%XX` escapes; `None` for a broken escape or bytes that aren't ASCII.
+fn percent_decode(value: &str) -> Option<String> {
+    let bytes = value.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%' {
+            let hex = value.get(i + 1..i + 3)?;
+            out.push(u8::from_str_radix(hex, 16).ok()?);
+            i += 3;
+        } else {
+            out.push(bytes[i]);
+            i += 1;
+        }
+    }
+    if !out.is_ascii() {
+        return None;
+    }
+    String::from_utf8(out).ok()
+}
 
 /// What a `redrob://` link asks for.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum DeepLink {
-    /// Start the app if it's installed; otherwise show it with its Install button.
-    Open(&'static CraftApp),
+    /// Start the app if it's installed, with these arguments; otherwise show it with its Install
+    /// button.
+    Open(&'static CraftApp, OpenArgs),
     /// Show the app and install it (or update it).
     Install(&'static CraftApp),
 }
@@ -31,14 +112,15 @@ impl DeepLink {
     /// The app the link is about.
     pub fn app(&self) -> &'static CraftApp {
         match self {
-            Self::Open(app) | Self::Install(app) => app,
+            Self::Open(app, _) | Self::Install(app) => app,
         }
     }
 
-    /// The link's canonical spelling (`redrob://open/cad`).
+    /// The link's canonical spelling (`redrob://open/cad`). The query is left out: it may carry a
+    /// view-link token, and this spelling is what gets logged.
     pub fn to_url(&self) -> String {
         let (action, app) = match self {
-            Self::Open(app) => ("open", app),
+            Self::Open(app, _) => ("open", app),
             Self::Install(app) => ("install", app),
         };
         let short = app.id.strip_prefix(ID_PREFIX).unwrap_or(app.id);
@@ -62,14 +144,15 @@ pub fn parse(url: &str) -> Option<DeepLink> {
         return None;
     }
     let rest = url.get(SCHEME.len() + 1..)?.strip_prefix("//")?;
-    // The query and fragment carry nothing the launcher reads.
-    let rest = rest.split(['?', '#']).next().unwrap_or_default();
+    // The fragment carries nothing the launcher reads; the query only `open`'s allowlisted args.
+    let rest = rest.split('#').next().unwrap_or_default();
+    let (rest, query) = rest.split_once('?').unwrap_or((rest, ""));
     let (action, path) = rest.split_once('/')?;
     // One segment, with at most one trailing slash.
     let app = path.strip_suffix('/').unwrap_or(path);
     let app = find_app(app)?;
     if action.eq_ignore_ascii_case("open") {
-        Some(DeepLink::Open(app))
+        Some(DeepLink::Open(app, OpenArgs::from_query(query)))
     } else if action.eq_ignore_ascii_case("install") {
         Some(DeepLink::Install(app))
     } else {
@@ -95,24 +178,57 @@ mod tests {
         CraftApp::by_id(id).unwrap()
     }
 
+    fn open(id: &str) -> DeepLink {
+        DeepLink::Open(app(id), OpenArgs::default())
+    }
+
     #[test]
     fn open_and_install_name_an_app_by_its_short_or_full_id() {
-        assert_eq!(parse("redrob://open/cad"), Some(DeepLink::Open(app("redrob-cad"))));
-        assert_eq!(parse("redrob://open/redrob-cad"), Some(DeepLink::Open(app("redrob-cad"))));
+        assert_eq!(parse("redrob://open/cad"), Some(open("redrob-cad")));
+        assert_eq!(parse("redrob://open/redrob-cad"), Some(open("redrob-cad")));
         assert_eq!(parse("redrob://install/cowork"), Some(DeepLink::Install(app("redrob-cowork"))));
         assert_eq!(parse("redrob://install/redrob-query/"), Some(DeepLink::Install(app("redrob-query"))));
         for a in &SUITE {
             let short = a.id.strip_prefix("redrob-").unwrap();
-            assert_eq!(parse(&format!("redrob://open/{short}")), Some(DeepLink::Open(a)), "{}", a.id);
+            assert_eq!(parse(&format!("redrob://open/{short}")), Some(DeepLink::Open(a, OpenArgs::default())), "{}", a.id);
             assert_eq!(parse(&DeepLink::Install(a).to_url()), Some(DeepLink::Install(a)), "{}", a.id);
         }
     }
 
     #[test]
     fn case_whitespace_query_and_fragment_do_not_matter() {
-        assert_eq!(parse("  REDROB://Open/CAD  "), Some(DeepLink::Open(app("redrob-cad"))));
+        assert_eq!(parse("  REDROB://Open/CAD  "), Some(open("redrob-cad")));
         assert_eq!(parse("redrob://install/code?from=chat"), Some(DeepLink::Install(app("redrob-code"))));
-        assert_eq!(parse("redrob://open/office#top"), Some(DeepLink::Open(app("redrob-office"))));
+        assert_eq!(parse("redrob://open/office#top"), Some(open("redrob-office")));
+        assert_eq!(parse("redrob://open/office?from=chat"), Some(open("redrob-office")));
+    }
+
+    #[test]
+    fn open_passes_on_only_allowlisted_file_and_link() {
+        let file = format!("dfl_{}", "0123456789abcdef".repeat(2));
+        let Some(DeepLink::Open(_, args)) = parse(&format!("redrob://open/design?file={file}&link=a%2Eb_c-d~e&x=1")) else { panic!() };
+        assert_eq!(args.file.as_deref(), Some(file.as_str()));
+        assert_eq!(args.link.as_deref(), Some("a.b_c-d~e"));
+        assert_eq!(args.to_args(), ["--open-file", file.as_str(), "--open-link", "a.b_c-d~e"]);
+        for query in [
+            "file=dfl_0123",
+            "file=DFL_0123456789abcdef0123456789abcdef",
+            "file=dfl_0123456789ABCDEF0123456789abcdef",
+            "file=dfl_0123456789abcdef0123456789abcdeg",
+            "file=../dfl_0123456789abcdef0123456789abcdef",
+            "link=",
+            "link=a%20b",
+            "link=a%2",
+            "link=a/b",
+            "link=a%23b",
+            "link=--x;rm",
+            "link=%C3%A7",
+        ] {
+            let Some(DeepLink::Open(_, args)) = parse(&format!("redrob://open/design?{query}")) else { panic!("{query}") };
+            assert_eq!(args, OpenArgs::default(), "{query}");
+        }
+        let long = format!("redrob://open/design?link={}", "a".repeat(MAX_TOKEN + 1));
+        assert_eq!(parse(&long), Some(open("redrob-design")));
     }
 
     #[test]
