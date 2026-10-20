@@ -167,7 +167,7 @@ fn korean_switches_persists_and_keeps_install_actions() {
     h.run_steps(3);
     h.get_by_label("에이전트와 함께 그림을 그리고 이미지를 편집해요");
     h.get_by_label("그래픽");
-    h.get_by_label("0.5.0(으)로 업데이트");
+    h.get_by_label("0.5.0 버전으로 업데이트");
     // The account row's menu, in Korean.
     let row = h.get_by_label("설정").rect();
     h.get_by_label("설정").click();

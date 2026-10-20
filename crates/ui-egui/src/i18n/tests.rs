@@ -229,7 +229,7 @@ fn korean_counts_dates_and_messages_work() {
     }
     assert_eq!(super::tr_ctx(Lang::KO, "month", "Mar"), "3월");
     assert_eq!(tr(Lang::KO, "{month} {day}, {year}"), "{year}년 {month} {day}일");
-    assert_eq!(message(Lang::KO, "Redrob Canvas updated to 0.5.0"), "Redrob Canvas을(를) 0.5.0(으)로 업데이트했어요");
+    assert_eq!(message(Lang::KO, "Redrob Canvas updated to 0.5.0"), "Redrob Canvas 앱을 0.5.0 버전으로 업데이트했어요");
     assert_eq!(tr(Lang::KO, "Untranslated diagnostic"), "Untranslated diagnostic");
 }
 
