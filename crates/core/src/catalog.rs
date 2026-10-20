@@ -122,19 +122,19 @@ pub const SUITE: [CraftApp; 9] = [
     app!(
         "redrob-film",
         "Redrob Film",
-        "Describe the edit and the motion graphics and let the agent make them",
+        "Describe the cut and the motion graphics, and the agent edits the video",
         "Video editing",
         AppGroup::Create,
         BLUE,
         "ai.redrob.film"
     ),
-    app!("redrob-shape", "Redrob Shape", "Shape and shade 3D models by prompt", "3D", AppGroup::Create, BLUE, "ai.redrob.shape"),
-    app!("redrob-cad", "Redrob CAD", "Design, constrain and iterate on parts with an agent", "CAD", AppGroup::Create, BLUE, "ai.redrob.cad"),
-    app!("redrob-canvas", "Redrob Canvas", "Paint and edit images with an agent", "Graphics", AppGroup::Create, BLUE, "ai.redrob.canvas"),
+    app!("redrob-shape", "Redrob Shape", "Model and texture 3D objects from a written prompt", "3D", AppGroup::Create, BLUE, "ai.redrob.shape"),
+    app!("redrob-cad", "Redrob CAD", "Design parts, set constraints and revise them with an agent", "CAD", AppGroup::Create, BLUE, "ai.redrob.cad"),
+    app!("redrob-canvas", "Redrob Canvas", "Paint, retouch and edit images with an agent", "Graphics", AppGroup::Create, BLUE, "ai.redrob.canvas"),
     app!(
         "redrob-design",
         "Redrob Design",
-        "Open .fig and .pen files and design by prompt",
+        "Open .fig and .pen files and change the design by describing it",
         "Design",
         AppGroup::Create,
         [0xc1, 0x62, 0xf4],
@@ -143,18 +143,34 @@ pub const SUITE: [CraftApp; 9] = [
     app!(
         "redrob-browser",
         "Redrob Browser",
-        "A browser whose agent reads, acts on and automates the web",
+        "Browse while an agent reads pages, fills in forms and runs tasks",
         "Browser",
         AppGroup::Work,
         [0xf1, 0x4a, 0xa8],
         "ai.redrob.browser"
     ),
-    app!("redrob-code", "Redrob Code", "The AI coding agent for your terminal", "Coding agent", AppGroup::Work, [0x02, 0xa2, 0x52], "ai.redrob.code"),
-    app!("redrob-cowork", "Redrob Cowork", "Work with AI agents on your own files", "Agent workspace", AppGroup::Work, BLUE, "ai.redrob.cowork"),
+    app!(
+        "redrob-code",
+        "Redrob Code",
+        "A coding agent in your terminal that reads, writes and runs code",
+        "Coding agent",
+        AppGroup::Work,
+        [0x02, 0xa2, 0x52],
+        "ai.redrob.code"
+    ),
+    app!(
+        "redrob-cowork",
+        "Redrob Cowork",
+        "Hand tasks to AI agents that work on the files on your computer",
+        "Agent workspace",
+        AppGroup::Work,
+        BLUE,
+        "ai.redrob.cowork"
+    ),
     app!(
         "redrob-office",
         "Redrob Office",
-        "Docs, Sheets, Slides, PDF and Hangul in one window",
+        "Write docs, build sheets and slides, and edit PDF and Hangul files in one window",
         "Office suite",
         AppGroup::Work,
         [0xfe, 0x4d, 0x3e],

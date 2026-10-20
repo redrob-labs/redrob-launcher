@@ -215,15 +215,15 @@ column	Installed	설치됨
 column	Latest	최신
 column	Released	출시일
 filter	Installed	설치됨
-redrob-film	Describe the edit and the motion graphics and let the agent make them	원하는 편집과 모션 그래픽을 말하면 에이전트가 만들어요
-redrob-shape	Shape and shade 3D models by prompt	프롬프트로 3D 모델을 만들고 질감을 입혀요
-redrob-cad	Design, constrain and iterate on parts with an agent	에이전트와 함께 부품을 설계하고 다듬어요
-redrob-canvas	Paint and edit images with an agent	에이전트와 함께 그림을 그리고 이미지를 편집해요
-redrob-design	Open .fig and .pen files and design by prompt	.fig·.pen 파일을 열고 프롬프트로 디자인해요
-redrob-browser	A browser whose agent reads, acts on and automates the web	에이전트가 웹을 읽고, 대신 조작하고, 자동화하는 브라우저
-redrob-code	The AI coding agent for your terminal	터미널에서 쓰는 AI 코딩 에이전트
-redrob-cowork	Work with AI agents on your own files	내 파일로 AI 에이전트와 함께 일해요
-redrob-office	Docs, Sheets, Slides, PDF and Hangul in one window	문서·시트·슬라이드·PDF·한글을 한 창에서
+redrob-film	Describe the cut and the motion graphics, and the agent edits the video	원하는 컷과 모션 그래픽을 말하면 에이전트가 영상을 편집해요
+redrob-shape	Model and texture 3D objects from a written prompt	글로 설명하면 3D 오브젝트를 만들고 질감을 입혀요
+redrob-cad	Design parts, set constraints and revise them with an agent	에이전트와 함께 부품을 설계하고 구속 조건을 걸어 다듬어요
+redrob-canvas	Paint, retouch and edit images with an agent	에이전트와 함께 그림을 그리고 이미지를 보정하고 편집해요
+redrob-design	Open .fig and .pen files and change the design by describing it	.fig·.pen 파일을 열고 말로 설명해 디자인을 바꿔요
+redrob-browser	Browse while an agent reads pages, fills in forms and runs tasks	웹을 둘러보는 동안 에이전트가 페이지를 읽고 양식을 채우고 할 일을 처리해요
+redrob-code	A coding agent in your terminal that reads, writes and runs code	터미널에서 코드를 읽고 쓰고 실행하는 코딩 에이전트
+redrob-cowork	Hand tasks to AI agents that work on the files on your computer	내 컴퓨터의 파일로 일하는 AI 에이전트에게 작업을 맡겨요
+redrob-office	Write docs, build sheets and slides, and edit PDF and Hangul files in one window	문서·시트·슬라이드를 만들고 PDF·한글 파일까지 한 창에서 편집해요
 month	Jan	1월
 month	Feb	2월
 month	Mar	3월
