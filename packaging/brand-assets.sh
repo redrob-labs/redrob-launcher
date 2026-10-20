@@ -7,8 +7,8 @@
 #   packaging/brand-assets.sh
 #
 # What is derived, and from what (assets/brand/README.md has the rules):
-#   app-icon/hicolor/<size>              redrob-icon.svg (the 2026 group icon) rendered at that size
-#   app-icon/hicolor/scalable            redrob-icon.svg, as is
+#   app-icon/hicolor/<size>              redrob-icon-web.svg (the 2026 group icon, rounded) rendered at that size
+#   app-icon/hicolor/scalable            redrob-icon-web.svg, as is
 #   app-icon/redrob-launcher.ico         16, 32, 48, 64, 256
 #   app-icon/redrob-launcher.icns        16, 32, 64, 128, 256, 512
 #   app-icon/redrob-logo-{light,dark}.png  the lockups resized down to 64 px tall (header)
@@ -28,10 +28,10 @@ rm -rf "$A" "$APPS"
 mkdir -p "$A" "$APPS"
 for s in 16 24 32 48 64 128 256 512; do
   mkdir -p "$A/hicolor/${s}x${s}/apps"
-  resvg -w "$s" -h "$s" "$B/redrob-icon.svg" "$A/hicolor/${s}x${s}/apps/$ID.png"
+  resvg -w "$s" -h "$s" "$B/redrob-icon-web.svg" "$A/hicolor/${s}x${s}/apps/$ID.png"
 done
 mkdir -p "$A/hicolor/scalable/apps"
-cp "$B/redrob-icon.svg" "$A/hicolor/scalable/apps/$ID.svg"
+cp "$B/redrob-icon-web.svg" "$A/hicolor/scalable/apps/$ID.svg"
 
 H="$A/hicolor"
 (cd "$ROOT" && cargo run -q -p xtask -- ico "$A/redrob-launcher.ico" \
