@@ -105,6 +105,24 @@ fn harness(state: Rc<RefCell<State>>) -> Harness<'static, Option<LauncherUi>> {
     )
 }
 
+/// Clicks the sidebar's account row labelled `row`, then the item `item` of the menu it opens
+/// above itself.
+fn from_account_menu(h: &mut Harness<'_, Option<LauncherUi>>, row: &str, item: &str) {
+    let row_rect = h.get_by_label(row).rect();
+    h.get_by_label(row).click();
+    h.run_steps(4);
+    {
+        // The menu's item: the nearest one above the row (a page title can share its label).
+        let node = h
+            .get_all_by_label(item)
+            .filter(|n| n.rect().bottom() <= row_rect.top() + 0.5)
+            .max_by(|a, b| a.rect().bottom().total_cmp(&b.rect().bottom()))
+            .unwrap();
+        node.click();
+    }
+    h.run_steps(4);
+}
+
 fn snapshot(h: &mut Harness<'_, Option<LauncherUi>>, name: &str) {
     let Some(dir) = std::env::var_os("REDROB_LAUNCHER_SNAPSHOTS") else { return };
     let img = h.render().unwrap();
@@ -127,9 +145,9 @@ fn signing_in_shows_the_code_then_the_workspace_and_connects_apps() {
     let mut h = harness(state.clone());
     h.run_steps(4);
 
-    // Signed out: the header says so, and the dialog offers the sign-in.
-    h.get_by_label("Sign in").click();
-    h.run_steps(12);
+    // Signed out: the account row says so; its menu leads to the account page and its sign-in.
+    from_account_menu(&mut h, "Log in or sign up", "Log in or sign up");
+    h.run_steps(8);
     h.get_by_label("Redrob account");
     h.get_by_label("Sign in to Redrob").click();
     h.run_steps(2);
@@ -167,7 +185,7 @@ fn signing_in_shows_the_code_then_the_workspace_and_connects_apps() {
     h.get_by_label("Uses this sign-in");
     h.get_by_label("Next release uses this sign-in");
     h.get_by_label("Update to use this sign-in");
-    // Every suite app without a link above is listed as unsupported.
+    // Every app the Apps page shows without a link above is listed as unsupported.
     assert_eq!(h.query_all_by_label("Not supported yet").count(), redrob_launcher_core::SUITE.len() - 6);
     snapshot(&mut h, "account-signed-in");
     h.get_by_label("Connect").click();
@@ -180,6 +198,20 @@ fn signing_in_shows_the_code_then_the_workspace_and_connects_apps() {
     h.get_by_label("Sign out").click();
     h.run_steps(2);
     assert_eq!(state.borrow().asked.last(), Some(&Asked::Disconnect));
+    // A page, not a dialog: no Done; the back button and Escape lead to the apps.
+    assert!(h.query_by_label("Done").is_none());
+    let on_page = |h: &egui_kittest::Harness<'_, _>| h.query_by_label("Sign out").is_some() || h.query_by_label("Sign in to Redrob").is_some();
+    assert!(on_page(&h));
+    h.get_by_label("Back to apps").click();
+    h.run_steps(4);
+    assert!(!on_page(&h));
+    // The sidebar's account row opens it again, through its menu (the fake still reports Acme).
+    from_account_menu(&mut h, "Acme", "Redrob account");
+    h.run_steps(2);
+    assert!(on_page(&h));
+    h.key_press(egui::Key::Escape);
+    h.run_steps(4);
+    assert!(!on_page(&h));
 }
 
 #[test]
@@ -190,8 +222,7 @@ fn the_header_names_the_workspace_once_signed_in() {
     }));
     let mut h = harness(state);
     h.run_steps(4);
-    assert!(h.query_by_label("Sign in").is_none());
-    h.get_by_label("Acme").click();
-    h.run_steps(3);
+    assert!(h.query_by_label("Log in or sign up").is_none());
+    from_account_menu(&mut h, "Acme", "Redrob account");
     h.get_by_label("Workspace: Acme");
 }

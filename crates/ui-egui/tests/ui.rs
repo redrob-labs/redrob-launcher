@@ -7,14 +7,13 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use egui_kittest::Harness;
-use egui_kittest::kittest::{NodeT, Queryable};
+use egui_kittest::kittest::Queryable;
 use redrob_launcher_core::protocol::{
     Backend, CANCELLED, Capabilities, Command, Event, INSTALL_CANCELLED, JobPhase, LatestRelease, Origin, PausedDownload, Source,
 };
 use redrob_launcher_core::release::{Asset, Release};
 use redrob_launcher_core::status::InstallSource;
 use redrob_launcher_core::{Arch, Installed, Os, Platform, SUITE, version};
-use redrob_launcher_ui_egui::settings::ViewMode;
 use redrob_launcher_ui_egui::{Host, LauncherUi, Settings};
 
 const NOW: i64 = 1_791_500_000;
@@ -106,17 +105,16 @@ fn events() -> Vec<Event> {
     ev
 }
 
-fn harness(view: ViewMode, theme: egui::Theme, manage: bool) -> (Harness<'static, Option<LauncherUi>>, Rc<RefCell<Vec<Command>>>) {
-    harness_at(view, theme, manage, 1.0)
+fn harness(theme: egui::Theme, manage: bool) -> (Harness<'static, Option<LauncherUi>>, Rc<RefCell<Vec<Command>>>) {
+    harness_at(theme, manage, 1.0)
 }
 
-fn harness_at(view: ViewMode, theme: egui::Theme, manage: bool, scale: f32) -> (Harness<'static, Option<LauncherUi>>, Rc<RefCell<Vec<Command>>>) {
-    harness_with(events(), view, theme, manage, scale)
+fn harness_at(theme: egui::Theme, manage: bool, scale: f32) -> (Harness<'static, Option<LauncherUi>>, Rc<RefCell<Vec<Command>>>) {
+    harness_with(events(), theme, manage, scale)
 }
 
 fn harness_with(
     events: Vec<Event>,
-    view: ViewMode,
     theme: egui::Theme,
     manage: bool,
     scale: f32,
@@ -127,7 +125,7 @@ fn harness_with(
     let sent = Rc::new(RefCell::new(Vec::new()));
     let sent2 = sent.clone();
     let mut backend = Some(Fake { events, sent: sent2, manage, clock: Rc::new(Cell::new(NOW)) });
-    let settings = Settings { view, notify: false, ..Settings::default() };
+    let settings = Settings { notify: false, ..Settings::default() };
     // No `.wgpu()`: it gives every test its own GPU device, and those segfault on parallel test threads (see above).
     // The default renderer creates one only when a test renders.
     let harness = Harness::builder().with_size(egui::vec2(1180.0, 900.0)).with_pixels_per_point(scale).with_theme(theme).build_ui_state(
@@ -189,43 +187,21 @@ fn keeps_working_with_no_window_then_draws_in_a_new_one() {
 }
 
 #[test]
-fn grid_shows_every_status_and_installs_on_click() {
-    let (mut h, sent) = harness(ViewMode::Grid, egui::Theme::Dark, true);
-    h.run_steps(8);
-    snapshot(&mut h, "grid-dark");
-    // Statuses the user asked for: available, installed and up to date, update with version.
-    assert!(h.query_all_by_label("Available to install").count() >= 2);
-    assert!(h.query_all_by_label("Installed · up to date").count() >= 1);
-    h.get_by_label("Update to 0.5.0");
-    h.get_by_label("Update to 0.6.0");
-    h.get_by_label_contains("0.4.1 installed → 0.5.0 released");
-    h.get_by_label("Graphics");
-    // The window has no title bar of its own here (the web build, and the tests).
-    assert!(h.query_by_label("Close").is_none());
-    // No upstream community links, social icons or trademark notice.
-    assert!(h.query_all_by_label_contains("Discord").next().is_none());
-    assert!(h.query_all_by_label_contains("ArtCraft").next().is_none());
-    assert!(h.query_all_by_label("Coming soon").count() >= 1);
-    h.get_by_label_contains("48 MB of 131 MB");
-    h.get_by_label("Update all (2)").click();
-    h.run_steps(2);
-    let installs: Vec<_> = sent.borrow().iter().filter_map(|c| if let Command::Install { app } = c { Some(app.clone()) } else { None }).collect();
-    assert_eq!(installs.len(), 2, "{installs:?}");
-    assert!(installs.contains(&"redrob-canvas".to_string()) && installs.contains(&"redrob-browser".to_string()));
-}
-
-#[test]
 fn downloads_can_be_paused_resumed_and_discarded() {
-    let (mut h, sent) = harness(ViewMode::Grid, egui::Theme::Dark, true);
+    // The fixture's reconnecting download is Redrob Office's.
+    let (mut h, sent) = harness_with(events(), egui::Theme::Dark, true, 1.0);
     h.run_steps(4);
-    // Bring the paused and reconnecting apps on screen.
+    // Bring the paused and reconnecting apps on screen (the sidebar leaves the grid three
+    // columns, so the third row needs a taller window).
     if let Some(l) = h.state_mut().as_mut() {
         l.settings.filter = redrob_launcher_ui_egui::settings::Filter::NotInstalled;
     }
+    h.set_size(egui::vec2(1180.0, 1100.0));
     h.run_steps(6);
     snapshot(&mut h, "grid-downloads-dark");
-    h.get_by_label("Download paused");
-    h.get_by_label("Reconnecting…");
+    h.get_by_label_contains(": Download paused");
+    // The badge, and in a narrow tile the progress caption too.
+    assert!(h.query_all_by_label("Reconnecting…").count() >= 1);
     h.get_by_label_contains("· 25%").click();
     h.run_steps(2);
     assert!(sent.borrow().contains(&Command::Install { app: "redrob-cowork".into() }));
@@ -239,7 +215,7 @@ fn downloads_can_be_paused_resumed_and_discarded() {
 
 #[test]
 fn a_kept_download_offers_retry_install_and_download_again() {
-    let (mut h, sent) = harness(ViewMode::Grid, egui::Theme::Dark, true);
+    let (mut h, sent) = harness(egui::Theme::Dark, true);
     h.run_steps(4);
     if let Some(l) = h.state_mut().as_mut() {
         l.settings.filter = redrob_launcher_ui_egui::settings::Filter::NotInstalled;
@@ -256,10 +232,20 @@ fn a_kept_download_offers_retry_install_and_download_again() {
     h.run_steps(2);
     assert_eq!(*sent.borrow(), [Command::Install { app: "redrob-cad".into() }]);
     sent.borrow_mut().clear();
-    // The … menu beside it.
+    // The named button beside this uninstalled app exposes the same command as its context menu.
     let beside = |r: egui::Rect| row.y_range().contains(r.center().y) && (row.right()..row.right() + 60.0).contains(&r.left());
-    h.get_all_by_label("…").find(|n| beside(n.rect())).unwrap().click();
+    assert!(h.query_all_by_label("More actions").any(|n| beside(n.rect())), "… beside Retry install");
+    open_card_more_button(&mut h, "Redrob CAD");
+    h.get_by_label("Download again");
+    h.key_press(egui::Key::Escape);
+    h.run_steps(2);
+    // The card's own controls sit over the card and keep the pointer: right-clicking the button
+    // neither opens the card's menu nor presses it.
+    h.get_by_label("Retry install").click_secondary();
     h.run_steps(3);
+    assert!(h.query_by_label("Download again").is_none(), "a right-click on a button is the button's");
+    assert!(sent.borrow().is_empty(), "{:?}", sent.borrow());
+    open_card_menu(&mut h, "Redrob CAD");
     snapshot(&mut h, "grid-retry-install-menu-dark");
     h.get_by_label("Download again").click();
     h.run_steps(2);
@@ -277,7 +263,7 @@ fn a_dismissed_install_prompt_is_not_called_a_cancelled_download() {
     ev.push(finished("redrob-cad", INSTALL_CANCELLED));
     ev.push(finished("redrob-office", INSTALL_CANCELLED));
     ev.push(finished("redrob-shape", CANCELLED));
-    let (mut h, _) = harness_with(ev, ViewMode::Grid, egui::Theme::Dark, true, 1.0);
+    let (mut h, _) = harness_with(ev, egui::Theme::Dark, true, 1.0);
     h.run_steps(6);
     snapshot(&mut h, "grid-install-cancelled-dark");
     for toast in ["Install cancelled. The download is kept for the next try.", "Install cancelled", "Download cancelled"] {
@@ -291,18 +277,19 @@ fn a_kept_update_names_its_version_and_an_up_to_date_app_is_not_downloaded_again
     for app in ["redrob-browser", "redrob-code"] {
         ev.push(Event::ReadyToInstall { app: app.into(), ready: true });
     }
-    let (mut h, sent) = harness_with(ev, ViewMode::Table, egui::Theme::Dark, true, 1.0);
+    let (mut h, sent) = harness_with(ev, egui::Theme::Dark, true, 1.0);
     h.run_steps(8);
-    snapshot(&mut h, "table-retry-update-dark");
+    h.get_by_label("Retry update to 0.6.0").scroll_to_me();
+    h.run_steps(4);
+    snapshot(&mut h, "grid-retry-update-dark");
     sent.borrow_mut().clear();
     assert!(h.query_by_label("Update to 0.6.0").is_none());
     h.get_by_label("Retry update to 0.6.0").click();
     h.run_steps(2);
     assert_eq!(*sent.borrow(), [Command::Install { app: "redrob-browser".into() }]);
-    // Redrob Code is up to date: its menu offers Reinstall, which uses the kept file.
-    let row = h.get_all_by_label("Redrob Code").next().unwrap().rect().center().y;
-    h.get_all_by_label("…").find(|n| (n.rect().center().y - row).abs() < 25.0).unwrap().click();
-    h.run_steps(3);
+    // Redrob Code is up to date: its … button opens the menu, which offers Reinstall (it uses the
+    // kept file).
+    open_card_more_button(&mut h, "Redrob Code");
     h.get_by_label("Reinstall");
     assert!(h.query_by_label("Download again").is_none());
 }
@@ -313,12 +300,15 @@ fn an_install_waiting_for_another_says_so_and_can_be_cancelled() {
     // Two updates reached the system's installer together: one runs, the other waits its turn.
     events.push(Event::Progress { app: "redrob-canvas".into(), phase: JobPhase::Installing });
     events.push(Event::Progress { app: "redrob-shape".into(), phase: JobPhase::Waiting });
-    let (mut h, sent) = harness_with(events, ViewMode::Grid, egui::Theme::Dark, true, 1.0);
+    let (mut h, sent) = harness_with(events, egui::Theme::Dark, true, 1.0);
     h.run_steps(6);
     snapshot(&mut h, "grid-waiting-dark");
     h.get_by_label("Installing…");
     h.get_by_label("Waiting for another app…");
-    // Only the waiting one: the install that is running can't be called off.
+    // Only the waiting one: the install that is running can't be called off. (Redrob Shape is on
+    // the third shelf now: bring it on screen first.)
+    h.get_by_label("Cancel").scroll_to_me();
+    h.run_steps(4);
     h.get_by_label("Cancel").click();
     h.run_steps(2);
     let cancels: Vec<_> = sent.borrow().iter().filter(|c| matches!(c, Command::Cancel { .. })).cloned().collect();
@@ -330,7 +320,7 @@ fn the_launcher_update_waiting_for_other_installs_can_be_cancelled() {
     let mut ev = events();
     ev.push(Event::LauncherUpdate(release("redrob-launcher", "0.2.0", NOW)));
     ev.push(Event::Progress { app: "redrob-launcher".into(), phase: JobPhase::Waiting });
-    let (mut h, sent) = harness_with(ev, ViewMode::Grid, egui::Theme::Dark, true, 1.0);
+    let (mut h, sent) = harness_with(ev, egui::Theme::Dark, true, 1.0);
     h.run_steps(6);
     snapshot(&mut h, "grid-launcher-waiting-dark");
     h.get_by_label("Waiting for other installs…");
@@ -354,129 +344,71 @@ fn each_cancellation_says_what_it_called_off() {
     ev.push(finished("redrob-launcher", CANCELLED));
     // A download cancelled mid-way.
     ev.push(finished("redrob-film", CANCELLED));
-    let (mut h, _) = harness_with(ev, ViewMode::Grid, egui::Theme::Dark, true, 1.0);
+    let (mut h, _) = harness_with(ev, egui::Theme::Dark, true, 1.0);
     h.run_steps(6);
     for toast in ["Uninstall cancelled", "Update cancelled", "Download cancelled"] {
         assert_eq!(h.query_all_by_label(toast).count(), 1, "{toast}");
     }
 }
 
-#[test]
-fn table_view_and_light_theme() {
-    let (mut h, sent) = harness(ViewMode::Table, egui::Theme::Light, true);
-    h.run_steps(8);
-    snapshot(&mut h, "table-light");
-    h.get_by_label("Graphics");
-    h.get_by_label("Agent workspace");
-    h.get_by_label("Update to 0.5.0").click();
-    h.run_steps(2);
-    assert!(sent.borrow().contains(&Command::Install { app: "redrob-canvas".into() }));
-    h.get_all_by_label("Open").next().unwrap().click();
-    h.run_steps(2);
-    assert!(sent.borrow().iter().any(|c| matches!(c, Command::Launch { .. })));
-}
-
-#[test]
-fn switching_views_and_filters() {
-    let (mut h, _) = harness(ViewMode::Grid, egui::Theme::Dark, true);
-    h.run_steps(6);
-    h.get_by_label_contains("Table").click();
+/// Clicks the sidebar's account row labelled `row`, then the item `item` of the menu it opens
+/// above itself.
+fn from_account_menu(h: &mut Harness<'_, Option<LauncherUi>>, row: &str, item: &str) {
+    let row_rect = h.get_by_label(row).rect();
+    h.get_by_label(row).click();
     h.run_steps(4);
-    assert_eq!(h.state().as_ref().unwrap().settings.view, ViewMode::Table);
-    h.get_by_label_contains("Updates").click();
-    h.run_steps(4);
-    snapshot(&mut h, "table-updates-dark");
-    assert!(h.query_by_label("Redrob Code").is_none());
-    h.get_by_label("Redrob Canvas");
-}
-
-/// How far the middle of these lines of text is below the middle of the app icon beside them, in points.
-fn below_icon_centre(h: &Harness<'_, Option<LauncherUi>>, lines: &[&str]) -> f32 {
-    let text = lines.iter().map(|l| h.get_by_label(l).rect()).reduce(|a, b| a.union(b)).unwrap();
-    let icon = h
-        .query_all(egui_kittest::kittest::by().role(egui::accesskit::Role::Image))
-        .map(|n| n.rect())
-        .filter(|r| r.right() <= text.left() && r.top() < text.bottom() && r.bottom() > text.top())
-        .max_by(|a, b| a.right().total_cmp(&b.right()))
-        .unwrap();
-    assert!(text.left() - icon.right() < 24.0, "no icon beside {lines:?}");
-    text.center().y - icon.center().y
-}
-
-#[test]
-fn name_and_tagline_are_centred_on_the_icon() {
-    for (scale, suffix) in [(1.0, "-1x"), (1.5, "-1.5x"), (2.0, "-2x")] {
-        let (mut h, _) = harness_at(ViewMode::Grid, egui::Theme::Dark, true, scale);
-        h.run_steps(8);
-        snapshot(&mut h, &format!("grid-dark{suffix}"));
-        let off = below_icon_centre(&h, &["Redrob Canvas", "Paint and edit images with an agent", "Graphics"]);
-        assert!(off.abs() < 0.25, "grid at {scale}x: {off}");
-        let (mut h, _) = harness_at(ViewMode::Table, egui::Theme::Light, true, scale);
-        h.run_steps(8);
-        snapshot(&mut h, &format!("table-light{suffix}"));
-        let off = below_icon_centre(&h, &["Redrob Canvas", "Paint and edit images with an agent"]);
-        assert!(off.abs() < 0.25, "table at {scale}x: {off}");
+    {
+        // The menu's item: the nearest one above the row (a page title can share its label).
+        let node = h
+            .get_all_by_label(item)
+            .filter(|n| n.rect().bottom() <= row_rect.top() + 0.5)
+            .max_by(|a, b| a.rect().bottom().total_cmp(&b.rect().bottom()))
+            .unwrap();
+        node.click();
     }
+    h.run_steps(4);
 }
 
-/// The app names in the order the table shows them.
-fn order(h: &Harness<'_, Option<LauncherUi>>) -> Vec<String> {
-    let names: Vec<&str> = SUITE.iter().map(|a| a.name).collect();
-    let mut found: Vec<(f32, String)> = h
-        .query_all(egui_kittest::kittest::by())
-        .filter_map(|n| {
-            let node = n.accesskit_node();
-            let label = node.label().or_else(|| node.value())?;
-            names.contains(&label.as_str()).then(|| (n.rect().top(), label))
-        })
-        .collect();
-    found.sort_by(|a, b| a.0.total_cmp(&b.0));
-    let mut names: Vec<String> = found.into_iter().map(|(_, l)| l).collect();
-    // A label and its text can both carry the name.
-    names.dedup();
-    names
+/// Opens the Settings page: the sidebar's account row (it reads "Settings" with no account
+/// backend) opens its menu, and the menu's Settings item opens the page.
+fn open_settings(h: &mut Harness<'_, Option<LauncherUi>>) {
+    from_account_menu(h, "Settings", "Settings");
 }
 
-#[test]
-fn every_table_column_sorts_both_ways() {
-    let (mut h, _) = harness(ViewMode::Table, egui::Theme::Dark, true);
-    h.run_steps(6);
-    // Installed: highest first, apps that aren't installed last.
-    h.get_by_label("Installed").click();
+/// Opens `app`'s menu by right-clicking its tile (on its name: the card under the label takes the
+/// click). Every tile also has the named … button, including read-only and job states.
+fn open_card_menu(h: &mut Harness<'_, Option<LauncherUi>>, app: &str) {
+    h.get_all_by_label(app).next().unwrap().scroll_to_me();
+    h.run_steps(4);
+    h.get_all_by_label(app).next().unwrap().click_secondary();
     h.run_steps(3);
-    let o = order(&h);
-    assert_eq!(&o[..3], ["Redrob Browser", "Redrob Canvas", "Redrob Code"], "{o:?}");
-    // Reversed: lowest first, the empty cells still last.
-    h.get_by_label("Installed").click();
+}
+
+/// Opens `app`'s menu with its … button: the nearest one right of its name and under it, in the
+/// same tile.
+fn open_card_more_button(h: &mut Harness<'_, Option<LauncherUi>>, app: &str) {
+    h.get_all_by_label(app).next().unwrap().scroll_to_me();
+    h.run_steps(4);
+    {
+        let name = h.get_all_by_label(app).next().unwrap().rect();
+        let menu = h
+            .get_all_by_label("More actions")
+            .filter(|n| {
+                let r = n.rect();
+                r.left() > name.left() && r.top() > name.bottom() && r.top() < name.top() + 180.0
+            })
+            .min_by(|a, b| a.rect().left().total_cmp(&b.rect().left()))
+            .unwrap();
+        menu.click();
+    }
     h.run_steps(3);
-    let o = order(&h);
-    assert_eq!(&o[..3], ["Redrob Code", "Redrob Canvas", "Redrob Browser"], "{o:?}");
-    // Kind: A to Z.
-    h.get_by_label("Kind").click();
-    h.run_steps(3);
-    let o = order(&h);
-    assert_eq!(o.first().map(String::as_str), Some("Redrob Shape"), "{o:?}"); // 3D
-    // Latest: highest version first, Redrob Design (no release) last.
-    h.get_by_label("Latest").click();
-    h.run_steps(3);
-    let o = order(&h);
-    assert_eq!(o.first().map(String::as_str), Some("Redrob Shape"), "{o:?}"); // 0.7.0
-    snapshot(&mut h, "table-sorted-latest");
-    // App: Z to A on the second click.
-    h.get_by_label("App").click();
-    h.run_steps(3);
-    h.get_by_label("App").click();
-    h.run_steps(3);
-    let o = order(&h);
-    assert_eq!(o.first().map(String::as_str), Some("Redrob Shape"), "{o:?}");
 }
 
 #[test]
 fn settings_link_to_redrob() {
-    let (mut h, _) = harness(ViewMode::Grid, egui::Theme::Dark, true);
+    let (mut h, _) = harness(egui::Theme::Dark, true);
     h.run_steps(6);
-    h.get_by_label("Settings").click();
-    h.run_steps(4);
+    open_settings(&mut h);
     snapshot(&mut h, "settings-dark");
     h.get_by_label("News and source code for every Redrob app");
     assert!(h.query_all_by_label_contains("Discord").next().is_none());
@@ -484,24 +416,21 @@ fn settings_link_to_redrob() {
 
 #[test]
 fn links_to_the_website_github_and_each_apps_pages() {
-    let (mut h, _) = harness(ViewMode::Grid, egui::Theme::Dark, true);
+    let (mut h, _) = harness(egui::Theme::Dark, true);
     h.run_steps(6);
-    // Footer: website and GitHub.
-    for label in ["Website", "GitHub"] {
-        assert!(h.query_all_by_label(label).count() >= 1, "{label}");
-    }
-    // Cards: every app links to its repo; no app has a web page of its own yet (only the footer's).
-    let shown_cards = h.query_all_by_label("GitHub").count() - 1;
-    let shown_sites = h.query_all_by_label("Website").count() - 1;
-    assert!(shown_cards >= 7, "{shown_cards}");
-    assert_eq!(shown_sites, 0, "no app has a website page yet");
-    // The table's … menu has the app's GitHub repo and no website entry.
-    let (mut h, _) = harness(ViewMode::Table, egui::Theme::Dark, true);
-    h.run_steps(6);
-    h.get_all_by_label("…").nth(6).unwrap().click(); // Redrob Code
-    h.run_steps(3);
+    // The Apps page has no links: no footer, nothing on the cards.
+    assert_eq!(h.query_all_by_label("GitHub").count(), 0);
+    assert_eq!(h.query_all_by_label("Website").count(), 0);
+    // A card's menu has the app's GitHub repo and no website entry (no app has a web page yet).
+    open_card_menu(&mut h, "Redrob Code");
     h.get_by_label("GitHub repository");
-    assert_eq!(h.query_all_by_label_contains("Website").count(), 1, "only the footer's");
+    assert_eq!(h.query_all_by_label_contains("Website").count(), 0, "no app has a website page yet");
+    // Redrob's own pages are in Settings.
+    h.key_press(egui::Key::Escape);
+    h.run_steps(3);
+    open_settings(&mut h);
+    h.get_by_label("Website");
+    h.get_by_label("GitHub");
 }
 
 /// Clicks the `n`th widget labelled `label` and returns the URL the app asked to open.
@@ -524,25 +453,19 @@ fn click_opens(h: &mut Harness<'_, Option<LauncherUi>>, label: &str) -> Option<S
     click_nth_opens(h, label, 0)
 }
 
-/// Every URL the widgets labelled `label` open.
-fn all_opened(h: &mut Harness<'_, Option<LauncherUi>>, label: &str) -> Vec<String> {
-    let n = h.query_all_by_label(label).count();
-    (0..n).filter_map(|i| click_nth_opens(h, label, i)).collect()
-}
-
 #[test]
 fn links_open_the_right_pages() {
-    let (mut h, _) = harness(ViewMode::Grid, egui::Theme::Dark, true);
+    let (mut h, _) = harness(egui::Theme::Dark, true);
     h.run_steps(6);
-    // The footer's Redrob links and each card's own pages.
-    let github = all_opened(&mut h, "GitHub");
-    assert!(github.contains(&"https://github.com/redrob-labs".to_string()), "{github:?}");
-    assert!(github.contains(&"https://github.com/redrob-labs/redrob-canvas".to_string()), "{github:?}");
-    assert_eq!(all_opened(&mut h, "Website"), ["https://redrob.ai"]);
-    // The … menu.
-    h.get_all_by_label("…").next().unwrap().click();
-    h.run_steps(3);
+    // Each app's pages, from its card's menu.
+    open_card_menu(&mut h, "Redrob Canvas");
+    assert_eq!(click_opens(&mut h, "GitHub repository").as_deref(), Some("https://github.com/redrob-labs/redrob-canvas"));
+    open_card_menu(&mut h, "Redrob Shape");
     assert_eq!(click_opens(&mut h, "All releases").as_deref(), Some("https://github.com/redrob-labs/redrob-shape/releases"));
+    // Redrob's own, from Settings.
+    open_settings(&mut h);
+    assert_eq!(click_opens(&mut h, "Website").as_deref(), Some("https://redrob.ai"));
+    assert_eq!(click_opens(&mut h, "GitHub").as_deref(), Some("https://github.com/redrob-labs"));
 }
 
 #[test]
@@ -650,12 +573,13 @@ fn the_launcher_updates_itself_and_quits_to_restart() {
 fn launcher_update_prompts_to_relaunch_with_updated_version() {
     let mut ev = events();
     ev.push(Event::LauncherUpdate(release("redrob-launcher", "0.2.0", NOW)));
-    let (mut h, _) = harness_with(ev, ViewMode::Grid, egui::Theme::Dark, true, 1.0);
+    let (mut h, _) = harness_with(ev, egui::Theme::Dark, true, 1.0);
     h.run_steps(6);
     // Dialog pops up on launch with the update prompt
     h.get_by_label_contains("Redrob Launcher 0.2.0 is available");
     h.get_by_label("A new version is available. Would you like to relaunch with the updated version?");
     h.get_by_label("What's new");
+    snapshot(&mut h, "launcher-update-dialog-dark");
     // Clicking "Later" dismisses the modal dialog
     h.get_by_label("Later").click();
     h.run_steps(3);
@@ -667,10 +591,9 @@ fn launcher_update_prompts_to_relaunch_with_updated_version() {
 #[test]
 fn the_current_desktop_setting_is_only_offered_where_the_os_has_desktops() {
     // NoHost has no desktops (Windows, Linux, web): no setting.
-    let (mut h, _) = harness(ViewMode::Grid, egui::Theme::Dark, true);
+    let (mut h, _) = harness(egui::Theme::Dark, true);
     h.run_steps(6);
-    h.get_by_label("Settings").click();
-    h.run_steps(4);
+    open_settings(&mut h);
     assert!(h.query_by_label("Show the window on the current desktop").is_none());
     // On by default for everyone; macOS shows it in Settings (DesktopHost::has_desktops).
     assert!(Settings::default().show_on_current_desktop);
@@ -798,44 +721,23 @@ fn automatic_updates_are_disabled_by_default() {
 }
 
 #[test]
-fn the_footer_names_the_services_behind_what_is_on_screen() {
-    let footer = |extra: Vec<Event>| {
-        let mut evs = events();
-        evs.extend(extra);
-        let sent = Rc::new(RefCell::new(Vec::new()));
-        let mut backend = Some(Fake { events: evs, sent, manage: true, clock: Rc::new(Cell::new(NOW)) });
-        let mut h = Harness::builder().with_size(egui::vec2(1180.0, 900.0)).build_ui_state(
-            move |ui, state: &mut Option<LauncherUi>| {
-                if state.is_none()
-                    && let Some(b) = backend.take()
-                {
-                    *state = Some(LauncherUi::new(ui.ctx(), Box::new(b), Settings { notify: false, ..Settings::default() }));
-                }
-                if let Some(l) = state.as_mut() {
-                    l.logic(&ui.ctx().clone(), &mut NoHost);
-                    l.ui(ui, &mut NoHost);
-                }
-            },
-            None,
-        );
-        h.run_steps(6);
-        let label =
-            h.get_by_label_contains("Checked ").accesskit_node().label().or_else(|| h.get_by_label_contains("Checked ").accesskit_node().value());
-        label.unwrap_or_default()
-    };
-    assert_eq!(footer(Vec::new()), "Checked 3 min ago · using Redrob API");
-    let from_github =
-        vec![Event::Latest { app: "redrob-code".into(), latest: LatestRelease::Found(release("redrob-code", "0.3.1", NOW)), from: Origin::GitHub }];
-    assert_eq!(footer(from_github), "Checked 3 min ago · using Redrob API and GitHub");
-}
-
-#[test]
 fn web_build_offers_downloads() {
-    let (mut h, _) = harness(ViewMode::Grid, egui::Theme::Dark, false);
+    let (mut h, _) = harness(egui::Theme::Dark, false);
     h.run_steps(8);
     snapshot(&mut h, "web-grid-dark");
     assert!(h.query_all_by_label("Download for macOS").count() >= 6);
+    // Read-only web cards still need a discoverable route to alternate packages and links.
+    let visible_cards = SUITE.iter().filter(|app| h.query_by_label_contains(&format!("{}:", app.name)).is_some()).count();
+    assert_eq!(h.query_all_by_label("More actions").count(), visible_cards);
     assert!(h.query_by_label("Install").is_none());
+}
+
+/// The title bar's search field.
+fn search_field_rect(h: &Harness<'_, Option<LauncherUi>>) -> egui::Rect {
+    h.query_all(egui_kittest::kittest::by().role(egui::accesskit::Role::TextInput).label("Search apps"))
+        .map(|n| n.rect())
+        .find(|r| r.bottom() <= 48.0)
+        .unwrap()
 }
 
 #[test]
@@ -846,38 +748,9 @@ fn custom_title_bar_has_window_buttons() {
             redrob_launcher_ui_egui::TitleBar::Custom
         }
     }
-    let mut backend = Some(Fake { events: events(), sent: Rc::new(RefCell::new(Vec::new())), manage: true, clock: Rc::new(Cell::new(NOW)) });
-    let mut h = Harness::builder().with_size(egui::vec2(1180.0, 900.0)).build_ui_state(
-        move |ui, state: &mut Option<LauncherUi>| {
-            if state.is_none()
-                && let Some(b) = backend.take()
-            {
-                *state = Some(LauncherUi::new(ui.ctx(), Box::new(b), Settings { notify: false, ..Settings::default() }));
-            }
-            if let Some(l) = state.as_mut() {
-                l.logic(&ui.ctx().clone(), &mut FramelessHost);
-                l.ui(ui, &mut FramelessHost);
-            }
-        },
-        None,
-    );
-    h.run_steps(6);
-    snapshot(&mut h, "grid-title-bar-dark");
-    h.get_by_label("Minimize");
-    h.get_by_label("Maximize");
-    h.get_by_label("Close").click();
-    h.step();
-    let closes = h.output().viewport_output.values().any(|v| v.commands.contains(&egui::ViewportCommand::Close));
-    assert!(closes, "the close button asks the window to close (the shell decides whether that hides it to the tray)");
-}
-
-#[test]
-fn the_rate_limit_notice_never_runs_under_the_footer_links() {
-    for width in [600.0, 960.0, 1180.0] {
-        let mut evs = events();
-        evs.push(Event::CheckFinished { at: NOW - 180, source: Source::GitHubApi, rate_limited_until: Some(NOW + 1800) });
-        let mut backend = Some(Fake { events: evs, sent: Rc::new(RefCell::new(Vec::new())), manage: true, clock: Rc::new(Cell::new(NOW)) });
-        let mut h = Harness::builder().with_size(egui::vec2(width, 900.0)).build_ui_state(
+    let frameless = |width: f32| {
+        let mut backend = Some(Fake { events: events(), sent: Rc::new(RefCell::new(Vec::new())), manage: true, clock: Rc::new(Cell::new(NOW)) });
+        Harness::builder().with_size(egui::vec2(width, 900.0)).build_ui_state(
             move |ui, state: &mut Option<LauncherUi>| {
                 if state.is_none()
                     && let Some(b) = backend.take()
@@ -885,31 +758,61 @@ fn the_rate_limit_notice_never_runs_under_the_footer_links() {
                     *state = Some(LauncherUi::new(ui.ctx(), Box::new(b), Settings { notify: false, ..Settings::default() }));
                 }
                 if let Some(l) = state.as_mut() {
-                    l.logic(&ui.ctx().clone(), &mut NoHost);
-                    l.ui(ui, &mut NoHost);
+                    l.logic(&ui.ctx().clone(), &mut FramelessHost);
+                    l.ui(ui, &mut FramelessHost);
                 }
             },
             None,
-        );
+        )
+    };
+    // Narrow windows shrink the search first, never under the caption buttons, and leave the bar
+    // room to drag left of Update.
+    for width in [600.0, 960.0] {
+        let mut h = frameless(width);
         h.run_steps(6);
-        snapshot(&mut h, &format!("footer-rate-limited-{width}"));
-        // Full or short, the notice says when GitHub can be asked again.
-        let notice = h.get_by_label_contains("in 30 min").rect();
-        let checked = h.get_by_label_contains("Checked ").rect();
-        // Cut short in a narrow window, but enough of it left to read.
-        assert!(notice.width() >= 120.0 && notice.right() <= width, "{width}: notice {notice:?}");
-        // Everything on the footer's right: the two links and (when there's room) the platform.
-        let mut right = Vec::new();
-        for label in ["Website", "GitHub"] {
-            right.extend(h.query_all_by_label(label).map(|n| n.rect()).filter(|r| (r.center().y - notice.center().y).abs() < 12.0));
-        }
-        assert_eq!(right.len(), 2, "{width}: {right:?}");
-        let platform = h.query_by_label_contains("Installing for").map(|n| n.rect());
-        assert_eq!(platform.is_some(), width > 600.0, "{width}: the platform label shows unless the window is narrow");
-        right.extend(platform);
-        for r in right {
-            assert!(!r.intersects(notice), "{width}: notice {notice:?} overlaps {r:?}");
-            assert!(!r.intersects(checked), "{width}: check time {checked:?} overlaps {r:?}");
-        }
+        snapshot(&mut h, &format!("grid-title-bar-dark-{width}"));
+        let minimize = h.get_by_label("Minimize").rect();
+        let search = search_field_rect(&h);
+        let update = h.get_by_label("Update all (2)").rect();
+        assert!(search.right() <= minimize.left() && search.width() >= 159.5, "{width}: {search:?}");
+        assert!(update.left() >= 24.0, "{width}: {update:?}");
     }
+    let mut h = frameless(1180.0);
+    h.run_steps(6);
+    snapshot(&mut h, "grid-title-bar-dark");
+    // The custom bar, right to left: window buttons, search, the group logo, Update.
+    let minimize = h.get_by_label("Minimize").rect();
+    let search = search_field_rect(&h);
+    let logo = h.get_by_label("Go to console.redrob.ai").rect();
+    let update = h.get_by_label("Update all (2)").rect();
+    assert!(update.right() <= logo.left() && logo.right() <= search.left() && search.right() <= minimize.left());
+    // One row, inside the caption buttons' band (whose target starts under the 5 px resize edge).
+    for r in [search, logo, update] {
+        assert!(r.top() >= minimize.top() - 5.0 && r.bottom() <= minimize.bottom(), "{r:?} vs {minimize:?}");
+    }
+    // Check for updates moved down to the filter row.
+    assert!(h.get_by_label("Check for updates").rect().top() > 48.0);
+    assert!(h.get_all_by_label("All apps").all(|n| n.rect().top() >= 48.0), "the sidebar and page start under the title bar");
+    // Restored, the top 5 px of the caption buttons and close's right 5 px stay the resize band.
+    // (The harness insets the bar: its top is minimize's minus that band.)
+    h.get_by_label("Maximize");
+    let restored_close = h.get_by_label("Close").rect();
+    let bar_top = minimize.top() - 5.0;
+    assert!((restored_close.top() - (bar_top + 5.0)).abs() < 0.5, "{restored_close:?}");
+    // Maximized there is no resize band: the buttons run to the top of the screen and close to its
+    // right edge, so flinging the pointer into the corner lands on Close (Windows' own buttons).
+    for _ in 0..3 {
+        h.input_mut().viewports.entry(egui::ViewportId::ROOT).or_default().maximized = Some(true);
+        h.step();
+    }
+    let close = h.get_by_label("Close").rect();
+    let restore = h.get_by_label("Restore").rect();
+    assert!((close.top() - bar_top).abs() < 0.5 && (close.right() - (restored_close.right() + 5.0)).abs() < 0.5, "{close:?}");
+    assert!((restore.top() - bar_top).abs() < 0.5 && (restore.right() - close.left()).abs() < 0.5, "{restore:?}");
+    h.get_by_label("Minimize");
+    h.get_by_label("Restore");
+    h.get_by_label("Close").click();
+    h.step();
+    let closes = h.output().viewport_output.values().any(|v| v.commands.contains(&egui::ViewportCommand::Close));
+    assert!(closes, "the close button asks the window to close (the shell decides whether that hides it to the tray)");
 }

@@ -12,7 +12,7 @@ use redrob_launcher_core::{Platform, SUITE};
 
 use crate::i18n::set_current;
 use crate::model::AppEntry;
-use crate::settings::{Filter, Settings, SortKey, ViewMode};
+use crate::settings::{Filter, Settings};
 use crate::theme::{self, Tokens};
 
 /// Who draws the window's title bar.
@@ -69,11 +69,17 @@ pub struct LanguageChoice {
     pub apps: std::collections::BTreeMap<String, String>,
 }
 
-/// Which page the central panel shows: the apps, or the models they can use.
+/// Which page the main area shows: one per sidebar row.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Page {
     Apps,
+    /// The models the apps can use on this computer.
     Models,
+    /// The shared Redrob Code engine: running or not, who uses it, start and stop.
+    Engine,
+    /// Signing in to Redrob, and which apps use it.
+    Account,
+    Settings,
 }
 
 pub(crate) struct Toast {
@@ -86,13 +92,7 @@ pub(crate) struct Toast {
 pub(crate) enum Dialog {
     Notes(String),
     ConfirmUninstall(String),
-    Settings,
     LauncherUpdate(redrob_launcher_core::Release),
-    /// Signing in to Redrob, and which apps use it.
-    Account,
-    /// The apps' downloadable models.
-    /// The shared Redrob Code engine: running or not, who uses it, start and stop.
-    Engine,
 }
 
 pub struct LauncherUi {
@@ -119,7 +119,7 @@ pub struct LauncherUi {
     pub(crate) toasts: Vec<Toast>,
     pub(crate) dialog: Option<Dialog>,
     pub(crate) page: Page,
-    /// Which page of the Settings dialog is open.
+    /// Which tab of the Settings page is open.
     pub(crate) settings_tab: crate::channels::SettingsTab,
     /// Settings > Channels, as edited.
     pub(crate) channels: crate::channels::ChannelsPanel,
@@ -226,12 +226,12 @@ impl LauncherUi {
     }
 
     /// Looks for updates now (the tray's "Check for Updates").
-    /// Open the engine dialog (the tray's "Redrob Code engine" item).
+    /// Open the engine page (the tray's "AI engine" item).
     pub fn show_engine(&mut self) {
         if let Some(engine) = self.backend.engine() {
             engine.refresh();
         }
-        self.dialog = Some(Dialog::Engine);
+        self.set_page(Page::Engine);
     }
 
     pub fn check_now(&mut self) {
@@ -614,6 +614,10 @@ impl LauncherUi {
     /// Draws the launcher.
     pub fn ui(&mut self, ui: &mut egui::Ui, host: &mut dyn Host) {
         let ctx = ui.ctx().clone();
+        // Whether something already open owns Escape this frame, read before drawing: a list or a
+        // text field handles the key while it is drawn (closing, or giving up focus), so by the
+        // page's own check below it would look as if nothing had been open.
+        let escape_taken = egui::Popup::is_any_open(&ctx) || ctx.text_edit_focused();
         // Set the current language for this frame based on settings.
         let lang = effective_lang(&self.settings.language);
         set_current(lang);
@@ -642,62 +646,109 @@ impl LauncherUi {
             ctx.request_repaint_after(Duration::from_millis(50));
         }
 
-        // The bars' separator lines are the hairlines under the header and over the footer.
-        egui::Panel::top("header")
-            .frame(egui::Frame::new().fill(tokens.bg))
-            .exact_size(crate::views::HEADER_H)
+        // The title bar across the top (Redrob Cowork's 48 px bar on the sunken ground, its hairline
+        // under it), then the sidebar card down the left; each page's top bar spans the main area
+        // only, on the same base ground as the card's gap. There is no footer: what it said (the
+        // last check, GitHub's limit, the platform) is in Settings > Updates.
+        // A window the OS decorates (and the web build) has no title bar of ours: the title bar's
+        // search, logo and Update sit in a 48 px row over the main area instead.
+        let bar = host.title_bar();
+        if bar != TitleBar::Native {
+            egui::Panel::top("header")
+                .frame(egui::Frame::new().fill(tokens.sunken))
+                .exact_size(crate::views::HEADER_H)
+                .resizable(false)
+                .show(ui, |ui| self.header(ui, bar));
+        }
+        let inset = crate::shell::INSET as i8;
+        egui::Panel::left("sidebar")
+            .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin { left: inset, right: inset, top: inset, bottom: inset }))
+            .exact_size(Self::sidebar_width(&ctx))
             .resizable(false)
-            .show(ui, |ui| self.header(ui, host.title_bar()));
-        egui::Panel::bottom("footer")
-            .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin::symmetric(20, 0)))
-            .exact_size(crate::views::FOOTER_H)
-            .resizable(false)
-            .show(ui, |ui| self.footer(ui));
+            .show_separator_line(false)
+            .show(ui, |ui| self.sidebar(ui, host));
+        if bar == TitleBar::Native {
+            egui::Panel::top("chrome")
+                .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin::symmetric(24, 0)))
+                .exact_size(crate::views::HEADER_H)
+                .resizable(false)
+                .show(ui, |ui| self.header(ui, bar));
+        }
+        // The Apps page has no top bar: its actions are in the chrome and its filter row.
+        if self.page != Page::Apps {
+            egui::Panel::top("page-top")
+                .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin::symmetric(24, 0)))
+                .exact_size(crate::shell::PAGE_TOP_H)
+                .resizable(false)
+                .show(ui, |ui| self.page_top_bar(ui));
+        }
+        // The right margin is only the scroll bar's gap from the window's edge: the page's own
+        // 24 px is inside its scroll area, so the bar hugs the edge like Cowork's.
+        let edge = crate::widgets::PAGE_SCROLL_EDGE as i8;
         egui::CentralPanel::default()
-            .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin { left: 20, right: 20, top: 18, bottom: 0 }))
-            .show(ui, |ui| {
-                if self.page == Page::Models {
-                    self.models_page(ui);
-                    return;
-                }
-                self.toolbar(ui);
-                ui.add_space(18.0);
-                let ids = self.visible_ids();
-                // The table is wider than a narrow window: let it scroll sideways too.
-                let scroll = match self.settings.view {
-                    ViewMode::Grid => egui::ScrollArea::vertical(),
-                    ViewMode::Table => egui::ScrollArea::both(),
-                };
-                scroll.auto_shrink(false).show(ui, |ui| {
-                    if ids.is_empty() {
-                        ui.add_space(40.0);
-                        ui.vertical_centered(|ui| {
-                            crate::widgets::hud(ui, tl!("No apps match"), tokens.muted);
-                        });
-                    } else {
-                        match self.settings.view {
-                            ViewMode::Grid => self.grid(ui, &ids),
-                            ViewMode::Table => self.table(ui, &ids),
+            .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin { left: 24, right: edge, top: 20, bottom: 0 }))
+            .show(ui, |ui| match self.page {
+                Page::Models => self.models_page(ui),
+                Page::Engine | Page::Account | Page::Settings => {
+                    crate::widgets::page_scroll(ui, "page", |ui| {
+                        // A reading measure, like Cowork's content column.
+                        ui.set_max_width(720.0);
+                        match self.page {
+                            Page::Engine => self.engine_page(ui),
+                            Page::Account => self.account_page(ui),
+                            _ => self.settings_page(ui, host),
                         }
-                    }
+                        // Room under the last control, so nothing ends against the window's edge.
+                        ui.add_space(32.0);
+                    });
+                }
+                Page::Apps => {
+                    // Above the scroll: the page's right padding, as inside it.
+                    egui::Frame::new()
+                        .inner_margin(egui::Margin { right: crate::widgets::PAGE_SCROLL_PAD as i8, ..egui::Margin::ZERO })
+                        .show(ui, |ui| self.toolbar(ui));
                     ui.add_space(16.0);
-                });
+                    let ids = self.visible_ids();
+                    crate::widgets::page_scroll(ui, "apps", |ui| {
+                        if ids.is_empty() {
+                            self.empty_state(ui);
+                        } else {
+                            self.grid(ui, &ids);
+                        }
+                        ui.add_space(16.0);
+                    });
+                }
             });
-        self.dialogs(&ctx, host);
+        // Escape leaves a page for Apps, when nothing above the page (a dialog, the feed alert, a
+        // menu or a list) or a text field being edited would take the key itself. An ordinary
+        // focused control (a button reached by Tab) doesn't use Escape, so it doesn't block it.
+        let alert_open = self.alerts.iter().any(|a| !self.settings.dismissed_notices.contains(&a.id));
+        if self.page != Page::Apps
+            && self.dialog.is_none()
+            && !alert_open
+            && !escape_taken
+            && !egui::Popup::is_any_open(&ctx)
+            && !ctx.text_edit_focused()
+            && ctx.input(|i| i.key_pressed(egui::Key::Escape))
+        {
+            self.set_page(Page::Apps);
+        }
+        self.dialogs(&ctx);
         self.draw_toasts(&ctx);
         if host.title_bar() == TitleBar::Custom {
             crate::widgets::window_edges(&ctx);
         }
     }
 
-    /// The ids to show, filtered and sorted.
+    /// The ids to show, filtered, in page order ([`crate::shelves::page_order`], the grid's only
+    /// order). Apps kept off the page ([`crate::shelves::shown`]) never appear.
     pub(crate) fn visible_ids(&self) -> Vec<&'static str> {
         let needle = self.search.trim().to_lowercase();
-        let mut list: Vec<(usize, &AppEntry)> = self
-            .entries
-            .iter()
-            .enumerate()
-            .filter(|(_, e)| {
+        crate::shelves::page_order()
+            .into_iter()
+            .filter_map(|id| self.entry(id))
+            .filter(|e| self.shown(e))
+            .filter(|e| {
                 let s = e.status(self.platform, self.caps.manage_apps);
                 let keep = match self.settings.filter {
                     Filter::All => true,
@@ -710,46 +761,8 @@ impl LauncherUi {
                     || e.app.tagline.to_lowercase().contains(&needle)
                     || e.app.like.to_lowercase().contains(&needle))
             })
-            .collect();
-        let platform = self.platform;
-        let manage = self.caps.manage_apps;
-        let desc = self.settings.sort_descending;
-        let dir = |o: std::cmp::Ordering| if desc { o.reverse() } else { o };
-        // Empty cells (not installed, no release) go last whichever way the column sorts.
-        let opt = |a: Option<std::cmp::Ordering>, a_some: bool, b_some: bool| match (a_some, b_some) {
-            (true, true) => dir(a.unwrap_or(std::cmp::Ordering::Equal)),
-            (true, false) => std::cmp::Ordering::Less,
-            (false, true) => std::cmp::Ordering::Greater,
-            (false, false) => std::cmp::Ordering::Equal,
-        };
-        let installed = |e: &AppEntry| e.installed.as_ref().and_then(|i| i.version.clone());
-        let latest = |e: &AppEntry| e.release().and_then(|r| r.version.clone());
-        list.sort_by(|(ia, a), (ib, b)| {
-            let ord = match self.settings.sort {
-                SortKey::Suite => dir(ia.cmp(ib)),
-                SortKey::Name => dir(a.app.name.cmp(b.app.name)),
-                SortKey::InspiredBy => dir(a.app.like.cmp(b.app.like)),
-                SortKey::Status => {
-                    dir(crate::model::status_rank(&a.status(platform, manage)).cmp(&crate::model::status_rank(&b.status(platform, manage))))
-                }
-                SortKey::Installed => {
-                    let (x, y) = (installed(a), installed(b));
-                    opt(x.as_ref().zip(y.as_ref()).map(|(x, y)| x.cmp_precedence(y)), x.is_some(), y.is_some())
-                }
-                SortKey::Latest => {
-                    let (x, y) = (latest(a), latest(b));
-                    opt(x.as_ref().zip(y.as_ref()).map(|(x, y)| x.cmp_precedence(y)), x.is_some(), y.is_some())
-                }
-                SortKey::Released => {
-                    let at = |e: &AppEntry| e.release().and_then(|r| r.published_at);
-                    let (x, y) = (at(a), at(b));
-                    opt(x.zip(y).map(|(x, y)| x.cmp(&y)), x.is_some(), y.is_some())
-                }
-            };
-            // Ties keep suite order.
-            ord.then(ia.cmp(ib))
-        });
-        list.into_iter().map(|(_, e)| e.app.id).collect()
+            .map(|e| e.app.id)
+            .collect()
     }
 
     /// "Redrob API", "GitHub" or "Redrob API and GitHub": the services behind the releases on
@@ -775,9 +788,16 @@ impl LauncherUi {
         }
     }
 
+    /// Whether an app is on the page (and in its counts): every app except those kept off it
+    /// unless installed ([`crate::shelves::HIDDEN_UNLESS_INSTALLED`]).
+    pub(crate) fn shown(&self, e: &AppEntry) -> bool {
+        crate::shelves::shown(e.app.id, e.installed.is_some())
+    }
+
     pub(crate) fn count(&self, filter: Filter) -> usize {
         self.entries
             .iter()
+            .filter(|e| self.shown(e))
             .filter(|e| {
                 let s = e.status(self.platform, self.caps.manage_apps);
                 match filter {
@@ -790,7 +810,10 @@ impl LauncherUi {
             .count()
     }
 
+    /// DS Toasts: 360 wide, raised, radius 8, shadow-lg, a 20 px status icon in its colour, the
+    /// text, and a close button. Clicking a toast also dismisses it.
     fn draw_toasts(&mut self, ctx: &egui::Context) {
+        use crate::glyphs::Icon;
         let now = ctx.input(|i| i.time);
         self.toasts.retain(|t| t.until > now);
         if self.toasts.is_empty() {
@@ -798,28 +821,42 @@ impl LauncherUi {
         }
         ctx.request_repaint_after(Duration::from_millis(250));
         let t = Tokens::get(ctx);
-        let anchor = egui::vec2(-20.0, -(crate::views::FOOTER_H + 12.0));
+        const W: f32 = 360.0;
+        // 24 px in from the window's corner (the page's own padding); there is no footer to clear.
+        let anchor = egui::vec2(-24.0, -24.0);
         egui::Area::new(egui::Id::new("toasts")).anchor(egui::Align2::RIGHT_BOTTOM, anchor).order(egui::Order::Foreground).show(ctx, |ui| {
-            ui.set_max_width(380.0);
+            ui.set_width(W);
             let mut dismiss = None;
             for (i, toast) in self.toasts.iter().enumerate() {
-                let accent = if toast.error { t.bad } else { t.good };
+                let (icon, tone) = if toast.error { (Icon::Close, t.bad) } else { (Icon::Check, t.good) };
                 let r = egui::Frame::new()
-                    .fill(t.bg)
-                    .stroke(egui::Stroke::new(1.0, t.line_strong))
-                    .shadow(theme::shadow(&t))
-                    .inner_margin(egui::Margin::symmetric(14, 10))
+                    .fill(t.raised())
+                    .stroke(t.hairline())
+                    .corner_radius(egui::CornerRadius::same(theme::radius::MD))
+                    .shadow(theme::shadow_lg(&t))
+                    .inner_margin(16)
                     .show(ui, |ui| {
-                        ui.horizontal(|ui| {
-                            let (rect, _) = ui.allocate_exact_size(egui::vec2(6.0, 6.0), egui::Sense::hover());
-                            ui.painter().rect_filled(rect, egui::CornerRadius::ZERO, accent);
-                            ui.add(egui::Label::new(egui::RichText::new(crate::i18n::msg(&toast.text)).color(t.ink)).wrap());
-                        });
+                        ui.set_width(W - 32.0);
+                        ui.horizontal_top(|ui| {
+                            ui.spacing_mut().item_spacing.x = theme::space::S3;
+                            let (r, _) = ui.allocate_exact_size(egui::vec2(20.0, 20.0), egui::Sense::hover());
+                            crate::glyphs::paint(ui.painter(), r, icon, tone);
+                            let text_w = W - 32.0 - 20.0 - theme::control::SM - 2.0 * theme::space::S3;
+                            ui.allocate_ui(egui::vec2(text_w, 0.0), |ui| {
+                                ui.set_width(text_w);
+                                ui.add(
+                                    egui::Label::new(egui::RichText::new(crate::i18n::msg(&toast.text)).size(theme::text::BODY_SM).color(t.ink))
+                                        .wrap(),
+                                );
+                            });
+                            crate::widgets::icon_button(ui, Icon::Close, tl!("Dismiss notification"), theme::control::SM).clicked()
+                        })
+                        .inner
                     });
-                if r.response.interact(egui::Sense::click()).clicked() {
+                if r.inner || r.response.interact(egui::Sense::click()).clicked() {
                     dismiss = Some(i);
                 }
-                ui.add_space(6.0);
+                ui.add_space(theme::space::S2);
             }
             if let Some(i) = dismiss {
                 self.toasts.remove(i);

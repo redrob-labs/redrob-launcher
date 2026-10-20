@@ -127,10 +127,12 @@ fn complete_catalogs_cover_every_ui_literal() {
         include_str!("../channels.rs"),
         include_str!("../dialogs.rs"),
         include_str!("../engine.rs"),
+        include_str!("../glyphs.rs"),
         include_str!("../model.rs"),
         include_str!("../models.rs"),
         include_str!("../notes.rs"),
         include_str!("../settings.rs"),
+        include_str!("../shell.rs"),
         include_str!("../views.rs"),
         include_str!("../widgets.rs"),
         // The desktop shell's tray menu and tooltip.
@@ -227,7 +229,7 @@ fn korean_counts_dates_and_messages_work() {
     }
     assert_eq!(super::tr_ctx(Lang::KO, "month", "Mar"), "3월");
     assert_eq!(tr(Lang::KO, "{month} {day}, {year}"), "{year}년 {month} {day}일");
-    assert_eq!(message(Lang::KO, "Redrob Canvas updated to 0.5.0"), "Redrob Canvas을(를) 0.5.0(으)로 업데이트했어요");
+    assert_eq!(message(Lang::KO, "Redrob Canvas updated to 0.5.0"), "Redrob Canvas 앱을 0.5.0 버전으로 업데이트했어요");
     assert_eq!(tr(Lang::KO, "Untranslated diagnostic"), "Untranslated diagnostic");
 }
 
@@ -269,8 +271,9 @@ fn language_labels_come_from_the_registry() {
     for lang in Lang::all() {
         assert_eq!(Settings::language_label(lang.code()), lang.name());
     }
-    assert_eq!(Settings::language_label(Settings::LANGUAGE_AUTO), "Auto");
-    assert_eq!(Settings::language_label("xx"), "Auto");
+    // `cfg(test)` pins the system language to English.
+    assert_eq!(Settings::language_label(Settings::LANGUAGE_AUTO), "Match system (English)");
+    assert_eq!(Settings::language_label("xx"), "Match system (English)");
 }
 
 // The parser.

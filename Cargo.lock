@@ -3875,6 +3875,7 @@ dependencies = [
  "ron",
  "serde",
  "tray-icon",
+ "windows-sys 0.59.0",
  "winresource",
 ]
 

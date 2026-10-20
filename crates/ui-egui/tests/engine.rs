@@ -1,4 +1,4 @@
-//! The engine dialog against a fake engine backend: each state's label and buttons, and the
+//! The AI engine page against a fake engine backend: each state's label and buttons, and the
 //! requests they send.
 
 use std::cell::RefCell;
@@ -16,6 +16,8 @@ struct State {
     state: Option<EngineState>,
     asked: Vec<String>,
     commands: Vec<Command>,
+    /// Catalog events for the first poll (e.g. an installed engine and a newer release).
+    events: Vec<Event>,
 }
 
 struct FakeEngine(Rc<RefCell<State>>);
@@ -48,7 +50,7 @@ impl Backend for Fake {
         self.1.borrow_mut().commands.push(c);
     }
     fn poll(&mut self) -> Vec<Event> {
-        Vec::new()
+        std::mem::take(&mut self.1.borrow_mut().events)
     }
     fn capabilities(&self) -> Capabilities {
         Capabilities { manage_apps: true, reveal_label: "Show in Finder", self_update: false }
@@ -105,22 +107,41 @@ fn a_running_engine_lists_its_apps_and_offers_stop_and_restart() {
     }));
     let mut h = harness(state.clone());
     h.run_steps(4);
-    // Two apps attached: the header counts them.
-    h.get_by_label("Engine · 2").click();
+    // Two apps attached: the sidebar row says the engine is in use.
+    h.get_by_label("AI engine: In use").click();
     h.run_steps(12);
     h.get_by_label("Running");
     h.get_by_label("version 0.6.0");
-    // The suite grid lists these names too, so the dialog adds a second match for each.
-    assert_eq!(h.get_all_by_label("Redrob Design").count(), 2);
-    assert_eq!(h.get_all_by_label("Redrob Cowork").count(), 2);
+    // The engine is a page now: it replaces the suite grid, so each attached app is listed once.
+    assert_eq!(h.get_all_by_label("Redrob Design").count(), 1);
+    assert_eq!(h.get_all_by_label("Redrob Cowork").count(), 1);
     if let Some(dir) = std::env::var_os("REDROB_LAUNCHER_SNAPSHOTS") {
         h.render().unwrap().save(std::path::Path::new(&dir).join("engine.png")).unwrap();
     }
+    // The footer's actions and the apps' pids share the card's trailing edge, Stop before Restart.
+    let restart = h.get_by_label("Restart").rect();
+    let pid = h.get_by_label("pid 7").rect();
+    assert!((restart.right() - pid.right()).abs() <= 1.0, "restart {restart:?} pid {pid:?}");
+    assert!(h.get_by_label("Stop").rect().right() < restart.left());
+    // The attached apps are list rows, not 65 px bands.
+    let design = h.get_by_label("Redrob Design").rect();
+    let cowork = h.get_by_label("Redrob Cowork").rect();
+    assert!(cowork.center().y - design.center().y < 44.0, "app row pitch {}", cowork.center().y - design.center().y);
     h.get_by_label("Restart").click();
     h.run_steps(4);
     h.get_by_label("Stop").click();
     h.run_steps(4);
     assert_eq!(state.borrow().asked, ["refresh", "restart", "stop"]);
+    // A page, not a dialog: no Done; Escape and the back button lead to the apps.
+    assert!(h.query_by_label("Done").is_none());
+    h.key_press(egui::Key::Escape);
+    h.run_steps(4);
+    assert!(h.query_by_label("Restart").is_none());
+    h.get_by_label("AI engine: In use").click();
+    h.run_steps(8);
+    h.get_by_label("Back to apps").click();
+    h.run_steps(4);
+    assert!(h.query_by_label("Restart").is_none());
 }
 
 #[test]
@@ -129,28 +150,22 @@ fn an_idle_engine_says_when_it_stops_and_a_stopped_one_can_be_started() {
     let state = Rc::new(RefCell::new(State { state: Some(running(vec![], Some(300))), ..State::default() }));
     let mut h = harness(state.clone());
     h.run_steps(4);
-    h.get_by_label("Engine").click();
+    h.get_by_label("AI engine: Ready").click();
     h.run_steps(12);
     h.get_by_label("No app is using it. It stops on its own in about 5 min.");
+    if let Some(dir) = std::env::var_os("REDROB_LAUNCHER_SNAPSHOTS") {
+        h.render().unwrap().save(std::path::Path::new(&dir).join("engine-idle.png")).unwrap();
+    }
 
     state.borrow_mut().state = Some(EngineState::Stopped);
     h.run_steps(8);
     h.get_by_label("Not running");
+    // Stopped is its resting state: the row says so plainly, not "off".
+    h.get_by_label("AI engine: Standby");
+    if let Some(dir) = std::env::var_os("REDROB_LAUNCHER_SNAPSHOTS") {
+        h.render().unwrap().save(std::path::Path::new(&dir).join("engine-stopped.png")).unwrap();
+    }
     h.get_by_label("Start").click();
     h.run_steps(4);
     assert_eq!(state.borrow().asked, ["refresh", "start"]);
-}
-
-#[test]
-fn without_the_engine_installed_the_dialog_installs_redrob_code() {
-    redrob_launcher_ui_egui::i18n::set_test_lang(redrob_launcher_ui_egui::i18n::Lang::EN);
-    let state = Rc::new(RefCell::new(State { state: Some(EngineState::NotInstalled), ..State::default() }));
-    let mut h = harness(state.clone());
-    h.run_steps(4);
-    h.get_by_label("Engine").click();
-    h.run_steps(12);
-    h.get_by_label("Not installed");
-    h.get_by_label("Install Redrob Code").click();
-    h.run_steps(4);
-    assert!(state.borrow().commands.contains(&Command::Install { app: "redrob-code".into() }));
 }
