@@ -163,10 +163,13 @@ impl LauncherUi {
         if self.dialog.is_none()
             && let Some(r) = self.launcher_update.clone()
         {
-            widgets::alert_frame(&t).show(ui, |ui| {
+            widgets::alert_frame_dense(&t).show(ui, |ui| {
+                // A row is at least interact_size tall: 32 here (the Sm buttons), not the page's 40.
+                ui.spacing_mut().interact_size.y = theme::control::SM;
                 ui.horizontal(|ui| {
-                    // DS Alert: a 20 px icon in the tone's ink, then the title.
-                    let (icon, _) = ui.allocate_exact_size(vec2(20.0, 20.0), Sense::hover());
+                    // A one-line DS Alert: a 16 px icon in the tone's ink, then the title, all on a
+                    // 32 px row (the buttons and the dismiss are Sm).
+                    let (icon, _) = ui.allocate_exact_size(vec2(16.0, 16.0), Sense::hover());
                     crate::glyphs::paint(ui.painter(), icon, Icon::Download, t.accent_ink);
                     ui.add_space(4.0);
                     ui.label(
@@ -200,7 +203,7 @@ impl LauncherUi {
                             widgets::progress(ui, fraction, &caption, t.accent, 220.0);
                             return;
                         }
-                        if widgets::icon_button(ui, crate::glyphs::Icon::Close, tl!("Dismiss"), crate::theme::CONTROL_H).clicked() {
+                        if widgets::icon_button(ui, crate::glyphs::Icon::Close, tl!("Dismiss"), theme::control::SM).clicked() {
                             self.launcher_update = None;
                         }
                         if self.caps.self_update {
@@ -221,7 +224,7 @@ impl LauncherUi {
                     });
                 });
             });
-            ui.add_space(14.0);
+            ui.add_space(theme::space::S3);
         }
         self.announcements(ui);
         ui.horizontal(|ui| {

@@ -761,6 +761,38 @@ fn looks_again_at_installed_apps_every_few_minutes_not_every_frame() {
 }
 
 #[test]
+fn the_launcher_update_banner_is_one_slim_line() {
+    let mut ev = events();
+    ev.push(Event::LauncherUpdate(release("redrob-launcher", "0.2.0", NOW)));
+    let (mut h, _) = harness_with(ev, egui::Theme::Light, true, 1.0);
+    h.run_steps(6);
+    // The prompt asks first; "Later" leaves the banner.
+    h.get_by_label("Later").click();
+    h.run_steps(4);
+    snapshot(&mut h, "launcher-update-banner-light");
+    h.get_by_label_contains("Redrob Launcher 0.2.0 is available");
+    // One line: its controls are Sm (32), so the bar (12 / 6 padding) is 44 px; with the 12 px gap
+    // and the filter row's own inset the filter cells start at most 70 px under the bar's top
+    // (they started 92 px under it before: a 66 px bar and a 14 px gap).
+    let dismiss = h.get_by_label("Dismiss").rect();
+    let action = ["Update and restart", "Download"]
+        .iter()
+        .flat_map(|l| h.query_all_by_label(l).map(|n| n.rect()).collect::<Vec<_>>())
+        .find(|r| (r.center().y - dismiss.center().y).abs() < 1.0)
+        .unwrap();
+    assert_eq!((dismiss.height(), action.height()), (32.0, 32.0));
+    // The filter row's "All" cell: the first thing under the banner.
+    let filters = h
+        .query_all_by_label_contains("All")
+        .map(|n| n.rect())
+        .filter(|r| r.top() > dismiss.bottom())
+        .min_by(|a, b| a.top().total_cmp(&b.top()))
+        .unwrap();
+    let bar_top = dismiss.top() - 6.0;
+    assert!(filters.top() - bar_top <= 70.0, "banner from {bar_top}, filters at {filters:?}");
+}
+
+#[test]
 fn the_launcher_updates_itself_and_quits_to_restart() {
     struct QuitHost(Rc<Cell<bool>>);
     impl Host for QuitHost {

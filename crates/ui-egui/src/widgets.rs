@@ -143,6 +143,12 @@ pub fn alert_frame(t: &Tokens) -> egui::Frame {
         .inner_margin(egui::Margin::symmetric(16, 12))
 }
 
+/// [`alert_frame`] for a one-line alert (the launcher's own update): padding 12 / 6, so with a
+/// 32 px control the bar is 44 px tall (was about 66).
+pub fn alert_frame_dense(t: &Tokens) -> egui::Frame {
+    alert_frame(t).inner_margin(egui::Margin::symmetric(12, 6))
+}
+
 /// How far in from the window's edges a custom title bar's window resizes ([`window_edges`]).
 /// The title bar's own controls leave this band alone.
 const RESIZE_EDGE: f32 = 5.0;
