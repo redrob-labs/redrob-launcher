@@ -55,8 +55,10 @@ pub(crate) const HEADER_H: f32 = 48.0;
 /// Three tiles across the main area beside the sidebar at the default 1180 px window (four once
 /// it is wider).
 const CARD_MIN_W: f32 = 240.0;
-/// A tile's height: padding, the icon row, the version line and the actions row.
-const CARD_H: f32 = 172.0;
+/// The gap between a tile's name and its description.
+const CARD_LINE_GAP: f32 = 2.0;
+/// The tallest thing on a tile's actions row (the main button, a progress bar or the … button).
+const CARD_ACTION_H: f32 = theme::control::MD;
 /// The space between tiles (DS card gap in a dense grid: space-4).
 const CARD_GAP: f32 = 16.0;
 /// DS card padding, dense (space-4).
@@ -400,6 +402,8 @@ impl LauncherUi {
             vec![(None, ids.to_vec())]
         };
         let t = Tokens::get(ui.ctx());
+        // Every tile is as tall as the one whose description wraps to the most lines.
+        let card_h = card_height(ui, ids, card_w);
         for (title, list) in sections {
             if list.is_empty() {
                 continue;
@@ -415,12 +419,12 @@ impl LauncherUi {
                 ui.add_space(theme::space::S3);
             }
             let rows = list.len().div_ceil(cols);
-            let height = rows as f32 * (CARD_H + CARD_GAP) - CARD_GAP;
+            let height = rows as f32 * (card_h + CARD_GAP) - CARD_GAP;
             let (area, _) = ui.allocate_exact_size(vec2(width, height), Sense::hover());
             for (i, id) in list.iter().enumerate() {
                 let (row, col) = (i / cols, i % cols);
-                let min = area.min + vec2(col as f32 * (card_w + CARD_GAP), row as f32 * (CARD_H + CARD_GAP));
-                self.card(ui, id, Rect::from_min_size(min, vec2(card_w, CARD_H)));
+                let min = area.min + vec2(col as f32 * (card_w + CARD_GAP), row as f32 * (card_h + CARD_GAP));
+                self.card(ui, id, Rect::from_min_size(min, vec2(card_w, card_h)));
             }
             ui.add_space(theme::space::S6);
         }
@@ -428,7 +432,7 @@ impl LauncherUi {
 
     /// One app as a DS ConnectorCard: raised, radius 12, a hairline that strengthens with a
     /// shadow-md on hover (140 ms); the icon exactly as supplied (no shadow, border or tint) beside
-    /// the name, tagline and kind; the version; the actions. No status chip and no links: the
+    /// the name and its full short description; the version; the actions. No status chip and no links: the
     /// button says what can be done, and every card exposes its menu through both the named …
     /// button and right-click. The product's colour is only its icon.
     fn card(&mut self, ui: &mut Ui, id: &str, rect: Rect) {
@@ -470,41 +474,29 @@ impl LauncherUi {
         let mut child = ui.new_child(egui::UiBuilder::new().max_rect(inner).layout(egui::Layout::top_down(egui::Align::Min)));
         child.set_clip_rect(rect.intersect(ui.clip_rect()));
         let ui = &mut child;
-        ui.horizontal(|ui| {
-            const ICON: f32 = CARD_ICON;
-            let [name, tagline, like] = [
-                FontId::new(theme::text::BODY, theme::display()),
-                FontId::proportional(theme::text::BODY_SM),
-                FontId::proportional(theme::text::META),
-            ];
-            const GAP: f32 = 2.0;
-            // The slot is as tall as the text beside it when that is taller, so the two share a centre.
-            let block = lines_height(ui, &[&name, &tagline, &like], GAP);
-            let (slot, icon_response) = ui.allocate_exact_size(vec2(ICON, block.max(ICON)), Sense::hover());
+        let (name_font, desc_font, _) = card_fonts();
+        let text_w = (inner.width() - CARD_ICON - theme::space::S3).max(1.0);
+        ui.horizontal_top(|ui| {
+            // The icon sits at the top of the text column, so a long description grows downward.
+            let (slot, icon_response) = ui.allocate_exact_size(vec2(CARD_ICON, CARD_ICON), Sense::hover());
             icon_response.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Image, true, fmt(tl!("{name} icon"), &[("name", app.name)])));
             if let Some(icon) = crate::icons::app(app.id) {
-                egui::Image::new(icon).paint_at(ui, Rect::from_center_size(slot.center(), vec2(ICON, ICON)));
+                egui::Image::new(icon).paint_at(ui, slot);
             }
             ui.add_space(theme::space::S3);
-            centered_lines(ui, &[&name, &tagline, &like], GAP, |ui| {
+            ui.allocate_ui_with_layout(vec2(text_w, 0.0), egui::Layout::top_down(egui::Align::Min), |ui| {
+                ui.spacing_mut().item_spacing.y = CARD_LINE_GAP;
                 // The name's row is as tall as its text, not as a button.
                 ui.spacing_mut().interact_size.y = 0.0;
-                widgets::wordmark(ui, app, theme::text::BODY);
-                ui.add(egui::Label::new(RichText::new(tr_ctx(current(), app.id, app.tagline)).font(tagline.clone()).color(t.muted)).truncate());
-                ui.add(egui::Label::new(RichText::new(crate::i18n::tr(current(), app.like)).font(like.clone()).color(t.faint)).truncate());
+                widgets::wordmark(ui, app, name_font.size);
+                // The short description in full: it wraps instead of being cut off.
+                ui.add(egui::Label::new(RichText::new(tr_ctx(current(), app.id, app.tagline)).font(desc_font).color(t.muted)).wrap());
             });
         });
         ui.add_space(theme::space::S3);
-        // One line, never cut short: where the dated line doesn't fit the tile, the date moves to
-        // the tooltip.
-        let full = version_line(&entry, &status);
-        let font = FontId::proportional(theme::text::META);
-        let fits = ui.fonts_mut(|f| f.layout_no_wrap(full.clone(), font.clone(), t.muted).size().x) <= ui.available_width();
-        if fits {
-            ui.label(RichText::new(full).font(font).color(t.muted));
-        } else {
-            ui.label(RichText::new(version_line_dated(&entry, &status, false)).font(font).color(t.muted)).on_hover_text(full);
-        }
+        // The version alone, in the lightest ink, with no release date. A narrow tile cuts it short;
+        // egui then shows the whole line on hover.
+        ui.add(egui::Label::new(RichText::new(version_line(&entry, &status)).font(card_fonts().2).color(t.faint)).truncate());
         ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
             ui.horizontal(|ui| self.actions(ui, &entry, &status, inner.width()));
         });
@@ -763,22 +755,17 @@ impl LauncherUi {
     }
 }
 
-/// "0.4.1 installed → 0.5.0 released · Oct 8, 2026" and friends.
+/// "0.4.1 installed → 0.5.0 released", "Version 0.3.0" and friends: versions only, no release date
+/// (the date is in Release notes).
 fn version_line(e: &AppEntry, status: &AppStatus) -> String {
-    version_line_dated(e, status, true)
-}
-
-/// [`version_line`], with or without the release date.
-fn version_line_dated(e: &AppEntry, status: &AppStatus, dated: bool) -> String {
-    let released = e.release().and_then(|r| r.published_at).filter(|_| dated).map(|at| format!(" · {}", date_text(at))).unwrap_or_default();
     match (status, e.installed_label(), e.latest_label()) {
         (AppStatus::UpdateAvailable, Some(i), Some(l)) => {
-            format!("{}{released}", fmt(tl!("{version} installed → {latest} released"), &[("version", i.as_str()), ("latest", l.as_str())]))
+            fmt(tl!("{version} installed → {latest} released"), &[("version", i.as_str()), ("latest", l.as_str())])
         }
-        (AppStatus::UpToDate, Some(i), _) => format!("{}{released}", fmt(tl!("Version {version}"), &[("version", i.as_str())])),
+        (AppStatus::UpToDate, Some(i), _) => fmt(tl!("Version {version}"), &[("version", i.as_str())]),
         (_, Some(i), Some(l)) => fmt(tl!("{installed} installed · latest {latest}"), &[("installed", i.as_str()), ("latest", l.as_str())]),
         (_, Some(i), None) => fmt(tl!("Version {version} installed"), &[("version", i.as_str())]),
-        (_, None, Some(l)) => format!("{}{released}", fmt(tl!("Version {latest}"), &[("latest", l.as_str())])),
+        (_, None, Some(l)) => fmt(tl!("Version {latest}"), &[("latest", l.as_str())]),
         (AppStatus::NoRelease, None, None) => tl!("No release published yet").to_string(),
         _ => " ".to_string(),
     }
@@ -794,19 +781,29 @@ pub(crate) fn launcher_download(r: &redrob_launcher_core::Release, p: redrob_lau
     pick_asset(r, &[redrob_launcher_core::catalog::LAUNCHER_ID], p, kinds).map(|(a, _)| a.url.clone())
 }
 
-/// A column of single-line texts, one per font and `gap` apart, centred across the row it is in.
-/// `ui.vertical` starts at the top of the row instead: a row only centres what it knows the height of.
-/// Each line is measured as an empty galley, which is rounded to the pixel like a label, unlike `Fonts::row_height`.
-fn centered_lines(ui: &mut Ui, fonts: &[&FontId], gap: f32, add_contents: impl FnOnce(&mut Ui)) {
-    let height = lines_height(ui, fonts, gap);
-    ui.allocate_ui_with_layout(vec2(ui.available_width(), height), egui::Layout::top_down(egui::Align::Min), |ui| {
-        ui.spacing_mut().item_spacing.y = gap;
-        add_contents(ui);
-    });
+/// The height every tile takes at `card_w`, set by the app whose description wraps to the most
+/// lines: padding, the icon-and-text block, the version line, the actions row, padding.
+///
+/// * `ui` - any Ui on the page, for font metrics.
+/// * `ids` - the apps shown; every tile takes the tallest one's height so rows stay even.
+/// * `card_w` - one tile's outer width.
+fn card_height(ui: &Ui, ids: &[&'static str], card_w: f32) -> f32 {
+    let (name, desc, meta) = card_fonts();
+    let text_w = (card_w - 2.0 * CARD_PAD - CARD_ICON - theme::space::S3).max(1.0);
+    let line = |font: &FontId| ui.fonts_mut(|f| f.layout_no_wrap(String::new(), font.clone(), Color32::PLACEHOLDER)).size().y;
+    let desc_h = ids
+        .iter()
+        .filter_map(|id| redrob_launcher_core::CraftApp::by_id(id))
+        .map(|app| {
+            let text = tr_ctx(current(), app.id, app.tagline).to_string();
+            ui.fonts_mut(|f| f.layout(text, desc.clone(), Color32::PLACEHOLDER, text_w)).size().y
+        })
+        .fold(line(&desc), f32::max);
+    let block = (line(&name) + CARD_LINE_GAP + desc_h).max(CARD_ICON);
+    (2.0 * CARD_PAD + block + theme::space::S3 + line(&meta) + theme::space::S4 + CARD_ACTION_H).ceil()
 }
 
-/// The height of [`centered_lines`] with these fonts.
-fn lines_height(ui: &Ui, fonts: &[&FontId], gap: f32) -> f32 {
-    let line = |font: &FontId| ui.fonts_mut(|f| f.layout_no_wrap(String::new(), font.clone(), Color32::PLACEHOLDER)).size().y;
-    (fonts.iter().map(|font| line(font) + gap).sum::<f32>() - gap).max(0.0)
+/// A tile's three type roles: (app name in the display face, description, version line).
+fn card_fonts() -> (FontId, FontId, FontId) {
+    (FontId::new(theme::text::BODY, theme::display()), FontId::proportional(theme::text::BODY_SM), FontId::proportional(theme::text::META))
 }

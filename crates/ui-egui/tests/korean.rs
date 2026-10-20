@@ -164,7 +164,8 @@ fn korean_switches_persists_and_keeps_install_actions() {
     h.get_by_label("앱으로 돌아가기").click();
     h.run_steps(3);
     h.get_by_label("에이전트와 함께 그림을 그리고 이미지를 편집해요");
-    h.get_by_label("그래픽");
+    // Cards show the full description and no "kind of app" caption.
+    assert!(h.query_by_label("그래픽").is_none());
     h.get_by_label("0.5.0 버전으로 업데이트");
     // The account row's menu, in Korean.
     let row = h.get_by_label("설정").rect();
@@ -185,10 +186,11 @@ fn korean_switches_persists_and_keeps_install_actions() {
     let installs: Vec<_> = sent.borrow().iter().filter_map(|c| if let Command::Install { app } = c { Some(app.clone()) } else { None }).collect();
     assert_eq!(installs, ["redrob-canvas", "redrob-browser"]);
 
-    // Release dates in Korean, on the tiles' version lines.
+    // Version lines in Korean on the tiles, without a release date (that is in Release notes).
     let (mut light, _) = harness_language(egui::Theme::Light, true, &restored.language);
     light.run_steps(6);
-    assert!(light.query_all_by_label_contains("2026년 10월").count() >= 1);
+    assert!(light.query_all_by_label_contains("버전 ").count() >= 1);
+    assert_eq!(light.query_all_by_label_contains("2026년 10월").count(), 0);
     snapshot(&mut light, "grid-ko-light");
     let (mut web, _) = harness_language(egui::Theme::Dark, false, &restored.language);
     web.run_steps(6);
