@@ -163,7 +163,7 @@ fn korean_switches_persists_and_keeps_install_actions() {
     assert_eq!(restored.language, "ko");
     h.get_by_label("앱으로 돌아가기").click();
     h.run_steps(3);
-    h.get_by_label("에이전트와 함께 그림을 그리고 이미지를 보정하고 편집해요");
+    h.get_by_label("전문가 수준으로 그리고 칠하고 보정해요. 원하는 편집은 AI에게 맡기세요");
     // Cards show the full description and no "kind of app" caption.
     assert!(h.query_by_label("그래픽").is_none());
     h.get_by_label("0.5.0 버전으로 업데이트");

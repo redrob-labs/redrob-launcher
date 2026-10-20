@@ -215,15 +215,15 @@ column	Installed	설치됨
 column	Latest	최신
 column	Released	출시일
 filter	Installed	설치됨
-redrob-film	Describe the cut and the motion graphics, and the agent edits the video	원하는 컷과 모션 그래픽을 말하면 에이전트가 영상을 편집해요
-redrob-shape	Model and texture 3D objects from a written prompt	글로 설명하면 3D 오브젝트를 만들고 질감을 입혀요
-redrob-cad	Design parts, set constraints and revise them with an agent	에이전트와 함께 부품을 설계하고 구속 조건을 걸어 다듬어요
-redrob-canvas	Paint, retouch and edit images with an agent	에이전트와 함께 그림을 그리고 이미지를 보정하고 편집해요
-redrob-design	Open .fig and .pen files and change the design by describing it	.fig·.pen 파일을 열고 말로 설명해 디자인을 바꿔요
-redrob-browser	Browse while an agent reads pages, fills in forms and runs tasks	웹을 둘러보는 동안 에이전트가 페이지를 읽고 양식을 채우고 할 일을 처리해요
-redrob-code	A coding agent in your terminal that reads, writes and runs code	터미널에서 코드를 읽고 쓰고 실행하는 코딩 에이전트
-redrob-cowork	Hand tasks to AI agents that work on the files on your computer	내 컴퓨터의 파일로 일하는 AI 에이전트에게 작업을 맡겨요
-redrob-office	Write docs, build sheets and slides, and edit PDF and Hangul files in one window	문서·시트·슬라이드를 만들고 PDF·한글 파일까지 한 창에서 편집해요
+redrob-film	Pro video editing and motion graphics. Describe the cut and AI builds it	전문가급 영상 편집과 모션 그래픽. 원하는 컷을 말하면 AI가 만들어요
+redrob-shape	Model, sculpt and texture in 3D. Describe the object and AI shapes it	3D 모델링, 스컬핑, 텍스처링까지. 원하는 오브젝트를 말하면 AI가 빚어요
+redrob-cad	Precision CAD for real parts. Sketch, constrain and revise with AI beside you	실제 부품을 위한 정밀 CAD. AI와 함께 스케치하고 구속 조건을 걸어 다듬어요
+redrob-canvas	Draw, paint and retouch at pro quality. Ask AI for the edit you have in mind	전문가 수준으로 그리고 칠하고 보정해요. 원하는 편집은 AI에게 맡기세요
+redrob-design	Design apps and websites. Open .fig and .pen files and change any screen by asking	앱과 웹사이트를 디자인해요. .fig·.pen 파일을 열고 말로 어떤 화면이든 바꿔요
+redrob-browser	Browse with AI that reads pages, fills in forms and finishes tasks for you	페이지를 읽고 양식을 채우고 할 일까지 끝내는 AI와 함께 웹을 둘러봐요
+redrob-code	Build software from your terminal. AI that reads, writes and tests your code	터미널에서 소프트웨어를 만들어요. 코드를 읽고 쓰고 테스트하는 AI
+redrob-cowork	Hand off real work. AI agents research, draft and organize your files for you	진짜 일을 맡기세요. AI 에이전트가 조사하고 초안을 쓰고 파일을 정리해요
+redrob-office	Docs, sheets and slides with AI built in. Opens PDF and Hangul files too	AI가 들어간 문서, 시트, 슬라이드. PDF와 한글 파일도 열어요
 month	Jan	1월
 month	Feb	2월
 month	Mar	3월

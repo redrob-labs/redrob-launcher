@@ -122,19 +122,43 @@ pub const SUITE: [CraftApp; 9] = [
     app!(
         "redrob-film",
         "Redrob Film",
-        "Describe the cut and the motion graphics, and the agent edits the video",
+        "Pro video editing and motion graphics. Describe the cut and AI builds it",
         "Video editing",
         AppGroup::Create,
         BLUE,
         "ai.redrob.film"
     ),
-    app!("redrob-shape", "Redrob Shape", "Model and texture 3D objects from a written prompt", "3D", AppGroup::Create, BLUE, "ai.redrob.shape"),
-    app!("redrob-cad", "Redrob CAD", "Design parts, set constraints and revise them with an agent", "CAD", AppGroup::Create, BLUE, "ai.redrob.cad"),
-    app!("redrob-canvas", "Redrob Canvas", "Paint, retouch and edit images with an agent", "Graphics", AppGroup::Create, BLUE, "ai.redrob.canvas"),
+    app!(
+        "redrob-shape",
+        "Redrob Shape",
+        "Model, sculpt and texture in 3D. Describe the object and AI shapes it",
+        "3D",
+        AppGroup::Create,
+        BLUE,
+        "ai.redrob.shape"
+    ),
+    app!(
+        "redrob-cad",
+        "Redrob CAD",
+        "Precision CAD for real parts. Sketch, constrain and revise with AI beside you",
+        "CAD",
+        AppGroup::Create,
+        BLUE,
+        "ai.redrob.cad"
+    ),
+    app!(
+        "redrob-canvas",
+        "Redrob Canvas",
+        "Draw, paint and retouch at pro quality. Ask AI for the edit you have in mind",
+        "Graphics",
+        AppGroup::Create,
+        BLUE,
+        "ai.redrob.canvas"
+    ),
     app!(
         "redrob-design",
         "Redrob Design",
-        "Open .fig and .pen files and change the design by describing it",
+        "Design apps and websites. Open .fig and .pen files and change any screen by asking",
         "Design",
         AppGroup::Create,
         [0xc1, 0x62, 0xf4],
@@ -143,7 +167,7 @@ pub const SUITE: [CraftApp; 9] = [
     app!(
         "redrob-browser",
         "Redrob Browser",
-        "Browse while an agent reads pages, fills in forms and runs tasks",
+        "Browse with AI that reads pages, fills in forms and finishes tasks for you",
         "Browser",
         AppGroup::Work,
         [0xf1, 0x4a, 0xa8],
@@ -152,7 +176,7 @@ pub const SUITE: [CraftApp; 9] = [
     app!(
         "redrob-code",
         "Redrob Code",
-        "A coding agent in your terminal that reads, writes and runs code",
+        "Build software from your terminal. AI that reads, writes and tests your code",
         "Coding agent",
         AppGroup::Work,
         [0x02, 0xa2, 0x52],
@@ -161,7 +185,7 @@ pub const SUITE: [CraftApp; 9] = [
     app!(
         "redrob-cowork",
         "Redrob Cowork",
-        "Hand tasks to AI agents that work on the files on your computer",
+        "Hand off real work. AI agents research, draft and organize your files for you",
         "Agent workspace",
         AppGroup::Work,
         BLUE,
@@ -170,7 +194,7 @@ pub const SUITE: [CraftApp; 9] = [
     app!(
         "redrob-office",
         "Redrob Office",
-        "Write docs, build sheets and slides, and edit PDF and Hangul files in one window",
+        "Docs, sheets and slides with AI built in. Opens PDF and Hangul files too",
         "Office suite",
         AppGroup::Work,
         [0xfe, 0x4d, 0x3e],
