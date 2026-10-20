@@ -1,0 +1,26 @@
+[package]
+name = "redrob-login"
+description = "Redrob account sign-in for desktop apps: redrob-auth through the system browser (PKCE) or a device code, refresh token in the OS keychain"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+serde_json = { workspace = true }
+log = { workspace = true }
+# Already in Cargo.lock; pinned exactly to those versions.
+base64 = "=0.22.1"
+getrandom = "=0.3.4"
+sha2 = "0.10"
+url = "=2.5.8"
+webbrowser = "=1.2.4"
+# The same HTTPS client and TLS setup as redrob-launcher-native (OS certificate verifier).
+ureq = { version = "3.4", default-features = false, features = ["rustls-no-provider", "_ring", "gzip", "platform-verifier"] }
+# The OS keychain: macOS Keychain, Windows Credential Manager, Secret Service over D-Bus (pure Rust
+# zbus, no libdbus) elsewhere. New: pinned exactly.
+keyring = "=4.1.6"
