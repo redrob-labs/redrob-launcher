@@ -49,7 +49,7 @@ pub fn models_dir(app: &str) -> Option<PathBuf> {
         }
         // Shared models, and every other app's: one folder every Redrob app reads through the
         // installed registry (`installed.json` beside the model folders).
-        SHARED_APP | "redrob-canvas" | "redrob-shape" | "redrob-recall" | "redrob-code" => shared_models_dir(),
+        SHARED_APP | "redrob-canvas" | "redrob-shape" | "redrob-code" => shared_models_dir(),
         _ => None,
     }
 }

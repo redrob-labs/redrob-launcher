@@ -476,7 +476,7 @@ impl Launcher {
             requests.push(Request::Show);
         }
         let links = starts.iter().filter_map(|s| match s {
-            single_instance::Request::Link(link) => Some(*link),
+            single_instance::Request::Link(link) => Some(link.clone()),
             _ => None,
         });
         let mut links: Vec<DeepLink> = self.link.take().into_iter().chain(links).collect();

@@ -31,7 +31,7 @@ Console을 씁니다. 이 계약의 어떤 것도 앱이 동작하는 데 필수
 | `app` | 폴더 |
 | --- | --- |
 | `redrob-film` | Redrob Film 자체 모델 폴더(`<데이터 폴더>/models`), 이전과 같음 |
-| `redrob`, `redrob-canvas`, `redrob-shape`, `redrob-recall`, `redrob-code` | `~/.redrob/models/<id>/` (`REDROB_MODELS_DIR`로 바꿀 수 있음) |
+| `redrob`, `redrob-canvas`, `redrob-shape`, `redrob-code` | `~/.redrob/models/<id>/` (`REDROB_MODELS_DIR`로 바꿀 수 있음) |
 
 파일은 SHA-256이 맞은 뒤에만 제자리에 놓입니다. 받다 만 파일은 `.part`가 붙어 있고 앱이 열 것이
 아닙니다.

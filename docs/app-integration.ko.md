@@ -17,8 +17,6 @@ console.redrob.ai에서 자기 키를 받는다는 뜻입니다(콘솔의 `DEVIC
 | Redrob Office | 기기 인증(`office`) | 머지됨(redrob-office#154) | 아니요 | 릴리스 |
 | Redrob Design | 기기 인증(`design`) | 머지됨(redrob-design#92) | 아니요 | 릴리스 |
 | Redrob Canvas | `REDROB_API_KEY`, 저장된 `console-key`, 기기 인증 | 머지됨(redrob-canvas#160) | 아니요 | 릴리스 |
-| Redrob Query | `REDROB_API_KEY`, OS 키링 | 머지됨(redrob-query#55) | 아니요 | 릴리스 |
-| Redrob Recall | OS 키링, 붙여 넣은 키 | 머지됨(redrob-recall#49) | 아니요 | 릴리스 |
 
 런처 계정 창은 이 표를 `crates/core/src/account.rs`의 `SHARED_READERS`로 읽습니다. 설치된 버전이 표의
 릴리스 이상이면 "이 로그인을 씀", 머지됐지만 릴리스 전이면 "다음 버전부터 이 로그인을 씁니다", IDE는
@@ -46,8 +44,6 @@ console.redrob.ai에서 자기 키를 받는다는 뜻입니다(콘솔의 `DEVIC
 | Redrob Cowork | v0.3.0 | `redrob-linux-x86_64-0.3.0.AppImage` | 아니요 | 버전이 arch 뒤에; stem `redrob`; `mac` -> `macos` |
 | Redrob Office | v0.9.0 | `Redrob-0.9.0-arm64.dmg`, `Redrob-0.9.0.AppImage` | 아니요 | electron-builder 기본값: stem `Redrob`, OS 없음, Linux는 arch 없음 |
 | Redrob Design | v0.15.0 | `Redrob.Design_0.15.0_aarch64.dmg` | 아니요 | Tauri 기본값 `Redrob.Design_<ver>_<arch>`; Linux·Windows 자산 없음 |
-| Redrob Query | v0.2.0 | `Redrob.Query_0.2.0_amd64.AppImage` | 아니요 | Tauri 기본값, Design과 같음 |
-| Redrob Recall | v0.2.0 | `Redrob.Recall_0.2.0_amd64.AppImage` | 아니요 | Tauri 기본값, Design과 같음 |
 
 메우는 길은 둘입니다. 레포마다 릴리스 워크플로에서 업로드 전에 이름을 바꾸는 단계 하나(패키저 고유
 이름은 사본으로 남김), 또는 런처가 Tauri·electron-builder 표기를 배우는 것. 앞은 모든 앱에 규칙 하나,

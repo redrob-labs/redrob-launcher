@@ -12,8 +12,8 @@ Redrob Launcher is one place to install, update, sign in and connect every Redro
 
 ## What it does
 
-- Lists every Redrob app: Cut, Shape, CAD, Canvas, Design, Browser, Code, Cowork,
-  Office, Query and Recall.
+- Lists every Redrob app: Cut, Shape, CAD, Canvas, Design, Browser, Code, Cowork
+  and Office.
 - Reads each app's GitHub releases, picks the right build for your OS and CPU (DMG, MSI, AppImage,
   .deb, .rpm and more), checks it against the release's SHA-256 checksums and installs it.
 - Shows which apps you have and which version, tells you when an update is out, and updates them.
@@ -43,7 +43,7 @@ Redrob Launcher is one place to install, update, sign in and connect every Redro
 
 - Downloads the local models every Redrob app can use: chat, coding and vision LLMs, Canvas's
   image models (our own Redrob Image, LaMa inpainting, background removal, upscaling, selection),
-  Cut's speech models and voices, Shape's image-to-3D and Recall's OCR. Measures this computer
+  Cut's speech models and voices and Shape's image-to-3D. Measures this computer
   first and says which of them run here. Resumable, pausable, every file checked against its
   pinned SHA-256. The list is `assets/models/models.json`.
 
@@ -59,7 +59,7 @@ Web pages open the launcher on one app with a `redrob://` link:
   installed;
 - `redrob://install/cowork` shows Redrob Cowork and installs it.
 
-The app is its catalog id with or without `redrob-` (`cad`, `cowork`, `office`, `query`…); any
+The app is its catalog id with or without `redrob-` (`cad`, `cowork`, `office`, `design`…); any
 other link just opens the launcher. The installers register the scheme, and the launcher checks it
 on every start. Details: [docs/deep-links.md](docs/deep-links.md).
 

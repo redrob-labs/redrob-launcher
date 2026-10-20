@@ -13,7 +13,7 @@ English: [README.md](./README.md)
 ## 무엇인가
 
 - 레드롭 앱 전부를 보여 줍니다: Cut, Shape, CAD, Canvas, Design, Browser, Code, Cowork,
-  Office, Query, Recall.
+  Office.
 - 각 앱의 GitHub 릴리스를 읽어 내 OS와 CPU에 맞는 빌드(DMG, MSI, AppImage, .deb, .rpm 등)를 고르고,
   SHA-256으로 검사한 뒤 설치합니다.
 - 설치된 앱과 버전을 보여 주고, 새 버전이 나오면 알리고 업데이트합니다.
@@ -53,7 +53,7 @@ English: [README.md](./README.md)
 - `redrob://open/cad`는 Redrob CAD를 실행하고, 설치되지 않았으면 설치 버튼과 함께 보여 줍니다.
 - `redrob://install/cowork`는 Redrob Cowork를 보여 주고 설치합니다.
 
-앱은 카탈로그 ID이며 `redrob-`는 있어도 없어도 됩니다(`cad`, `cowork`, `office`, `query`…). 다른 링크는
+앱은 카탈로그 ID이며 `redrob-`는 있어도 없어도 됩니다(`cad`, `cowork`, `office`, `design`…). 다른 링크는
 런처만 엽니다. 설치 프로그램이 스킴을 등록하고, 런처도 시작할 때마다 확인합니다. 자세한 내용:
 [docs/deep-links.ko.md](docs/deep-links.ko.md).
 

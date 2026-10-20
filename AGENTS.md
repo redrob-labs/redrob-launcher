@@ -1,7 +1,7 @@
 # AGENTS.md: guide for AI agents and contributors
 
 Redrob Launcher installs, updates and launches the **Redrob apps** (Cut, Shape, CAD, Canvas,
-Design, Studio, Browser, Code, IDE, Cowork, Office, Query, Recall: `crates/core/src/catalog.rs`).
+Design, Studio, Browser, Code, IDE, Cowork, Office: `crates/core/src/catalog.rs`).
 It is a hard fork of an upstream launcher; `UPSTREAM.md` says which and what we do not own.
 It is written in **Rust only** (no JavaScript or TypeScript): the desktop
 app is native egui/eframe, and the web build is the same Rust compiled to WebAssembly (trunk +
@@ -24,6 +24,9 @@ crates/
   native    redrob-launcher-native    desktop only: HTTP, detecting installed apps, download,
                                         verify and install
   ui-egui   redrob-launcher-ui-egui   the shared egui UI (desktop and web)
+  redrob-login  redrob-login            desktop only: sign-in to the Redrob account (redrob-auth) through
+                                        the system browser (PKCE) or a device code; refresh token in
+                                        the OS keychain. Shared with the other Redrob desktop apps
 apps/
   redrob-launcher                     desktop shell (eframe): window, tray icon, notifications
   redrob-launcher-web                 the same UI in the browser (trunk; catalog and downloads only)

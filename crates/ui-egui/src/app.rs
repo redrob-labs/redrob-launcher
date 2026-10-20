@@ -257,7 +257,7 @@ impl LauncherUi {
 
     /// Carries out the pending link once its app's state is known; until then it waits.
     fn resolve_link(&mut self) {
-        let Some(link) = self.pending_link else { return };
+        let Some(link) = self.pending_link.clone() else { return };
         let id = link.app().id;
         let Some(entry) = self.entry(id) else {
             self.pending_link = None;
@@ -270,9 +270,9 @@ impl LauncherUi {
         }
         let status = entry.status(self.platform, true);
         let command = match link {
-            DeepLink::Open(_) if !entry.detected => return,
-            DeepLink::Open(_) if entry.installed.is_some() => Some(Command::Launch { app: id.to_string() }),
-            DeepLink::Open(_) => {
+            DeepLink::Open(..) if !entry.detected => return,
+            DeepLink::Open(_, args) if entry.installed.is_some() => Some(Command::Launch { app: id.to_string(), args: args.to_args() }),
+            DeepLink::Open(..) => {
                 self.focus_install = Some(id);
                 None
             }

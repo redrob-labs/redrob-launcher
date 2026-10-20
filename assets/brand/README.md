@@ -1,38 +1,36 @@
 # Brand sources
 
-Verbatim copies of the Redrob design system's shipped files (`redrob-design-system/assets/`).
-`SHA256SUMS` pins them, and `packaging/brand-assets.sh` derives everything under
-`assets/app-icon/` and `assets/app-icons/` from these and nothing else.
+Verbatim copies of the Redrob design system's shipped files. `SHA256SUMS` pins them, and
+`packaging/brand-assets.sh` derives everything under `assets/app-icon/` and `assets/app-icons/`
+from these and nothing else.
 
 | Files | From | Used for |
 |---|---|---|
-| `favicon-*.png`, `icon-192.png`, `icon-512.png`, `favicon.ico`, `favicon.svg` | `Favicons/` | The launcher's app icon and tray icon; the tile of every app without a product mark |
-| `symbol-white-*.png` | `Favicons/` | The symbol alone on transparent, for a dark ground that is not Redrob Blue |
-| `redrob-logo-primary.png`, `redrob-logo-primary-white.png` | `Logos/` | The header lockup: dark wordmark on light grounds, white wordmark on dark grounds |
-| `redrob-{browser,code,design,office}-icon.svg` | `Products/` | The four products whose mark the design system ships |
-| `redrob-{canvas,film,cad,shape,cowork,recall,query}-icon.svg` | here (see below) | The seven Labs products |
+| `redrob-icon.svg` | `@redrob-labs/ui@1.8.0` `dist/brand/app-icons/redrob/` | The launcher's app icon and tray icon (the Redrob group icon, 2026, `icon` variant) |
+| `redrob-<app>-icon-web.svg` | `@redrob-labs/ui@1.8.0` `dist/brand/app-icons/redrob-<app>/` | Each app's icon in the launcher (2026, `icon-web` variant: superellipse, transparent corners) |
+| `symbol-white-*.png` | design system `Favicons/` | The symbol alone on transparent, for a dark ground that is not Redrob Blue |
+| `redrob-logo-primary.png`, `redrob-logo-primary-white.png` | design system `Logos/` | The header lockup: dark wordmark on light grounds, white wordmark on dark grounds |
 
-Rules that bind here (design system `10-logo.md`, `Logos/README.md`, `Products/README.md`):
+Rules that bind here (design system `10-logo.md`, `Logos/README.md`, `app-icons/README.md`):
 
-- A white symbol on a Redrob Blue (`#2B52FF`) tile. One design, no dark-mode variant.
 - Never redrawn, recolored, re-proportioned, given a shadow, border or second radius. Never a
   macOS template image: the system would recolor it.
-- Each size is drawn for itself. Where the design system ships a size it is used as is; any other
-  size is the next larger file resized down. Nothing is upscaled, so no icon here is larger than 512.
+- A new icon comes as a new `@redrob-labs/ui` delivery: copy the SVG byte for byte, check its
+  sha256 against the package's `manifest.json`, update `SHA256SUMS` and rerun the script.
 - The lockup variant is picked by ground; it is never tinted to fit one.
+- Only apps with a 2026 icon are in the catalog (`crates/core/src/catalog.rs`).
 
-The Labs products (Canvas, Film, CAD, Shape, Cowork, Recall, Query) have no mark in the design
-system yet. Their masters live here, built from the shipped files only: the `Products/` tile path
-and the `Products/` white symbol, verbatim, on a tile color of their own. The doorway is left
-empty; the tile color alone tells them apart. If the design system later ships a mark for one of
-them, that file replaces the one here (update `SHA256SUMS`, rerun the script).
+The Film, Shape, CAD and Canvas icons are marked "not yet" approved in the 1.8.0 delivery.
 
-| File | Tile |
+| Source | sha256 (`manifest.json`) |
 |---|---|
-| `redrob-canvas-icon.svg` | #8944FF |
-| `redrob-film-icon.svg` | #17181B |
-| `redrob-cad-icon.svg` | #2F8DFF |
-| `redrob-shape-icon.svg` | #C9A400 |
-| `redrob-cowork-icon.svg` | #7FB800 |
-| `redrob-recall-icon.svg` | #0F7F8F |
-| `redrob-query-icon.svg` | #8C2F8C |
+| `redrob-icon.svg` | `572e331fe3175438c723440fed0e555ce4e671f1d13b11dcd1041e13f924ec92` |
+| `redrob-browser-icon-web.svg` | `1ce12193746cdeb767c058300dc9f3e7756ea187f53a8f2671480e620c91db8e` |
+| `redrob-cad-icon-web.svg` | `664ff7cd83c8e1667dd7c41a7542a061c7d4e8d5196b676ad6f7072d598a85a2` |
+| `redrob-canvas-icon-web.svg` | `1c0878b003927a459a365db32ba6e4c30959eb822d62335590f36ddbb83f07e2` |
+| `redrob-code-icon-web.svg` | `0a9840bb44ac1307014d59b9e33e279b1568cbf51137745a437d7c4fbd755dcc` |
+| `redrob-cowork-icon-web.svg` | `e2b985d0b238d6f33bfba9ad9c4ce84a7139939f448212c53305216635e5a7a0` |
+| `redrob-design-icon-web.svg` | `97f6c7120409bcc9455475a3cd7e73af0d2171440433a81953cbaf1a65dac384` |
+| `redrob-film-icon-web.svg` | `ebf56534f9ec6ad0c818b83ac91fb66a093acc3854187f444b78ef5dbff70bd1` |
+| `redrob-office-icon-web.svg` | `5351591c18bc4e938558f0293f570da16da36c502bbfec63de557fc71f44c398` |
+| `redrob-shape-icon-web.svg` | `219ac68e2c37a40fb3e63b93312ad239fe9a11def551ca3f86cc7b8d58d06e6a` |

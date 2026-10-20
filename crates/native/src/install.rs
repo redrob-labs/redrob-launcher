@@ -331,15 +331,17 @@ fn runs_in_terminal(app: &CraftApp) -> bool {
     app.id == "redrob-code"
 }
 
-/// Starts an installed app.
-pub fn launch(app: &CraftApp, installed: &Installed) -> Result<(), String> {
+/// Starts an installed app with `args` (allowlisted values from a `redrob://open` link, passed as
+/// separate arguments, never through a shell). A terminal app is started without them.
+pub fn launch(app: &CraftApp, installed: &Installed, args: &[String]) -> Result<(), String> {
     let path = Path::new(&installed.location);
+    let args: Vec<&str> = args.iter().map(String::as_str).collect();
     match installed.source {
-        InstallSource::MacApp => process::open(path.as_os_str()),
-        _ if cfg!(target_os = "macos") && path.extension().is_some_and(|e| e == "app") => process::open(path.as_os_str()),
+        InstallSource::MacApp => process::open_app(path.as_os_str(), &args),
+        _ if cfg!(target_os = "macos") && path.extension().is_some_and(|e| e == "app") => process::open_app(path.as_os_str(), &args),
         _ => {
             let exe = launch_path(app, path)?;
-            if runs_in_terminal(app) { process::launch_in_terminal(&exe) } else { process::launch_binary(&exe, &[]) }
+            if runs_in_terminal(app) { process::launch_in_terminal(&exe) } else { process::launch_binary(&exe, &args) }
         }
     }
     .map_err(|e| format!("Couldn't open {}: {e}", app.name))
@@ -674,8 +676,6 @@ pub(crate) mod linux {
             "redrob-code" => include_bytes!("../../../assets/app-icons/redrob-code.png"),
             "redrob-cowork" => include_bytes!("../../../assets/app-icons/redrob-cowork.png"),
             "redrob-office" => include_bytes!("../../../assets/app-icons/redrob-office.png"),
-            "redrob-query" => include_bytes!("../../../assets/app-icons/redrob-query.png"),
-            "redrob-recall" => include_bytes!("../../../assets/app-icons/redrob-recall.png"),
             _ => return None,
         })
     }
@@ -1058,13 +1058,27 @@ pub mod windows {
     pub fn run_setup(setup: &Path, stop: &Stop, phase: &mut dyn FnMut(JobPhase)) -> Result<(), String> {
         in_turn(stop, phase, JobPhase::Installing, || {
             let status = process::command(setup).arg("--silent").status().map_err(|e| format!("couldn't start the setup ({e})"))?;
-            match status.code() {
-                Some(0) => Ok(()),
-                Some(code) => Err(format!("the setup exited with code {code}")),
-                None => Err("the setup was interrupted".into()),
-            }
+            explain_setup(status.code())
         })
     }
+
+    /// Our setups' own results (`0xE000000N`, see redrob-canvas `installer/windows`) in words.
+    /// Windows reports them as negative `i32`s.
+    fn explain_setup(code: Option<i32>) -> Result<(), String> {
+        match code.map(|c| c as u32) {
+            Some(0) => Ok(()),
+            Some(0xE000_0001) => Err(SETUP_IN_USE.into()),
+            Some(0xE000_0002) => Err("the setup couldn't unpack the app. Try again.".into()),
+            Some(0xE000_0003) => Err("the download has no app in it. Try again.".into()),
+            Some(_) => Err(format!("the setup exited with code {}", code.unwrap_or(-1))),
+            None => Err("the setup was interrupted".into()),
+        }
+    }
+
+    /// The setup could not replace the install folder: the app, or a window opened inside its
+    /// folder (a Command Prompt, PowerShell or Explorer window), still holds it.
+    const SETUP_IN_USE: &str =
+        "the app's folder is in use. Close the app and any Command Prompt, PowerShell or File Explorer window open in its folder, then try again.";
 
     /// The launcher's own apps folder: `%LOCALAPPDATA%\Redrob Launcher\apps\<app>`.
     pub fn apps_dir() -> Option<PathBuf> {

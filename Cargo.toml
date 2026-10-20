@@ -3,7 +3,7 @@ resolver = "3"
 members = ["crates/*", "apps/*", "xtask"]
 
 [workspace.package]
-version = "0.8.0"
+version = "0.9.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 rust-version = "1.90"
@@ -20,6 +20,7 @@ todo = "warn"
 redrob-launcher-core = { path = "crates/core" }
 redrob-launcher-ui-egui = { path = "crates/ui-egui" }
 redrob-launcher-native = { path = "crates/native" }
+redrob-login = { path = "crates/redrob-login" }
 redrob-engine-client = { git = "https://github.com/redrob-labs/redrob-code", tag = "v0.6.3" }
 egui = "0.36"
 eframe = { version = "0.36", default-features = false }

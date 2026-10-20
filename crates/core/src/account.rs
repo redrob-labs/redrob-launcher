@@ -61,7 +61,7 @@ pub enum AppLink {
 ///
 /// `None`: the change is merged (every one on `develop`) but no release carries it yet, so an installed
 /// copy cannot read the file. The source of each is in `docs/app-integration.md`.
-pub const SHARED_READERS: [(&str, Option<&str>); 10] = [
+pub const SHARED_READERS: [(&str, Option<&str>); 8] = [
     ("redrob-cad", Some("0.0.3")),
     ("redrob-film", Some("0.1.0")),
     ("redrob-shape", None),
@@ -69,8 +69,6 @@ pub const SHARED_READERS: [(&str, Option<&str>); 10] = [
     ("redrob-cowork", None),
     ("redrob-office", None),
     ("redrob-design", None),
-    ("redrob-query", None),
-    ("redrob-recall", None),
     ("redrob-canvas", None),
 ];
 
@@ -122,6 +120,21 @@ pub fn link_for(
     }
 }
 
+/// The person's Redrob account (redrob-auth), signed in through the browser. Separate from the
+/// workspace key above: the account is the launcher's own sign-in and is never handed to an app.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum LoginState {
+    SignedOut,
+    /// The browser sign-in is open.
+    SigningIn,
+    /// Signed in; the name or email to show (empty until redrob-auth has said who it is).
+    SignedIn(String),
+    /// redrob-auth doesn't offer sign-in for the launcher (yet): the workspace key is the only sign-in.
+    Unavailable,
+    /// The attempt ended without a sign-in; the text says why, in plain English (the UI translates it).
+    Failed(String),
+}
+
 /// The desktop backend's sign-in and key hand-off. Every call returns at once; the device flow
 /// runs on a thread and its progress shows up in [`AccountBackend::state`].
 pub trait AccountBackend {
@@ -138,6 +151,14 @@ pub trait AccountBackend {
     fn app_link(&self, app: &str, installed: Option<&crate::version::Version>, latest: Option<&crate::release::Release>) -> AppLink;
     /// Write this computer's key into the app's own key file. `Err` says why not, in plain words.
     fn connect_app(&mut self, app: &str) -> Result<(), String>;
+    /// The Redrob account's sign-in. A backend without one reports [`LoginState::Unavailable`].
+    fn login(&mut self) -> LoginState {
+        LoginState::Unavailable
+    }
+    /// Start the browser sign-in (no-op while one is open).
+    fn sign_in(&mut self) {}
+    /// Sign the Redrob account out, or give up a sign-in that is still open.
+    fn sign_out(&mut self) {}
 }
 
 #[cfg(test)]
