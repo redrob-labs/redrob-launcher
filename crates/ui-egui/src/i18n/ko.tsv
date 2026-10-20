@@ -370,6 +370,10 @@ month	Dec	12월
 	Nine US English narration voices and the CMUdict pronunciation dictionary.	미국 영어 내레이션 목소리 9개와 CMUdict 발음 사전.
 @msg	HTTPS isn't available on this computer.	이 컴퓨터에서 HTTPS를 쓸 수 없어요.
 @msg	the download doesn't match its published checksum, so it wasn't installed	내려받은 파일이 공개된 체크섬과 맞지 않아 쓰지 않았어요
+@msg	the app's folder is in use. Close the app and any Command Prompt, PowerShell or File Explorer window open in its folder, then try again.	앱 폴더를 쓰는 중이에요. 앱과, 그 폴더를 연 명령 프롬프트·PowerShell·파일 탐색기 창을 모두 닫은 뒤 다시 해 보세요.
+@msg	the setup couldn't unpack the app. Try again.	설치 프로그램이 앱 압축을 풀지 못했어요. 다시 해 보세요.
+@msg	the download has no app in it. Try again.	내려받은 파일에 앱이 없어요. 다시 해 보세요.
+@msg	the setup exited with code {code}	설치 프로그램이 오류 코드 {code}로 끝났어요
 	Engine	엔진
 	Engine · {n}	엔진 · {n}
 	Engine…	엔진…

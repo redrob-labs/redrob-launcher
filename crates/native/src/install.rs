@@ -1058,13 +1058,26 @@ pub mod windows {
     pub fn run_setup(setup: &Path, stop: &Stop, phase: &mut dyn FnMut(JobPhase)) -> Result<(), String> {
         in_turn(stop, phase, JobPhase::Installing, || {
             let status = process::command(setup).arg("--silent").status().map_err(|e| format!("couldn't start the setup ({e})"))?;
-            match status.code() {
-                Some(0) => Ok(()),
-                Some(code) => Err(format!("the setup exited with code {code}")),
-                None => Err("the setup was interrupted".into()),
-            }
+            explain_setup(status.code())
         })
     }
+
+    /// Our setups' own results (`0xE000000N`, see redrob-canvas `installer/windows`) in words.
+    /// Windows reports them as negative `i32`s.
+    fn explain_setup(code: Option<i32>) -> Result<(), String> {
+        match code.map(|c| c as u32) {
+            Some(0) => Ok(()),
+            Some(0xE000_0001) => Err(SETUP_IN_USE.into()),
+            Some(0xE000_0002) => Err("the setup couldn't unpack the app. Try again.".into()),
+            Some(0xE000_0003) => Err("the download has no app in it. Try again.".into()),
+            Some(_) => Err(format!("the setup exited with code {}", code.unwrap_or(-1))),
+            None => Err("the setup was interrupted".into()),
+        }
+    }
+
+    /// The setup could not replace the install folder: the app, or a window opened inside its
+    /// folder (a Command Prompt, PowerShell or Explorer window), still holds it.
+    const SETUP_IN_USE: &str = "the app's folder is in use. Close the app and any Command Prompt, PowerShell or File Explorer window open in its folder, then try again.";
 
     /// The launcher's own apps folder: `%LOCALAPPDATA%\Redrob Launcher\apps\<app>`.
     pub fn apps_dir() -> Option<PathBuf> {
