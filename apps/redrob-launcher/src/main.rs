@@ -6,6 +6,8 @@
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
 mod settings_file;
+#[cfg(windows)]
+mod snap_layouts;
 #[cfg(target_os = "macos")]
 mod spaces;
 mod tray;
@@ -121,8 +123,8 @@ fn native_options(hidden: bool) -> eframe::NativeOptions {
     let mut viewport = egui::ViewportBuilder::default()
         .with_title("Redrob Launcher")
         .with_app_id(APP_ID)
-        .with_inner_size([1120.0, 760.0])
-        .with_min_inner_size([720.0, 500.0])
+        .with_inner_size([1180.0, 820.0])
+        .with_min_inner_size([900.0, 600.0])
         .with_visible(!hidden);
     // The header is the title bar (see `DesktopHost::title_bar`).
     viewport = if cfg!(target_os = "macos") {
@@ -416,11 +418,14 @@ impl Launcher {
         match settings {
             Some(settings) => self.ui.settings = settings,
             // First run: the language the installer asked for (Windows) becomes the launcher's,
-            // so the wizard, the launcher and then every app speak the same language.
+            // so the wizard, the launcher and then every app speak the same language. The
+            // wizard preselects the system language; accepting it keeps the launcher following
+            // the system, and only a different pick pins the language.
             None => {
                 if let Some(code) = language::installer_language() {
-                    log::info!("first run: the installer chose the language {code}");
-                    self.ui.settings.language = code;
+                    let language = Settings::language_from_installer(&code, redrob_launcher_ui_egui::i18n::system_lang());
+                    log::info!("first run: the installer chose the language {code}, so the launcher uses {language}");
+                    self.ui.settings.language = language;
                 }
             }
         }
@@ -583,6 +588,14 @@ struct Shell<'a> {
 impl<'a> Shell<'a> {
     fn new(cc: &eframe::CreationContext<'_>, launcher: &'a mut Launcher, hidden: bool) -> Self {
         let window_hides = window_can_hide(cc.display_handle().ok().map(|d| d.as_raw()));
+        // The pointer-sized HWND bridge supports every Windows target without truncating handles.
+        #[cfg(windows)]
+        {
+            use eframe::wgpu::rwh::{HasWindowHandle, RawWindowHandle};
+            if let Ok(RawWindowHandle::Win32(w)) = cc.window_handle().map(|h| h.as_raw()) {
+                snap_layouts::install(w.hwnd.get(), cc.egui_ctx.clone());
+            }
+        }
         // Started hidden at login but there's no tray to come back from: show the window.
         let visible = !hidden || launcher.tray.is_none();
         let mut shell = Self { launcher, window_hides, visible: true, quitting: false, applied_follow: None };

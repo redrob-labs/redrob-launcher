@@ -191,7 +191,7 @@ fn status(ui: &mut egui::Ui, line: &StatusLine) {
         ui.painter().circle_filled(rect.center(), 4.0, line.color);
         resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Label, true, &line.text));
         if line.busy {
-            ui.add(egui::Spinner::new().size(12.0).color(line.color));
+            widgets::loader_inline(ui, 12.0, line.color);
         }
         ui.add(egui::Label::new(RichText::new(line.text.as_str()).size(12.5).color(line.color)).wrap());
     });
@@ -235,7 +235,7 @@ impl LauncherUi {
         }
         let Some(loaded) = &panel.filled_from else {
             ui.horizontal(|ui| {
-                ui.spinner();
+                widgets::loader_inline(ui, 16.0, Tokens::get(ui.ctx()).accent);
                 ui.label(RichText::new(tl!("Reading the engine's settings…")).color(t.muted));
             });
             ui.ctx().request_repaint_after(std::time::Duration::from_millis(100));
@@ -262,7 +262,7 @@ impl LauncherUi {
         for (name, card) in &mut panel.cards {
             let name = *name;
             let line = status_line(&t, &live, name, card);
-            egui::Frame::new().stroke(t.hairline()).inner_margin(12).show(ui, |ui| {
+            widgets::card_frame(&t).show(ui, |ui| {
                 ui.set_width(ui.available_width());
                 // Header: mark, name, state dot, on/off.
                 ui.horizontal(|ui| {
@@ -437,7 +437,7 @@ impl LauncherUi {
                                 ui.add(
                                     egui::TextEdit::singleline(id).desired_width(250.0).min_size(vec2(0.0, theme::CONTROL_H)).vertical_align(egui::Align::Center),
                                 );
-                                if widgets::glyph_button(ui, widgets::Glyph::Close, tl!("Remove")).clicked() {
+                                if widgets::icon_button(ui, crate::glyphs::Icon::Close, tl!("Remove"), crate::theme::CONTROL_H).clicked() {
                                     remove = Some(i);
                                 }
                             });
@@ -476,7 +476,7 @@ impl LauncherUi {
             match &save_state {
                 SaveState::Idle => {}
                 SaveState::Saving => {
-                    ui.spinner();
+                    widgets::loader_inline(ui, 16.0, Tokens::get(ui.ctx()).accent);
                     widgets::hud(ui, tl!("Saving…"), t.muted);
                     ui.ctx().request_repaint_after(std::time::Duration::from_millis(250));
                 }
@@ -537,7 +537,7 @@ impl LauncherUi {
         match be.apps() {
             Apps::Unknown => {
                 ui.horizontal(|ui| {
-                    ui.spinner();
+                    widgets::loader_inline(ui, 16.0, Tokens::get(ui.ctx()).accent);
                     ui.label(RichText::new(tl!("Checking…")).color(t.muted));
                 });
                 ui.ctx().request_repaint_after(std::time::Duration::from_millis(250));

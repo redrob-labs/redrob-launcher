@@ -7,8 +7,11 @@ leaves the machine, and counts which apps are attached. The design of record is 
 
 ## What the launcher does
 
-The launcher is where a person sees that daemon. The header's **Engine** link (and the tray's
-**Redrob Code engine** item) opens a dialog with:
+The launcher is where a person sees that daemon. The sidebar's **AI engine** row (and the tray's
+**AI engine** item) opens the AI engine page with the state below. The row itself shows a dot and
+a short word: Ready, In use, Busy, Standby (stopped, its normal resting state: the first app that
+needs it starts it) or Not installed. The user-facing name is "AI engine" on purpose: the people
+using Redrob apps need to know what it is for, not that it is Redrob Code. The page:
 
 | State | Shown | Buttons |
 | --- | --- | --- |
@@ -30,13 +33,13 @@ The release check that finds a newer Redrob Code release drives `ui-egui/src/eng
 | Daemon | What happens |
 | --- | --- |
 | not running | the new version is installed right away |
-| running, nobody attached | `service stop`, install, `service start` -- the daemon comes back on the new binary |
-| running, apps attached | nothing yet; the dialog shows **Update available**, which apps hold it back, and **Update now** |
+| running, nobody attached | `service stop`, install, `service start` — the daemon comes back on the new binary |
+| running, apps attached | nothing yet; the AI engine page shows **Update available**, which apps hold it back, and **Update now** |
 
 **Update now** stops the daemon even with apps attached (they reconnect on their own, as after
 any restart). A version that failed to install is not retried on its own; **Update now** retries
 it. The setting *Keep the Redrob Code engine up to date on its own* (on by default) turns the
-automatic part off; the dialog's **Update now** still works with it off. Swapping the binary under
+automatic part off; the page's **Update now** still works with it off. Swapping the binary under
 a running daemon is never done: on Windows the running exe is locked, and on every platform the
 daemon would keep serving the old version until something restarted it.
 

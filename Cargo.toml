@@ -3,14 +3,16 @@ resolver = "3"
 members = ["crates/*", "apps/*", "xtask"]
 
 [workspace.package]
-version = "0.9.2"
+version = "0.10.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 rust-version = "1.90"
 repository = "https://github.com/redrob-labs/redrob-launcher"
 
 [workspace.lints.rust]
-unsafe_code = "forbid"
+# `deny`, not `forbid`, so the one module that needs Win32 calls (the launcher's
+# `snap_layouts.rs`) can `#![allow(unsafe_code)]`. No other code may.
+unsafe_code = "deny"
 
 [workspace.lints.clippy]
 dbg_macro = "warn"

@@ -54,9 +54,16 @@ settings file must produce an error the user can act on, never a panic.
   `unimplemented!`. Return the crate's error type and propagate with `?`.
 - Every production crate root (`lib.rs`, each binary's `main.rs`, and `xtask`) carries
   `#![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]`.
-- **No `unsafe`.** The workspace sets `unsafe_code = "forbid"`. The one exception is the macOS
-  Apple Event handler for `redrob://` links (`apps/redrob-launcher/src/url_event.rs`): that crate
-  denies `unsafe_code` instead, and only that module allows it.
+- **No `unsafe`.** The workspace denies `unsafe_code`. There are exactly two exceptions, each a
+  single module with `#![allow(unsafe_code)]`:
+  - `apps/redrob-launcher/src/url_event.rs` (macOS): the Apple Event handler for `redrob://` links.
+  - `apps/redrob-launcher/src/snap_layouts.rs` (Windows): Win32 calls on the launcher's own window
+    answer `HTMAXBUTTON` over the drawn Maximize button and suppress `WS_SYSMENU`, whose invisible
+    caption buttons otherwise steal the Windows 11 Snap Layout flyout. The subclass replaces the
+    style's lost Alt+Space behavior with the standard system menu and dispatches its commands
+    through `WM_SYSCOMMAND`.
+
+  Every `unsafe` block in them carries a `SAFETY:` comment. Don't add `unsafe` anywhere else.
 - **Everything from the network is hostile.** Use `get()` instead of indexing, checked arithmetic
   for sizes and offsets, and cap downloads and JSON sizes.
 
@@ -72,10 +79,18 @@ settings file must produce an error the user can act on, never a panic.
 
 ### Look and feel
 
-The UI follows the Redrob design system: hard square corners, 1 px hairlines instead of shadows,
-Pretendard for Latin and Wanted Sans for Hangul, sentence-case labels (never capitals, no second
-typeface), and the system's colour roles (`theme::Tokens`, each value commented with its token).
-Blue acts; a product's colour marks its tile, never text. Build new UI from `widgets.rs`; never hard-code a colour.
+The UI follows the Redrob design system as `@redrob-labs/ui` ships it: its radius tokens (controls
+8, fields 6, cards and tiles 12, modals and the sidebar card 16, pills full), 1 px hairlines, and
+soft shadows only on floating chrome (menus, popovers, dialogs, toasts, the sidebar card), never
+on a brand mark. Pretendard for Latin and Wanted Sans for Hangul, sentence-case labels (never
+capitals, no second typeface), and the system's colour roles (`theme::Tokens`, each value or
+derived role commented with its token). Blue acts; a product's colour marks only its app icon,
+never text or controls. The chrome is Redrob Cowork's: a 48 px title bar and a floating sidebar
+card on one base ground. Build new UI from `widgets.rs` and the drawn icons in `glyphs.rs`, with
+the radius, space, type and motion tokens in `theme`; never hard-code a colour in a consumer.
+Design-system roles and approved platform/brand exceptions are declared only in
+`xtask/src/tokens.rs`; `cargo xtask tokens` emits the checked Rust, loading-page CSS, and Windows
+installer header views.
 
 ### Languages
 

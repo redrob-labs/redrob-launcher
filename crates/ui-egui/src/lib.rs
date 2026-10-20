@@ -1,4 +1,4 @@
-//! Redrob Launcher's interface: the Redrob apps as a grid of cards or a table, with
+//! Redrob Launcher's interface: the Redrob apps as a grid of cards, with
 //! install, update, open and remove, shared by the desktop and web builds.
 //!
 //! The UI is thin: it draws [`model::AppEntry`]s and sends
@@ -18,18 +18,22 @@ macro_rules! tl {
 
 mod account;
 mod app;
+pub mod caption;
 mod channels;
 #[cfg(not(target_arch = "wasm32"))]
 mod cjk_font;
 mod dialogs;
 mod engine;
 mod engine_update;
+pub(crate) mod glyphs;
 pub mod i18n;
 pub mod icons;
 pub mod model;
 mod models;
 mod notes;
 pub mod settings;
+mod shell;
+mod shelves;
 pub mod theme;
 mod views;
 mod widgets;

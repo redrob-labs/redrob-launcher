@@ -17,8 +17,8 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # Docs-only and version-only PRs skip the Rust jobs. A skipped job still satisfies a required
-  # check, so `test (ubuntu-latest)` stays green for them.
+  # Docs-only and version-only PRs skip the Rust work. `test` still starts (its steps skip) so
+  # the required `test (ubuntu-latest)` reports; `wasm` is not required and skips outright.
   changes:
     runs-on: ubuntu-latest
     outputs:
@@ -47,10 +47,14 @@ jobs:
   test:
     name: test (${{ matrix.os }})
     needs: changes
-    # A failed `changes` (stale Cargo.lock) runs this job too, so the required check goes red
-    # instead of being skipped.
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.heavy == 'true') }}
+    # Never skipped at job level: a skipped matrix job reports its literal name
+    # `test (${{ matrix.os }})`, so the required `test (ubuntu-latest)` never arrives and
+    # docs/version-only PRs block. The job always starts; its steps run only when `heavy`
+    # (or when `changes` failed, e.g. a stale Cargo.lock, so the required check goes red).
+    if: ${{ !cancelled() }}
     runs-on: ${{ matrix.os }}
+    env:
+      RUN: ${{ needs.changes.result != 'success' || needs.changes.outputs.heavy == 'true' }}
     strategy:
       fail-fast: false
       matrix:
@@ -59,36 +63,41 @@ jobs:
         os: ${{ github.event_name == 'workflow_dispatch' && fromJSON('["ubuntu-latest","windows-latest"]') || fromJSON('["ubuntu-latest"]') }}
     steps:
       - uses: actions/checkout@v4
+        if: env.RUN == 'true'
 
       # egui/winit/wgpu headers. The tray (ksni) and notifications (notify-rust over zbus) are
       # pure-Rust D-Bus clients, so no GTK, appindicator, xdo or libdbus packages are needed.
       - name: Install Linux system dependencies (egui/winit)
-        if: runner.os == 'Linux'
+        if: env.RUN == 'true' && runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             libxkbcommon-dev libwayland-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev
 
       - uses: dtolnay/rust-toolchain@stable
+        if: env.RUN == 'true'
         with:
           components: clippy, rustfmt
 
       - uses: Swatinem/rust-cache@v2
+        if: env.RUN == 'true'
 
       - name: Format
-        if: runner.os == 'Linux'
+        if: env.RUN == 'true' && runner.os == 'Linux'
         run: cargo fmt --all -- --check
 
       # The colours are the design system's: theme/generated.rs must match the newest
       # @redrob-labs/ui release (cargo xtask tokens writes it).
       - name: Design-system tokens are current
-        if: runner.os == 'Linux'
+        if: env.RUN == 'true' && runner.os == 'Linux'
         run: cargo xtask tokens --check
 
       - name: Clippy
+        if: env.RUN == 'true'
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
 
       - name: Test
+        if: env.RUN == 'true'
         run: cargo test --workspace --locked
 
   wasm:

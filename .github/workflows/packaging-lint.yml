@@ -49,7 +49,7 @@ jobs:
       - name: XML, desktop entry, AppStream
         run: |
           xmllint --noout installer/windows/redrob_launcher_setup.manifest packaging/macos/*.plist* packaging/linux/*.xml*
-          python3 -m py_compile installer/windows/build.py installer/windows/build-art.py
+          python3 -m py_compile installer/windows/build.py
           desktop-file-validate packaging/linux/ai.redrob.launcher.desktop
           sed -e 's/@VERSION@/0.0.0/' -e 's/@DATE@/2026-01-01/' packaging/linux/ai.redrob.launcher.metainfo.xml.in >"$RUNNER_TEMP/ai.redrob.launcher.metainfo.xml"
           appstreamcli validate --no-net --explain "$RUNNER_TEMP/ai.redrob.launcher.metainfo.xml"

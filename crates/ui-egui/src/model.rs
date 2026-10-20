@@ -106,16 +106,3 @@ pub fn entry_status_text(e: &AppEntry, status: &AppStatus, manage_apps: bool) ->
         _ => status_text(status, manage_apps),
     }
 }
-
-/// Sort rank for "by status": things needing attention first.
-pub fn status_rank(status: &AppStatus) -> u8 {
-    match status {
-        AppStatus::UpdateAvailable => 0,
-        AppStatus::Installed => 1,
-        AppStatus::UpToDate => 2,
-        AppStatus::Available => 3,
-        AppStatus::Checking => 4,
-        AppStatus::Unavailable => 5,
-        AppStatus::NoRelease => 6,
-    }
-}

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT OR Apache-2.0
 """Build the Redrob Launcher Windows setup (and its uninstaller).
 
-Standard library only. It:
+Python standard library plus fontTools. It:
   1. locates Visual Studio (vswhere) and runs rc.exe / cl.exe under its developer environment for the
      requested --arch (x64, x86 or arm64; the x86 and arm64 compilers are cross compilers hosted on x64);
   2. compiles redrob_launcher_setup.rc + redrob_launcher_setup.cpp twice:
@@ -17,12 +17,11 @@ The payload is the release's own -portable.zip (packaging/windows/package.ps1: r
 portable.txt at the top level), already Authenticode-signed inside, so the setup must be built after signing
 and then signed itself (release workflow, Windows jobs). The setup drops portable.txt when it installs.
 
-The art is committed, not rendered here: res/background.png is res/background.html rasterised at 1320x800
-(shared with the other Redrob setups); res/lockup.png is built by build-art.py from the design system's
-Redrob Primary lockup and the product name; assets/app-icon/redrob-launcher.ico comes from
-packaging/brand-assets.sh. Pretendard is embedded when the design system delivery is present
-(--design-system, default ../redrob-design-system) and fontTools is installed; otherwise the window uses
-Segoe UI Variable (DirectWrite falls back to a system font for Hangul).
+The art is drawn by the window itself (the brand panel's gradient) around the design system's white symbol,
+assets/brand/symbol-white-192.png, embedded as is; assets/app-icon/redrob-launcher.ico comes from
+packaging/brand-assets.sh. The window embeds deterministic subsets from committed assets: Pretendard for
+Latin and Wanted Sans for Hangul. Production builds fail when fontTools, a source font, a requested glyph, or a resource is missing;
+`--allow-system-fonts` is an explicit developer-only escape hatch.
 
 Adapted from redrob-labs/redrob-canvas installer/windows/build.py (our own code).
 """
@@ -38,12 +37,10 @@ import tempfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-RES = HERE / "res"
 REPO = HERE.parent.parent
-DEFAULT_DS = REPO.parent / "redrob-design-system"
 ICON = REPO / "assets" / "app-icon" / "redrob-launcher.ico"
-BACKGROUND = RES / "background.png"
-LOCKUP_PNG = RES / "lockup.png"
+# The brand panel's mark: the design system's white symbol, verbatim (assets/brand/README.md).
+SYMBOL_PNG = REPO / "assets" / "brand" / "symbol-white-192.png"
 
 
 def find_vswhere() -> Path:
@@ -96,20 +93,91 @@ def vs_dev_env(arch: str) -> dict:
     return env
 
 
-def prepare_font(design_system: Path, out_ttf: Path) -> bool:
-    """Pretendard SemiBold. AddFontMemResourceEx needs TTF/OTF; the design system ships woff2."""
-    woff2 = design_system / "fonts" / "Pretendard-SemiBold.woff2"
-    if not woff2.exists():
-        return False
+# Committed Pretendard and Wanted Sans sources; subsets are generated build artifacts (ATTRIBUTION.md).
+FONTS = REPO / "assets" / "fonts"
+FONTTOOLS_VERSION = "4.67.0"
+SOURCE = HERE / "redrob_launcher_setup.cpp"
+
+
+def ui_literal_characters() -> set[str]:
+    """Extract wide-string contents so comments cannot perturb deterministic subsets."""
+    literals = re.findall(r'L"((?:\\.|[^"\\])*)"', SOURCE.read_text(encoding="utf-8"))
+    characters: set[str] = set()
+    for literal in literals:
+        i = 0
+        while i < len(literal):
+            if literal[i] != "\\":
+                characters.add(literal[i]); i += 1
+            elif i + 5 < len(literal) and literal[i + 1] == "u":
+                characters.add(chr(int(literal[i + 2:i + 6], 16))); i += 6
+            elif i + 1 < len(literal):
+                characters.add({"n": "\n", "r": "\r", "t": "\t"}.get(literal[i + 1], literal[i + 1])); i += 2
+            else:
+                i += 1
+    return characters
+
+
+def is_hangul(character: str) -> bool:
+    codepoint = ord(character)
+    return 0x1100 <= codepoint <= 0x11FF or 0x3130 <= codepoint <= 0x318F or 0xAC00 <= codepoint <= 0xD7A3
+
+
+def require_fonttools_version() -> None:
+    """Require the pinned release because fontTools changes can alter otherwise deterministic output."""
     try:
+        import fontTools  # type: ignore
+    except ImportError as exc:
+        raise RuntimeError(f"fontTools {FONTTOOLS_VERSION} is required for bundled installer fonts") from exc
+    installed = getattr(fontTools, "__version__", None)
+    if installed != FONTTOOLS_VERSION:
+        raise RuntimeError(f"fontTools {FONTTOOLS_VERSION} is required, found {installed or 'unknown'}")
+
+
+def subset_font(source: Path, out_ttf: Path, characters: set[str]) -> None:
+    """Create one deterministic subset and fail if any visible requested glyph was lost."""
+    try:
+        from fontTools import subset  # type: ignore
         from fontTools.ttLib import TTFont  # type: ignore
-        font = TTFont(str(woff2))
-        font.flavor = None
-        font.save(str(out_ttf))
-        return out_ttf.exists()
-    except Exception:
-        print("note: fontTools not available; the window uses Segoe UI Variable.")
-        return False
+    except ImportError as exc:
+        raise RuntimeError("fontTools is required for bundled installer fonts") from exc
+    if not source.is_file():
+        raise RuntimeError(f"missing committed font {source}")
+    options = subset.Options()
+    options.flavor = None
+    options.layout_features = ["*"]
+    options.name_IDs = ["*"]
+    options.notdef_outline = True
+    options.recalc_timestamp = False
+    options.canonical_order = True
+    font = subset.load_font(str(source), options)
+    subsetter = subset.Subsetter(options)
+    subsetter.populate(text="".join(sorted(characters)))
+    subsetter.subset(font)
+    subset.save_font(font, str(out_ttf), options)
+    # Cmap validation prevents a malformed subset from becoming a silent system-font fallback.
+    check = TTFont(str(out_ttf), recalcTimestamp=False)
+    cmap = check.getBestCmap() or {}
+    missing = sorted(ord(char) for char in characters if char >= " " and ord(char) not in cmap)
+    check.close()
+    if missing:
+        out_ttf.unlink(missing_ok=True)
+        raise RuntimeError(f"{source.name} is missing " + ", ".join(f"U+{value:04X}" for value in missing[:12]))
+
+
+def prepare_fonts(out: Path) -> tuple[Path, Path, Path]:
+    """Build required Pretendard Latin and Wanted Sans Hangul resources from committed assets."""
+    require_fonttools_version()
+    ui = ui_literal_characters()
+    latin = {chr(codepoint) for codepoint in range(0x20, 0x7F)} | {char for char in ui if char >= " " and not is_hangul(char)}
+    hangul = {char for char in ui if is_hangul(char)}
+    if not hangul:
+        raise RuntimeError("no Hangul UI characters found")
+    outputs = (out / "Pretendard-SemiBold.subset.ttf", out / "Pretendard-Regular.subset.ttf",
+               out / "WantedSans-Regular.subset.ttf")
+    subset_font(FONTS / "Pretendard-SemiBold.ttf", outputs[0], latin)
+    subset_font(FONTS / "Pretendard-Regular.ttf", outputs[1], latin)
+    subset_font(FONTS / "WantedSans-Regular.ttf", outputs[2], hangul)
+    return outputs
 
 
 def run_in_env(cmd: list, env: dict, cwd: str) -> None:
@@ -132,8 +200,7 @@ def compile_app(env, out: Path, exe_name: str, font, ver: str, payload, uninstal
     parts = (ver.split(".") + ["0", "0", "0", "0"])[:4]
     lines = [
         "// generated by build.py -- do not edit",
-        f'#define REDROB_BACKGROUND_PATH "{fwd(BACKGROUND)}"',
-        f'#define REDROB_LOCKUP_PATH "{fwd(LOCKUP_PNG)}"',
+        f'#define REDROB_SYMBOL_PATH "{fwd(SYMBOL_PNG)}"',
         f'#define REDROB_ICON_PATH "{fwd(ICON)}"',
         f"#define REDROB_VER_FILE {','.join(parts)}",
         f'#define REDROB_VER_STR "{ver}"',
@@ -141,7 +208,15 @@ def compile_app(env, out: Path, exe_name: str, font, ver: str, payload, uninstal
         f'#define REDROB_SETUP_KIND "{"Uninstaller" if payload is None else "Setup"}"',
     ]
     if font:
-        lines.append(f'#define REDROB_FONT_PATH "{fwd(font)}"')
+        lines.extend([
+            f'#define REDROB_FONT_SEMIBOLD_PATH "{fwd(font[0])}"',
+            f'#define REDROB_FONT_REGULAR_PATH "{fwd(font[1])}"',
+            f'#define REDROB_FONT_HANGUL_PATH "{fwd(font[2])}"',
+            "#define REDROB_REQUIRE_BUNDLED_FONTS 1",
+        ])
+    else:
+        # Only an explicit developer build may compile the documented system-font fallback.
+        lines.append("#define REDROB_ALLOW_SYSTEM_FONTS 1")
     if payload:
         lines.append(f'#define REDROB_PAYLOAD_PATH "{fwd(payload)}"')
     else:
@@ -167,11 +242,12 @@ def compile_app(env, out: Path, exe_name: str, font, ver: str, payload, uninstal
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", required=True)
-    ap.add_argument("--payload", help="the release's windows zip (omit for a demo-only build)")
+    ap.add_argument("--payload", help="the release's Windows zip (omit for a demo-only build)")
     ap.add_argument("--version", required=True, help="e.g. 0.4.0")
     ap.add_argument("--arch", default="x64", choices=sorted(VCVARS_ARCH), help="target architecture (default x64)")
     ap.add_argument("--name", default="Redrob Launcher Setup.exe", help="output file name of the setup")
-    ap.add_argument("--design-system", default=str(DEFAULT_DS))
+    ap.add_argument("--allow-system-fonts", action="store_true",
+                    help="developer-only escape hatch; production builds must embed the committed fonts")
     ap.add_argument("--uninstaller-only", action="store_true",
                     help="build only <out>/uninstall/Uninstall Redrob Launcher.exe, so it can be signed first")
     ap.add_argument("--uninstaller", help="an already built (and signed) uninstaller to embed, instead of "
@@ -180,16 +256,18 @@ def main() -> None:
 
     if not re.fullmatch(r"\d+\.\d+\.\d+", args.version):
         sys.exit(f"--version must be X.Y.Z, got {args.version!r}")
-    for f in (BACKGROUND, LOCKUP_PNG, ICON):
+    for f in (SYMBOL_PNG, ICON):
         if not f.exists():
-            sys.exit(f"missing committed asset {f}; run installer/windows/build-art.py / packaging/brand-assets.sh")
+            sys.exit(f"missing committed asset {f}; see assets/brand/README.md / packaging/brand-assets.sh")
 
     out = Path(args.out).resolve()
     out.mkdir(parents=True, exist_ok=True)
     env = vs_dev_env(args.arch)
     machine = {"x64": "X64", "x86": "X86", "arm64": "ARM64"}[args.arch]
-    font = out / "Pretendard-SemiBold.ttf"
-    font = font if prepare_font(Path(args.design_system), font) else None
+    try:
+        font = None if args.allow_system_fonts else prepare_fonts(out)
+    except RuntimeError as exc:
+        sys.exit(f"font preparation failed: {exc}")
 
     if args.uninstaller_only:
         exe = compile_app(env, out / "uninstall", "Uninstall Redrob Launcher.exe", font, args.version,

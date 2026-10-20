@@ -1,4 +1,4 @@
-//! The account dialog: sign this computer in to a Redrob workspace once, and see which apps can
+//! The account page and the sidebar's account menu: sign this computer in to a Redrob workspace once, and see which apps can
 //! use it. The backend does the work ([`AccountBackend`]); this only shows names and states.
 
 use egui::{RichText, vec2};
@@ -6,7 +6,8 @@ use redrob_launcher_core::SUITE;
 use redrob_launcher_core::account::{AppLink, ConnectState, LoginState};
 use redrob_launcher_core::protocol::LatestRelease;
 
-use crate::app::{Dialog, LauncherUi};
+use crate::app::{Host, LauncherUi, Page};
+use crate::glyphs::Icon;
 use crate::i18n::{fmt, msg};
 use crate::theme::{self, Tokens};
 use crate::widgets::{self, Kind};
@@ -34,25 +35,67 @@ impl LauncherUi {
         }
     }
 
-    /// The header's account link: "Sign in", or the workspace's name. Opens the account dialog.
-    pub(crate) fn account_link(&mut self, ui: &mut egui::Ui, height: f32) {
-        let (label, tip) = match self.header_account() {
-            HeaderAccount::None => return,
-            HeaderAccount::SignedOut => (tl!("Sign in").to_string(), tl!("Sign in to Redrob once for every app on this computer").to_string()),
-            HeaderAccount::Busy => (tl!("Signing in…").to_string(), tl!("Approve the code on console.redrob.ai").to_string()),
-            HeaderAccount::BrowserSignIn => (tl!("Signing in…").to_string(), tl!("Finish signing in in your browser").to_string()),
-            HeaderAccount::SignedIn(name) => (name, tl!("Your Redrob workspace and the apps that use it").to_string()),
+    /// The sidebar foot's one account row (Redrob Cowork's account menu): an avatar, the account
+    /// ("Log in or sign up", or the workspace; "Settings" with no account backend) and a status
+    /// line. A click opens a menu above it: the account page, Settings, Quit and the version. It is
+    /// the one way into Settings. Escape or a click outside closes it.
+    pub(crate) fn account_menu(&mut self, ui: &mut egui::Ui, rail: bool, host: &mut dyn Host) {
+        let version = fmt(tl!("Redrob Launcher {version}"), &[("version", env!("CARGO_PKG_VERSION"))]);
+        let (title, status, initial, account_item) = match self.header_account() {
+            HeaderAccount::None => (tl!("Settings").to_string(), version.clone(), None, None),
+            HeaderAccount::SignedOut => {
+                (tl!("Log in or sign up").to_string(), tl!("Not connected").to_string(), None, Some(tl!("Log in or sign up")))
+            }
+            HeaderAccount::Busy => {
+                (tl!("Log in or sign up").to_string(), tl!("Waiting for approval").to_string(), None, Some(tl!("Log in or sign up")))
+            }
+            HeaderAccount::BrowserSignIn => {
+                (tl!("Log in or sign up").to_string(), tl!("Finish signing in in your browser").to_string(), None, Some(tl!("Log in or sign up")))
+            }
+            HeaderAccount::SignedIn(name) => {
+                let initial = name.chars().next();
+                (name, tl!("Signed in").to_string(), initial, Some(tl!("Redrob account")))
+            }
         };
-        if widgets::nav_link(ui, &label, &tip, height, matches!(self.dialog, Some(Dialog::Account))).clicked() {
-            self.dialog = Some(Dialog::Account);
+        let current = matches!(self.page, Page::Account | Page::Settings);
+        let row = widgets::account_row(ui, &title, &status, initial, current, rail, &status);
+        // DS Menu: as wide as the row (at least 220), above it.
+        let width = if rail { 220.0 } else { row.rect.width().max(220.0) } - 2.0 * theme::space::S2;
+        let quit_offered = self.caps.manage_apps;
+        let mut go = None;
+        let mut quit = false;
+        egui::Popup::menu(&row).align(egui::RectAlign::TOP_START).gap(theme::space::S1).show(|ui| {
+            ui.spacing_mut().item_spacing.y = 0.0;
+            if let Some(label) = account_item {
+                if widgets::menu_item(ui, Some(Icon::Account), label, true, width).clicked() {
+                    go = Some(Page::Account);
+                    ui.close();
+                }
+                ui.separator();
+            }
+            if widgets::menu_item(ui, Some(Icon::Settings), tl!("Settings"), true, width).clicked() {
+                go = Some(Page::Settings);
+                ui.close();
+            }
+            if quit_offered && widgets::menu_item(ui, None, tl!("Quit Redrob Launcher"), true, width).clicked() {
+                quit = true;
+                ui.close();
+            }
+            ui.separator();
+            widgets::menu_item(ui, None, &version, false, width);
+        });
+        if let Some(page) = go {
+            self.set_page(page);
+        }
+        if quit {
+            host.quit();
         }
     }
 
-    pub(crate) fn account_dialog(&mut self, ui: &mut egui::Ui) -> bool {
+    /// The account page (its title is in the page's top bar).
+    pub(crate) fn account_page(&mut self, ui: &mut egui::Ui) {
         let t = Tokens::get(ui.ctx());
-        ui.set_width(560.0f32.min(ui.ctx().content_rect().width() - 80.0));
-        Self::title(ui, Some(crate::icons::redrob_mark()), tl!("Redrob account"), tl!("One sign-in for every Redrob app on this computer"));
-        let Some(acct) = self.backend.account() else { return true };
+        let Some(acct) = self.backend.account() else { return };
         let workspace = acct.workspace();
         let state = acct.state();
         let mut action: Option<fn(&mut dyn redrob_launcher_core::account::AccountBackend)> = None;
@@ -106,7 +149,7 @@ impl LauncherUi {
         match (&workspace, &state) {
             (_, ConnectState::Starting) => {
                 ui.horizontal(|ui| {
-                    ui.spinner();
+                    widgets::loader_inline(ui, 16.0, Tokens::get(ui.ctx()).accent);
                     ui.label(RichText::new(tl!("Asking console.redrob.ai for a code…")).color(t.muted));
                 });
             }
@@ -156,7 +199,7 @@ impl LauncherUi {
                 }
                 ui.label(RichText::new(tl!("Sign in once and every Redrob app on this computer can use your workspace. You approve a short code on console.redrob.ai; nobody copies a key.")).color(t.muted));
                 ui.add_space(10.0);
-                if widgets::button(ui, tl!("Sign in to Redrob"), Kind::Primary, 180.0).clicked() {
+                if widgets::button_sized(ui, tl!("Sign in to Redrob"), Kind::Primary, widgets::Size::Lg, 180.0).clicked() {
                     action = Some(|a| a.connect());
                 }
             }
@@ -170,8 +213,16 @@ impl LauncherUi {
         ui.add_space(6.0);
         let signed_in = workspace.is_some();
         let mut connect: Option<&'static str> = None;
-        egui::ScrollArea::vertical().max_height(ui.ctx().content_rect().height() * 0.45).show(ui, |ui| {
-            for app in &SUITE {
+        // The page scrolls as a whole; the apps are a card of rows on hairlines.
+        widgets::card_frame(&t).show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            // Page order, and only the apps the Apps page shows.
+            let apps: Vec<&'static redrob_launcher_core::CraftApp> =
+                crate::shelves::page_order().into_iter().filter_map(|id| self.entry(id)).filter(|e| self.shown(e)).map(|e| e.app).collect();
+            for (i, app) in apps.into_iter().enumerate() {
+                if i > 0 {
+                    widgets::row_rule(ui, 4.0);
+                }
                 let entry = self.entry(app.id);
                 let installed = entry.and_then(|e| e.installed.as_ref()).and_then(|i| i.version.clone());
                 let latest = entry.and_then(|e| e.latest.as_ref()).and_then(|l| match l {
@@ -213,7 +264,6 @@ impl LauncherUi {
                         widgets::badge(ui, text, widgets::tone_color(&t, tone));
                     });
                 });
-                ui.add_space(4.0);
             }
         });
         if let Some(id) = connect {
@@ -225,12 +275,5 @@ impl LauncherUi {
                 None => {}
             }
         }
-
-        ui.add_space(14.0);
-        let mut close = false;
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            close = widgets::button(ui, tl!("Done"), Kind::Secondary, 90.0).clicked();
-        });
-        close
     }
 }

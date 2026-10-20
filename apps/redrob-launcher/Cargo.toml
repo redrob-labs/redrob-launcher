@@ -42,6 +42,10 @@ serde = { workspace = true }
 # directly, so no GTK or libappindicator is needed.
 [target.'cfg(any(target_os = "macos", target_os = "windows"))'.dependencies]
 tray-icon = "0.25"
+# Windows only: answering HTMAXBUTTON over the drawn Maximize button so Windows 11 shows Snap
+# Layouts (snap_layouts.rs). Already in Cargo.lock; pinned exactly to that version.
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-sys = { version = "=0.59.0", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_UI_Input_KeyboardAndMouse", "Win32_UI_WindowsAndMessaging"] }
 
 # macOS only: which desktop (Space) the window shows on (spaces.rs), safe AppKit calls only, and the
 # redrob:// Apple Event handler (url_event.rs). Already in Cargo.lock through winit and tray-icon;

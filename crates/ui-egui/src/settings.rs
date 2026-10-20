@@ -8,6 +8,8 @@ use serde::{Deserialize, Serialize};
 use crate::i18n::t;
 use crate::theme::ThemeChoice;
 
+/// The grid or the table. Kept so saved settings still load: the launcher shows the grid only and
+/// ignores it.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ViewMode {
     #[default]
@@ -24,6 +26,8 @@ pub enum Filter {
     NotInstalled,
 }
 
+/// The order of the apps. Kept so saved settings still load: the grid is always in suite order and
+/// ignores it.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SortKey {
     /// Suite order: classic apps, then new.
@@ -39,14 +43,6 @@ pub enum SortKey {
     Latest,
     /// Release date.
     Released,
-}
-
-impl SortKey {
-    /// The direction a first click sorts in: newest and highest first for dates and versions,
-    /// A to Z for text.
-    pub fn starts_descending(self) -> bool {
-        matches!(self, Self::Installed | Self::Latest | Self::Released)
-    }
 }
 
 /// How often to look for updates in the background.
@@ -83,9 +79,12 @@ impl CheckEvery {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Settings {
+    /// Kept for compatibility, ignored: the grid is the only view.
     pub view: ViewMode,
     pub filter: Filter,
+    /// Kept for compatibility, ignored: the grid is always in suite order.
     pub sort: SortKey,
+    /// Kept for compatibility, ignored.
     pub sort_descending: bool,
     pub theme: ThemeChoice,
     /// Interface language: `auto` (follow the system) or a language code from the registry
@@ -105,7 +104,7 @@ pub struct Settings {
     #[serde(default)]
     pub auto_update: bool,
     /// Keep the shared Redrob Code engine on its newest release by itself (when no app is using
-    /// it; "Update now" in the engine dialog overrides). On by default: the engine is shared
+    /// it; "Update now" on the AI engine page overrides). On by default: the engine is shared
     /// infrastructure, and a fix there is a fix for every app.
     #[serde(default = "default_true")]
     pub engine_auto_update: bool,
@@ -136,14 +135,33 @@ impl Settings {
     /// Display name for a language `code`: a language's name in itself, from the registry
     /// ([`LANGUAGES`](crate::i18n::LANGUAGES)). A language needing the system's Chinese font is
     /// named in English, with its own name added only once that font is loaded (labels never load
-    /// it: choosing the language does); "Auto" for `auto` and unknown codes, like
-    /// [`Lang::from_pref`](crate::i18n::Lang::from_pref).
+    /// it: choosing the language does); [`Settings::system_language_label`] for `auto` and
+    /// unknown codes, like [`Lang::from_pref`](crate::i18n::Lang::from_pref).
     pub fn language_label(code: &str) -> String {
         match crate::i18n::Lang::from_code(code) {
             Some(lang) if lang.needs_cjk_font() && crate::theme::cjk_font_loaded() => format!("{} ({})", lang.english_name(), lang.name()),
             Some(lang) if lang.needs_cjk_font() => lang.english_name().to_string(),
             Some(lang) => lang.name().to_string(),
-            None => t("Auto").to_string(),
+            None => Self::system_language_label(),
+        }
+    }
+
+    /// "Match system (한국어)": the `auto` choice, naming the language the system resolves to so
+    /// the person sees what "system" means on this computer.
+    pub fn system_language_label() -> String {
+        let system = crate::i18n::system_lang();
+        crate::i18n::fmt(t("Match system ({language})"), &[("language", system.name())])
+    }
+
+    /// The launcher's language setting on its first run, from the language the Windows setup
+    /// recorded. When that is the system language the person only accepted the setup's default,
+    /// so the launcher keeps following the system (`auto`, published with `chosen: false`) and a
+    /// later change of the system language reaches it. A different language was picked on
+    /// purpose and is kept.
+    pub fn language_from_installer(code: &str, system: crate::i18n::Lang) -> String {
+        match crate::i18n::Lang::from_code(code) {
+            Some(lang) if lang != system => lang.code().to_string(),
+            _ => Self::LANGUAGE_AUTO.to_string(),
         }
     }
 }
