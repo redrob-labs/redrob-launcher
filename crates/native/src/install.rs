@@ -1077,7 +1077,8 @@ pub mod windows {
 
     /// The setup could not replace the install folder: the app, or a window opened inside its
     /// folder (a Command Prompt, PowerShell or Explorer window), still holds it.
-    const SETUP_IN_USE: &str = "the app's folder is in use. Close the app and any Command Prompt, PowerShell or File Explorer window open in its folder, then try again.";
+    const SETUP_IN_USE: &str =
+        "the app's folder is in use. Close the app and any Command Prompt, PowerShell or File Explorer window open in its folder, then try again.";
 
     /// The launcher's own apps folder: `%LOCALAPPDATA%\Redrob Launcher\apps\<app>`.
     pub fn apps_dir() -> Option<PathBuf> {
