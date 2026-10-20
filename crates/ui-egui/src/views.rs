@@ -57,8 +57,11 @@ pub(crate) const HEADER_H: f32 = 48.0;
 const CARD_MIN_W: f32 = 240.0;
 /// The gap between a tile's icon row (icon and name) and its description under it.
 const CARD_DESC_GAP: f32 = theme::space::S2;
-/// The tallest thing on a tile's actions row (the main button, a progress bar or the … button).
-const CARD_ACTION_H: f32 = theme::control::MD;
+/// The height a tile reserves for its actions row: the Sm main button and the … button (32 px).
+/// A 40 px progress row fits too, by taking the [`CARD_ACTIONS_GAP`] above it.
+const CARD_ACTION_H: f32 = theme::control::SM;
+/// The gap above a tile's version line, and the least gap above its actions row.
+const CARD_ACTIONS_GAP: f32 = theme::space::S2;
 /// The space between tiles (DS card gap in a dense grid: space-4).
 const CARD_GAP: f32 = 16.0;
 /// DS card padding, dense (space-4).
@@ -536,7 +539,7 @@ impl LauncherUi {
         // instead of being cut off.
         ui.add_space(CARD_DESC_GAP);
         ui.add(egui::Label::new(RichText::new(tr_ctx(current(), app.id, app.tagline)).font(desc_font).color(t.muted)).wrap());
-        ui.add_space(theme::space::S3);
+        ui.add_space(CARD_ACTIONS_GAP);
         // The version alone, in the lightest ink, with no release date. A narrow tile cuts it short;
         // egui then shows the whole line on hover.
         ui.add(egui::Label::new(RichText::new(version_line(&entry, &status)).font(card_fonts().2).color(t.faint)).truncate());
@@ -865,7 +868,7 @@ fn card_height(ui: &Ui, ids: &[&'static str], card_w: f32) -> f32 {
     // The layout's own spacing after the icon row, the description and the version line.
     let spacing = 3.0 * ui.spacing().item_spacing.y;
     let block = CARD_ICON + CARD_DESC_GAP + desc_h;
-    (2.0 * CARD_PAD + block + theme::space::S3 + line(&meta) + theme::space::S4 + CARD_ACTION_H + spacing).ceil()
+    (2.0 * CARD_PAD + block + CARD_ACTIONS_GAP + line(&meta) + CARD_ACTIONS_GAP + CARD_ACTION_H + spacing).ceil()
 }
 
 /// A tile's fill: white (`surface-base`, #ffffff) in light, where the hairline and the hover shadow
