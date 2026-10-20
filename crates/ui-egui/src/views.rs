@@ -55,8 +55,8 @@ pub(crate) const HEADER_H: f32 = 48.0;
 /// Three tiles across the main area beside the sidebar at the default 1180 px window (four once
 /// it is wider).
 const CARD_MIN_W: f32 = 240.0;
-/// The gap between a tile's name and its description.
-const CARD_LINE_GAP: f32 = 2.0;
+/// The gap between a tile's icon row (icon and name) and its description under it.
+const CARD_DESC_GAP: f32 = theme::space::S2;
 /// The tallest thing on a tile's actions row (the main button, a progress bar or the … button).
 const CARD_ACTION_H: f32 = theme::control::MD;
 /// The space between tiles (DS card gap in a dense grid: space-4).
@@ -458,8 +458,9 @@ impl LauncherUi {
     }
 
     /// One app as a DS ConnectorCard: raised, radius 12, a hairline that strengthens with a
-    /// shadow-md on hover (140 ms); the icon exactly as supplied (no shadow, border or tint) beside
-    /// the name and its full short description; the version; the actions. No status chip and no links: the
+    /// shadow-md on hover (140 ms); the icon exactly as supplied (no shadow, border or tint) with
+    /// the name centred beside it, then the full short description under both; the version; the
+    /// actions. No status chip and no links: the
     /// button says what can be done, and every card exposes its menu through both the named …
     /// button and right-click. The product's colour is only its icon.
     fn card(&mut self, ui: &mut Ui, id: &str, rect: Rect) {
@@ -503,23 +504,24 @@ impl LauncherUi {
         let ui = &mut child;
         let (name_font, desc_font, _) = card_fonts();
         let text_w = (inner.width() - CARD_ICON - theme::space::S3).max(1.0);
+        // Row 1: the icon, and the app's name centred on it vertically.
         ui.horizontal_top(|ui| {
-            // The icon sits at the top of the text column, so a long description grows downward.
             let (slot, icon_response) = ui.allocate_exact_size(vec2(CARD_ICON, CARD_ICON), Sense::hover());
             icon_response.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Image, true, fmt(tl!("{name} icon"), &[("name", app.name)])));
             if let Some(icon) = crate::icons::app(app.id) {
                 egui::Image::new(icon).paint_at(ui, slot);
             }
             ui.add_space(theme::space::S3);
-            ui.allocate_ui_with_layout(vec2(text_w, 0.0), egui::Layout::top_down(egui::Align::Min), |ui| {
-                ui.spacing_mut().item_spacing.y = CARD_LINE_GAP;
-                // The name's row is as tall as its text, not as a button.
-                ui.spacing_mut().interact_size.y = 0.0;
+            ui.allocate_ui_with_layout(vec2(text_w, CARD_ICON), egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                // The name's row is as tall as the icon, so the text sits on its centre line.
+                ui.set_min_height(CARD_ICON);
                 widgets::wordmark(ui, app, name_font.size);
-                // The short description in full: it wraps instead of being cut off.
-                ui.add(egui::Label::new(RichText::new(tr_ctx(current(), app.id, app.tagline)).font(desc_font).color(t.muted)).wrap());
             });
         });
+        // Row 2: the short description in full, from the card's left edge (under the icon), wrapping
+        // instead of being cut off.
+        ui.add_space(CARD_DESC_GAP);
+        ui.add(egui::Label::new(RichText::new(tr_ctx(current(), app.id, app.tagline)).font(desc_font).color(t.muted)).wrap());
         ui.add_space(theme::space::S3);
         // The version alone, in the lightest ink, with no release date. A narrow tile cuts it short;
         // egui then shows the whole line on hover.
@@ -827,14 +829,16 @@ pub(crate) fn launcher_download(r: &redrob_launcher_core::Release, p: redrob_lau
 }
 
 /// The height every tile takes at `card_w`, set by the app whose description wraps to the most
-/// lines: padding, the icon-and-text block, the version line, the actions row, padding.
+/// lines: padding, the icon row, the full-width description under it, the version line, the
+/// actions row, padding.
 ///
-/// * `ui` - any Ui on the page, for font metrics.
+/// * `ui` - any Ui on the page, for font metrics and item spacing.
 /// * `ids` - the apps shown; every tile takes the tallest one's height so rows stay even.
 /// * `card_w` - one tile's outer width.
 fn card_height(ui: &Ui, ids: &[&'static str], card_w: f32) -> f32 {
-    let (name, desc, meta) = card_fonts();
-    let text_w = (card_w - 2.0 * CARD_PAD - CARD_ICON - theme::space::S3).max(1.0);
+    let (_, desc, meta) = card_fonts();
+    // The description runs the card's full inner width, under the icon.
+    let text_w = (card_w - 2.0 * CARD_PAD).max(1.0);
     let line = |font: &FontId| ui.fonts_mut(|f| f.layout_no_wrap(String::new(), font.clone(), Color32::PLACEHOLDER)).size().y;
     let desc_h = ids
         .iter()
@@ -844,8 +848,10 @@ fn card_height(ui: &Ui, ids: &[&'static str], card_w: f32) -> f32 {
             ui.fonts_mut(|f| f.layout(text, desc.clone(), Color32::PLACEHOLDER, text_w)).size().y
         })
         .fold(line(&desc), f32::max);
-    let block = (line(&name) + CARD_LINE_GAP + desc_h).max(CARD_ICON);
-    (2.0 * CARD_PAD + block + theme::space::S3 + line(&meta) + theme::space::S4 + CARD_ACTION_H).ceil()
+    // The layout's own spacing after the icon row, the description and the version line.
+    let spacing = 3.0 * ui.spacing().item_spacing.y;
+    let block = CARD_ICON + CARD_DESC_GAP + desc_h;
+    (2.0 * CARD_PAD + block + theme::space::S3 + line(&meta) + theme::space::S4 + CARD_ACTION_H + spacing).ceil()
 }
 
 /// A tile's fill: white (`surface-base`, #ffffff) in light, where the hairline and the hover shadow
