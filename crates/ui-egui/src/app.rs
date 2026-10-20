@@ -703,13 +703,11 @@ impl LauncherUi {
                     });
                 }
                 Page::Apps => {
-                    // Above the scroll: the page's right padding, as inside it.
-                    egui::Frame::new()
-                        .inner_margin(egui::Margin { right: crate::widgets::PAGE_SCROLL_PAD as i8, ..egui::Margin::ZERO })
-                        .show(ui, |ui| self.toolbar(ui));
-                    ui.add_space(16.0);
                     let ids = self.visible_ids();
                     crate::widgets::page_scroll(ui, "apps", |ui| {
+                        // The filter row scrolls with the cards rather than staying pinned over them.
+                        self.toolbar(ui);
+                        ui.add_space(16.0);
                         if ids.is_empty() {
                             self.empty_state(ui);
                         } else {
