@@ -192,9 +192,14 @@ fn grid_shows_every_status_and_installs_on_click() {
     let (mut h, sent) = harness(egui::Theme::Dark, true);
     h.run_steps(8);
     snapshot(&mut h, "grid-dark");
-    // Statuses the user asked for: available, installed and up to date, update with version.
+    // Statuses the user asked for: available, installed and up to date, update with version. No
+    // chip draws them any more; each card carries its status for screen readers.
     assert!(h.query_all_by_label("Available to install").count() >= 3);
     assert!(h.query_all_by_label("Installed · up to date").count() >= 1);
+    // No links on the cards, and the … button only where the menu holds Uninstall.
+    assert!(h.query_by_label("GitHub").is_none() && h.query_by_label("Website").is_none(), "cards carry no links");
+    let installed = ["Installed · up to date", "Update available"].iter().map(|l| h.query_all_by_label(l).count()).sum::<usize>();
+    assert_eq!(h.query_all_by_label("More actions").count(), installed, "a … button on each installed app and no other");
     h.get_by_label("Update to 0.5.0");
     h.get_by_label("Update to 0.6.0");
     h.get_by_label_contains("0.4.1 installed → 0.5.0 released");
@@ -258,10 +263,10 @@ fn a_kept_download_offers_retry_install_and_download_again() {
     h.run_steps(2);
     assert_eq!(*sent.borrow(), [Command::Install { app: "redrob-cad".into() }]);
     sent.borrow_mut().clear();
-    // The … menu beside it.
+    // Not installed: no … button beside it; right-clicking the card opens the menu.
     let beside = |r: egui::Rect| row.y_range().contains(r.center().y) && (row.right()..row.right() + 60.0).contains(&r.left());
-    h.get_all_by_label("More actions").find(|n| beside(n.rect())).unwrap().click();
-    h.run_steps(3);
+    assert!(h.query_all_by_label("More actions").all(|n| !beside(n.rect())), "no … beside Retry install");
+    open_card_menu(&mut h, "Redrob CAD");
     snapshot(&mut h, "grid-retry-install-menu-dark");
     h.get_by_label("Download again").click();
     h.run_steps(2);
@@ -303,8 +308,9 @@ fn a_kept_update_names_its_version_and_an_up_to_date_app_is_not_downloaded_again
     h.get_by_label("Retry update to 0.6.0").click();
     h.run_steps(2);
     assert_eq!(*sent.borrow(), [Command::Install { app: "redrob-browser".into() }]);
-    // Redrob Code is up to date: its card's menu offers Reinstall, which uses the kept file.
-    open_card_menu(&mut h, "Redrob Code");
+    // Redrob Code is up to date: its … button opens the menu, which offers Reinstall (it uses the
+    // kept file).
+    open_card_more_button(&mut h, "Redrob Code");
     h.get_by_label("Reinstall");
     assert!(h.query_by_label("Download again").is_none());
 }
@@ -420,9 +426,18 @@ fn open_settings(h: &mut Harness<'_, Option<LauncherUi>>) {
     from_account_menu(h, "Settings", "Settings");
 }
 
-/// Opens the More actions menu on `app`'s tile: the nearest one right of its name and under it,
-/// in the same tile.
+/// Opens `app`'s menu by right-clicking its tile (on its name: the card under the label takes the
+/// click). Every tile has this menu; installed ones also have a … button for it.
 fn open_card_menu(h: &mut Harness<'_, Option<LauncherUi>>, app: &str) {
+    h.get_all_by_label(app).next().unwrap().scroll_to_me();
+    h.run_steps(4);
+    h.get_all_by_label(app).next().unwrap().click_secondary();
+    h.run_steps(3);
+}
+
+/// Opens an installed `app`'s menu with its … button: the nearest one right of its name and under
+/// it, in the same tile.
+fn open_card_more_button(h: &mut Harness<'_, Option<LauncherUi>>, app: &str) {
     h.get_all_by_label(app).next().unwrap().scroll_to_me();
     h.run_steps(4);
     {
@@ -431,7 +446,7 @@ fn open_card_menu(h: &mut Harness<'_, Option<LauncherUi>>, app: &str) {
             .get_all_by_label("More actions")
             .filter(|n| {
                 let r = n.rect();
-                r.left() > name.left() && r.top() > name.bottom() && r.top() < name.top() + 240.0
+                r.left() > name.left() && r.top() > name.bottom() && r.top() < name.top() + 180.0
             })
             .min_by(|a, b| a.rect().left().total_cmp(&b.rect().left()))
             .unwrap();
@@ -610,15 +625,19 @@ fn settings_link_to_redrob() {
 fn links_to_the_website_github_and_each_apps_pages() {
     let (mut h, _) = harness(egui::Theme::Dark, true);
     h.run_steps(6);
-    // Cards: every app links to its repo; no app has a web page of its own yet.
-    let shown_cards = h.query_all_by_label("GitHub").count();
-    let shown_sites = h.query_all_by_label("Website").count();
-    assert!(shown_cards >= 7, "{shown_cards}");
-    assert_eq!(shown_sites, 0, "no app has a website page yet");
-    // A card's … menu has the app's GitHub repo and no website entry.
+    // The Apps page has no links: no footer, nothing on the cards.
+    assert_eq!(h.query_all_by_label("GitHub").count(), 0);
+    assert_eq!(h.query_all_by_label("Website").count(), 0);
+    // A card's menu has the app's GitHub repo and no website entry (no app has a web page yet).
     open_card_menu(&mut h, "Redrob Code");
     h.get_by_label("GitHub repository");
     assert_eq!(h.query_all_by_label_contains("Website").count(), 0, "no app has a website page yet");
+    // Redrob's own pages are in Settings.
+    h.key_press(egui::Key::Escape);
+    h.run_steps(3);
+    open_settings(&mut h);
+    h.get_by_label("Website");
+    h.get_by_label("GitHub");
 }
 
 #[test]
@@ -696,23 +715,19 @@ fn click_opens(h: &mut Harness<'_, Option<LauncherUi>>, label: &str) -> Option<S
     click_nth_opens(h, label, 0)
 }
 
-/// Every URL the widgets labelled `label` open.
-fn all_opened(h: &mut Harness<'_, Option<LauncherUi>>, label: &str) -> Vec<String> {
-    let n = h.query_all_by_label(label).count();
-    (0..n).filter_map(|i| click_nth_opens(h, label, i)).collect()
-}
-
 #[test]
 fn links_open_the_right_pages() {
     let (mut h, _) = harness(egui::Theme::Dark, true);
     h.run_steps(6);
-    // Each card's own pages.
-    let github = all_opened(&mut h, "GitHub");
-    assert!(github.contains(&"https://github.com/redrob-labs/redrob-canvas".to_string()), "{github:?}");
-    // The … menu.
-    h.get_all_by_label("More actions").next().unwrap().click();
-    h.run_steps(3);
+    // Each app's pages, from its card's menu.
+    open_card_menu(&mut h, "Redrob Canvas");
+    assert_eq!(click_opens(&mut h, "GitHub repository").as_deref(), Some("https://github.com/redrob-labs/redrob-canvas"));
+    open_card_menu(&mut h, "Redrob Shape");
     assert_eq!(click_opens(&mut h, "All releases").as_deref(), Some("https://github.com/redrob-labs/redrob-shape/releases"));
+    // Redrob's own, from Settings.
+    open_settings(&mut h);
+    assert_eq!(click_opens(&mut h, "Website").as_deref(), Some("https://redrob.ai"));
+    assert_eq!(click_opens(&mut h, "GitHub").as_deref(), Some("https://github.com/redrob-labs"));
 }
 
 #[test]

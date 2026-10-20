@@ -52,13 +52,17 @@ enum Primary {
 /// Height of the header bar (the site's nav).
 pub(crate) const HEADER_H: f32 = 48.0;
 
-/// Three tiles across the main area beside the sidebar at the default 1180 px window.
-const CARD_MIN_W: f32 = 272.0;
-/// A tile's height: padding, the icon row, status, version and the actions row.
-const CARD_H: f32 = 236.0;
+/// Three tiles across the main area beside the sidebar at the default 1180 px window (four once
+/// it is wider).
+const CARD_MIN_W: f32 = 240.0;
+/// A tile's height: padding, the icon row, the version line and the actions row.
+const CARD_H: f32 = 172.0;
 /// The space between tiles (DS card gap in a dense grid: space-4).
 const CARD_GAP: f32 = 16.0;
-const CARD_PAD: f32 = 20.0;
+/// DS card padding, dense (space-4).
+const CARD_PAD: f32 = 16.0;
+/// The app icon on a tile (was 48).
+const CARD_ICON: f32 = 40.0;
 /// The icon buttons beside an app's main action (pause, cancel, More actions): DS IconButton sm.
 pub(crate) const ACTION_ICON: f32 = theme::control::SM;
 /// Room macOS's traffic lights take at the left of the header.
@@ -382,12 +386,30 @@ impl LauncherUi {
 
     /// One app as a DS ConnectorCard: raised, radius 12, a hairline that strengthens with a
     /// shadow-md on hover (140 ms); the icon exactly as supplied (no shadow, border or tint) beside
-    /// the name, tagline and kind; the status and the app's pages; the version; the actions.
-    /// The product's colour is only its icon.
+    /// the name, tagline and kind; the version; the actions. No status chip and no links: the
+    /// button says what can be done, and right-clicking the card opens the app's menu (installed
+    /// apps keep a … button for it too). The product's colour is only its icon.
     fn card(&mut self, ui: &mut Ui, id: &str, rect: Rect) {
         let Some(entry) = self.entry(id).cloned() else { return };
         let t = Tokens::get(ui.ctx());
         let app = entry.app;
+        let status = entry.status(self.platform, self.caps.manage_apps);
+        // The card itself, under its controls (they are added after it, so they win the pointer):
+        // right-click opens the app's menu. With no chip on screen, the card carries its status for
+        // screen readers, and a failed check explains itself on hover.
+        let card = ui.interact(rect, ui.id().with(("card", id)), Sense::click());
+        let (status_text, _) = model::entry_status_text(&entry, &status, self.caps.manage_apps);
+        card.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Other, true, status_text.clone()));
+        let card = match entry.failure() {
+            Some(f) => card.on_hover_text(fmt(tl!("Couldn't check for updates: {f}"), &[("f", f)])),
+            None => card,
+        };
+        card.context_menu(|ui| {
+            ui.set_min_width(200.0);
+            // DS menu items are about 36 px.
+            ui.spacing_mut().interact_size.y = 36.0;
+            self.menu_items(ui, &entry, &status);
+        });
         let hovered = ui.rect_contains_pointer(rect);
         let k = ui.ctx().animate_bool_with_time(ui.id().with(("card-hover", id)), hovered, theme::motion::duration(ui.ctx(), theme::motion::FAST));
         let radius = CornerRadius::same(theme::radius::LG);
@@ -399,16 +421,15 @@ impl LauncherUi {
         }
         painter.rect(rect, radius, t.raised(), Stroke::new(1.0, theme::mix(t.line, t.line_strong, k)), egui::StrokeKind::Inside);
 
-        let status = entry.status(self.platform, self.caps.manage_apps);
         let inner = rect.shrink(CARD_PAD);
         // A detached child: the card's contents never move the next card along.
         let mut child = ui.new_child(egui::UiBuilder::new().max_rect(inner).layout(egui::Layout::top_down(egui::Align::Min)));
         child.set_clip_rect(rect.intersect(ui.clip_rect()));
         let ui = &mut child;
         ui.horizontal(|ui| {
-            const ICON: f32 = 48.0;
+            const ICON: f32 = CARD_ICON;
             let [name, tagline, like] = [
-                FontId::new(theme::text::TITLE_4, theme::display()),
+                FontId::new(theme::text::BODY, theme::display()),
                 FontId::proportional(theme::text::BODY_SM),
                 FontId::proportional(theme::text::META),
             ];
@@ -424,28 +445,12 @@ impl LauncherUi {
             centered_lines(ui, &[&name, &tagline, &like], GAP, |ui| {
                 // The name's row is as tall as its text, not as a button.
                 ui.spacing_mut().interact_size.y = 0.0;
-                widgets::wordmark(ui, app, theme::text::TITLE_4);
+                widgets::wordmark(ui, app, theme::text::BODY);
                 ui.add(egui::Label::new(RichText::new(tr_ctx(current(), app.id, app.tagline)).font(tagline.clone()).color(t.muted)).truncate());
                 ui.add(egui::Label::new(RichText::new(crate::i18n::tr(current(), app.like)).font(like.clone()).color(t.faint)).truncate());
             });
         });
-        ui.add_space(theme::space::S4);
-        ui.horizontal(|ui| {
-            let (text, tone) = model::entry_status_text(&entry, &status, self.caps.manage_apps);
-            let r = widgets::badge(ui, &text, widgets::tone_color(&t, tone));
-            if let Some(f) = entry.failure() {
-                r.on_hover_text(fmt(tl!("Couldn't check for updates: {f}"), &[("f", f)]));
-            }
-            // The app's pages, quiet, at the right of the status.
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                ui.spacing_mut().item_spacing.x = theme::space::S3;
-                widgets::hud_link(ui, tl!("GitHub"), &app.repo_url());
-                if let Some(site) = app.website() {
-                    widgets::hud_link(ui, tl!("Website"), &site);
-                }
-            });
-        });
-        ui.add_space(theme::space::S2);
+        ui.add_space(theme::space::S3);
         // One line, never cut short: where the dated line doesn't fit the tile, the date moves to
         // the tooltip.
         let full = version_line(&entry, &status);
@@ -491,13 +496,15 @@ impl LauncherUi {
         }
     }
 
-    /// The main button (or progress) and the … menu, within `width`.
+    /// The main button (or progress) and, for an installed app, the … menu, within `width`.
     fn actions(&mut self, ui: &mut Ui, entry: &AppEntry, status: &AppStatus, width: f32) {
         let t = Tokens::get(ui.ctx());
         let id = entry.app.id.to_string();
-        // One square button (the menu) beside the main one.
+        // An installed app keeps one square button (the menu) beside the main one, so Uninstall
+        // stays in sight; anything else has its menu on right-click only.
         let gap = ui.spacing().item_spacing.x;
-        let main_w = (width - ACTION_ICON - gap).max(120.0);
+        let has_menu = self.has_menu_button(status);
+        let main_w = if has_menu { (width - ACTION_ICON - gap).max(120.0) } else { width };
         if let Some(phase) = entry.job {
             // Two square buttons (pause, cancel) beside the bar while downloading.
             let bar_w = (width - 2.0 * (ACTION_ICON + gap) - 4.0).max(100.0);
@@ -539,8 +546,9 @@ impl LauncherUi {
             let downloading = matches!(phase, JobPhase::Downloading { .. } | JobPhase::Reconnecting { .. });
             // A job waiting for the installer hasn't started it yet, so it can still be called off.
             let waiting = phase == JobPhase::Waiting;
-            // Waiting has one square button beside the bar, like the menu otherwise.
-            widgets::progress(ui, fraction, &caption, color, if downloading { bar_w } else { main_w });
+            // Waiting has one square button (cancel) beside the bar; the other steps none.
+            let job_w = if waiting { (width - ACTION_ICON - gap).max(100.0) } else { width };
+            widgets::progress(ui, fraction, &caption, color, if downloading { bar_w } else { job_w });
             if downloading && widgets::icon_button(ui, crate::glyphs::Icon::Pause, tl!("Pause download"), ACTION_ICON).clicked() {
                 self.send(Command::Pause { app: id.clone() });
             }
@@ -556,8 +564,9 @@ impl LauncherUi {
             && self.caps.manage_apps
         {
             let pct = if p.total > 0 { format!(" · {:.0}%", p.done as f32 / p.total as f32 * 100.0) } else { String::new() };
-            // Resume, then discard and the menu (two squares).
-            let resume_w = (width - 2.0 * (ACTION_ICON + gap)).max(90.0);
+            // Resume, then discard and (installed) the menu.
+            let squares = if has_menu { 2.0 } else { 1.0 };
+            let resume_w = (width - squares * (ACTION_ICON + gap)).max(90.0);
             // Narrow: just tl!("Resume"); the tooltip says how far it got.
             let label = match resume_w {
                 w if w < 150.0 => tl!("Resume").to_string(),
@@ -576,7 +585,9 @@ impl LauncherUi {
             if widgets::icon_button(ui, crate::glyphs::Icon::Close, tl!("Discard download"), ACTION_ICON).clicked() {
                 self.send(Command::Cancel { app: id.clone() });
             }
-            self.menu(ui, entry, status);
+            if has_menu {
+                self.menu(ui, entry, status);
+            }
             return;
         }
         match self.primary_action(entry, status) {
@@ -614,14 +625,27 @@ impl LauncherUi {
                 ui.add_enabled_ui(false, |ui| widgets::button(ui, label, Kind::Secondary, main_w));
             }
         }
-        self.menu(ui, entry, status);
+        if has_menu {
+            self.menu(ui, entry, status);
+        }
     }
 
+    /// Whether a tile shows the … button: only an installed app, whose menu holds Uninstall.
+    fn has_menu_button(&self, status: &AppStatus) -> bool {
+        self.caps.manage_apps && status.is_installed()
+    }
+
+    /// The … button and its menu.
     fn menu(&mut self, ui: &mut Ui, entry: &AppEntry, status: &AppStatus) {
+        widgets::more_menu(ui, |ui| self.menu_items(ui, entry, status));
+    }
+
+    /// An app's menu: from the … button or a right-click on its card.
+    fn menu_items(&mut self, ui: &mut Ui, entry: &AppEntry, status: &AppStatus) {
         let id = entry.app.id.to_string();
         let manage = self.caps.manage_apps;
         let reveal = self.caps.reveal_label;
-        widgets::more_menu(ui, |ui| {
+        {
             if entry.release().is_some() && ui.button(tl!("Release notes")).clicked() {
                 self.dialog = Some(Dialog::Notes(id.clone()));
                 ui.close();
@@ -688,7 +712,7 @@ impl LauncherUi {
                     ui.close();
                 }
             }
-        });
+        }
     }
 }
 
