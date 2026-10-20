@@ -51,7 +51,11 @@ settings file must produce an error the user can act on, never a panic.
   `unimplemented!`. Return the crate's error type and propagate with `?`.
 - Every production crate root (`lib.rs`, each binary's `main.rs`, and `xtask`) carries
   `#![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]`.
-- **No `unsafe`.** The workspace sets `unsafe_code = "forbid"`.
+- **No `unsafe`.** The workspace denies `unsafe_code`. The single exception is
+  `apps/redrob-launcher/src/snap_layouts.rs` (`#![allow(unsafe_code)]`): Win32 calls on the
+  launcher's own window that answer `HTMAXBUTTON` over the drawn Maximize button, so Windows 11
+  shows Snap Layouts as it does over Redrob Cowork's. Every `unsafe` block there carries a
+  `SAFETY:` comment. Don't add `unsafe` anywhere else.
 - **Everything from the network is hostile.** Use `get()` instead of indexing, checked arithmetic
   for sizes and offsets, and cap downloads and JSON sizes.
 

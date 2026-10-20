@@ -10,7 +10,9 @@ rust-version = "1.90"
 repository = "https://github.com/redrob-labs/redrob-launcher"
 
 [workspace.lints.rust]
-unsafe_code = "forbid"
+# `deny`, not `forbid`, so the one module that needs Win32 calls (the launcher's
+# `snap_layouts.rs`) can `#![allow(unsafe_code)]`. No other code may.
+unsafe_code = "deny"
 
 [workspace.lints.clippy]
 dbg_macro = "warn"

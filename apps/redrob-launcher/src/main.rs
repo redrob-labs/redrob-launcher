@@ -6,6 +6,8 @@
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
 mod settings_file;
+#[cfg(all(windows, target_pointer_width = "64"))]
+mod snap_layouts;
 #[cfg(target_os = "macos")]
 mod spaces;
 mod tray;
@@ -535,6 +537,14 @@ struct Shell<'a> {
 impl<'a> Shell<'a> {
     fn new(cc: &eframe::CreationContext<'_>, launcher: &'a mut Launcher, hidden: bool) -> Self {
         let window_hides = window_can_hide(cc.display_handle().ok().map(|d| d.as_raw()));
+        // Windows 11 Snap Layouts on the drawn Maximize button.
+        #[cfg(all(windows, target_pointer_width = "64"))]
+        {
+            use eframe::wgpu::rwh::{HasWindowHandle, RawWindowHandle};
+            if let Ok(RawWindowHandle::Win32(w)) = cc.window_handle().map(|h| h.as_raw()) {
+                snap_layouts::install(w.hwnd.get(), cc.egui_ctx.clone());
+            }
+        }
         // Started hidden at login but there's no tray to come back from: show the window.
         let visible = !hidden || launcher.tray.is_none();
         let mut shell = Self { launcher, window_hides, visible: true, quitting: false, applied_follow: None };
