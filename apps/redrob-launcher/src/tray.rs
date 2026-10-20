@@ -29,10 +29,10 @@ pub struct Tray {
 }
 
 fn load_icon() -> Result<tray_icon::Icon, String> {
-    // The Redrob tile (white symbol on Redrob Blue) as the design system ships it, on every
-    // platform. It is never used as a macOS template image: a template is recoloured by the
-    // system, and the mark is never recoloured (design system `10-logo.md`).
-    let bytes: &[u8] = include_bytes!("../../../assets/brand/favicon-64x64.png");
+    // The Redrob group icon (2026) as the design system ships it, on every platform. It is never
+    // used as a macOS template image: a template is recoloured by the system, and the mark is
+    // never recoloured (design system `10-logo.md`).
+    let bytes: &[u8] = include_bytes!("../../../assets/app-icon/hicolor/64x64/apps/ai.redrob.launcher.png");
     let img = image::load_from_memory_with_format(bytes, image::ImageFormat::Png).map_err(|e| e.to_string())?.into_rgba8();
     let (w, h) = img.dimensions();
     tray_icon::Icon::from_rgba(img.into_raw(), w, h).map_err(|e| e.to_string())
