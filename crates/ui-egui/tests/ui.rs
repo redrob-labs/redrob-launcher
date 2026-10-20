@@ -805,6 +805,19 @@ fn custom_title_bar_has_window_buttons() {
         }),
         "… directly right of {main:?}"
     );
+    // The suite's hero leads the grouped page, between the filter row and the first shelf, and
+    // leaves when a filter narrows the page.
+    let hero = h.get_by_label("Work, create and build in one suite.").rect();
+    assert!(hero.top() > refresh.bottom() && hero.bottom() < h.get_by_label("For your AI engine").rect().top(), "{hero:?}");
+    if let Some(l) = h.state_mut().as_mut() {
+        l.settings.filter = redrob_launcher_ui_egui::settings::Filter::Updates;
+    }
+    h.run_steps(3);
+    assert!(h.query_by_label("Work, create and build in one suite.").is_none(), "no hero on a filtered page");
+    if let Some(l) = h.state_mut().as_mut() {
+        l.settings.filter = redrob_launcher_ui_egui::settings::Filter::All;
+    }
+    h.run_steps(3);
     assert!(h.get_all_by_label("All apps").all(|n| n.rect().top() >= 48.0), "the sidebar and page start under the title bar");
     // Restored, the top 5 px of the caption buttons and close's right 5 px stay the resize band.
     // (The harness insets the bar: its top is minimize's minus that band.)

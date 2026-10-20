@@ -157,22 +157,28 @@ impl LauncherUi {
         }
     }
 
-    /// The filter row's update button, drawn just left of Check for updates: "Update 1 app" or
-    /// "Update all (N)", only when something can be updated. Debug builds add
+    /// The filter row's update button label, "Update 1 app" or "Update all (N)", and how many of
+    /// the counted updates are debug samples; None when nothing can be updated. Debug builds add
     /// [`sample_updates`] to the count so the button can be previewed with nothing to update.
-    ///
-    /// * `ui` - the filter row's right-to-left layout; the button lands left of what came before.
-    fn update_all_button(&mut self, ui: &mut Ui) {
+    fn update_all_label(&self) -> Option<(String, usize)> {
         let real = if self.caps.manage_apps { self.count(Filter::Updates) } else { 0 };
         let sample = sample_updates();
         let updates = real + sample;
         if updates == 0 {
-            return;
+            return None;
         }
         let label = if updates == 1 { tl!("Update 1 app").to_string() } else { fmt(tl!("Update all ({count})"), &[("count", &updates.to_string())]) };
-        // The row's own 8 px item spacing separates it from Refresh.
-        // Tinted, not filled: a quiet action beside the Refresh icon, the same 32 px tall.
-        let resp = widgets::button_sized(ui, &label, Kind::Tinted, widgets::Size::Sm, 0.0);
+        Some((label, sample))
+    }
+
+    /// Draws the update button from [`Self::update_all_label`] (Tinted, Size::Sm, 32 px like the
+    /// Refresh icon beside it) and installs every real update when pressed.
+    ///
+    /// * `ui` - a right-to-left row; the button lands left of what came before it.
+    /// * `label` - the button's text.
+    /// * `sample` - how many of the counted updates are debug samples (they install nothing).
+    fn update_all_button(&mut self, ui: &mut Ui, label: &str, sample: usize) {
+        let resp = widgets::button_sized(ui, label, Kind::Tinted, widgets::Size::Sm, 0.0);
         // Debug-only preview text, never shipped, so it is left untranslated.
         let resp = if sample > 0 { resp.on_hover_text(format!("Preview: {sample} sample update(s) from {SAMPLE_UPDATES_ENV}")) } else { resp };
         if resp.clicked() {
@@ -263,6 +269,8 @@ impl LauncherUi {
             ui.add_space(theme::space::S3);
         }
         self.announcements(ui);
+        let update = self.update_all_label();
+        let mut update_below = false;
         ui.horizontal(|ui| {
             let filters: Vec<(Filter, Cell<'_>)> = [
                 (Filter::All, tl!("All"), tl!("Every Redrob app"), None),
@@ -277,13 +285,23 @@ impl LauncherUi {
             .collect();
             widgets::cells(ui, &mut self.settings.filter, &filters);
             // Check for updates at the row's right end (where the sort was), Update all left of it.
+            // When the filters leave no room for both, Update all moves to its own row below.
+            let gap = ui.spacing().item_spacing.x;
+            let need = update.as_ref().map_or(0.0, |(l, _)| widgets::button_width(ui, l, widgets::Size::Sm) + gap) + theme::control::SM + gap;
+            update_below = update.is_some() && ui.available_width() < need;
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if widgets::icon_button_busy(ui, Icon::Refresh, tl!("Check for updates"), theme::control::SM, self.checking).clicked() {
                     self.check_now();
                 }
-                self.update_all_button(ui);
+                if let Some((label, sample)) = update.as_ref().filter(|_| !update_below) {
+                    self.update_all_button(ui, label, *sample);
+                }
             });
         });
+        if update_below && let Some((label, sample)) = &update {
+            ui.add_space(theme::space::S2);
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| self.update_all_button(ui, label, *sample));
+        }
     }
 
     /// The DS EmptyState for a filter or search that matches nothing: left aligned, a 48 px
@@ -404,6 +422,11 @@ impl LauncherUi {
             vec![(None, ids.to_vec())]
         };
         let t = Tokens::get(ui.ctx());
+        // The suite's hero banner leads the grouped page, above the first shelf.
+        if grouped {
+            self.hero(ui);
+            ui.add_space(theme::space::S8);
+        }
         // Every tile is as tall as the one whose description wraps to the most lines.
         let card_h = card_height(ui, ids, card_w);
         for (title, list) in sections {

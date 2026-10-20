@@ -26,6 +26,7 @@ mod dialogs;
 mod engine;
 mod engine_update;
 pub(crate) mod glyphs;
+mod hero;
 pub mod i18n;
 pub mod icons;
 pub mod model;
