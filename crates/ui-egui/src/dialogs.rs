@@ -11,6 +11,9 @@ use crate::settings::{CheckEvery, Settings};
 use crate::theme::{self, ThemeChoice, Tokens};
 use crate::widgets::{self, Cell, Kind};
 
+/// The icon a modal's head can lead with (an app's, or the launcher's), in points square.
+const MODAL_ICON: f32 = 40.0;
+
 impl LauncherUi {
     pub(crate) fn dialogs(&mut self, ctx: &egui::Context) {
         let Some(dialog) = self.dialog.clone() else {
@@ -50,8 +53,9 @@ impl LauncherUi {
         max.min(ui.ctx().content_rect().width() - 48.0)
     }
 
-    /// DS Modal head (padding 20 20 0): an optional 40 px icon, the title in 21 / 600 with a meta
-    /// line under it, and a close icon button (sm 32) when `closable`. Returns whether it was pressed.
+    /// DS Modal head (padding 20 20 0): an optional 40 px icon, the title in DS title-4 (17 / 600,
+    /// the DS's dialog-title size) with a meta line under it, and a close icon button (sm 32) when
+    /// `closable`. Returns whether it was pressed.
     fn modal_head(ui: &mut egui::Ui, width: f32, icon: Option<egui::ImageSource<'static>>, title: &str, subtitle: &str, closable: bool) -> bool {
         let t = Tokens::get(ui.ctx());
         let mut close = false;
@@ -59,8 +63,9 @@ impl LauncherUi {
             ui.set_width(width - 40.0);
             // A row, not a free right-to-left layout: the modal's area has no height to centre in.
             ui.horizontal_top(|ui| {
+                let has_icon = icon.is_some();
                 if let Some(icon) = icon {
-                    ui.add(egui::Image::new(icon).fit_to_exact_size(vec2(40.0, 40.0)));
+                    ui.add(egui::Image::new(icon).fit_to_exact_size(vec2(MODAL_ICON, MODAL_ICON)));
                     ui.add_space(theme::space::S1);
                 }
                 let text_w = (ui.available_width() - if closable { theme::control::SM + theme::space::S2 } else { 0.0 }).max(0.0);
@@ -68,7 +73,20 @@ impl LauncherUi {
                     ui.set_width(text_w);
                     ui.vertical(|ui| {
                         ui.spacing_mut().item_spacing.y = 2.0;
-                        ui.add(egui::Label::new(widgets::heading(title, theme::text::TITLE_3, t.ink)).wrap());
+                        let heading = widgets::heading(title, theme::text::TITLE_4, t.ink);
+                        // A lone title is centred on the 40 px icon beside it (the 17 px title is
+                        // shorter than the icon); a wrapped one, or one with a meta line, starts at
+                        // the icon's top.
+                        if has_icon && subtitle.is_empty() {
+                            let galley = egui::WidgetText::from(heading.clone()).into_galley(
+                                ui,
+                                Some(egui::TextWrapMode::Wrap),
+                                text_w,
+                                egui::FontSelection::Default,
+                            );
+                            ui.add_space(((MODAL_ICON - galley.size().y) / 2.0).max(0.0));
+                        }
+                        ui.add(egui::Label::new(heading).wrap());
                         if !subtitle.is_empty() {
                             widgets::hud(ui, subtitle, t.faint);
                         }
@@ -90,21 +108,19 @@ impl LauncherUi {
         });
     }
 
-    /// DS Modal footer: right aligned, on surface-raised under a hairline, padding 16 20. `add`
-    /// runs right to left, so the first thing added is the rightmost (the main action).
+    /// DS Modal footer, on the modal's own ground (no hairline, no raised band), so head, body and
+    /// footer read as one surface: right aligned, padding 0 20 20 (the body's 20 px bottom padding
+    /// is the gap above it). `add` runs right to left, so the first thing added is the rightmost
+    /// (the main action).
+    ///
+    /// * `ui` - the modal's Ui.
+    /// * `width` - the modal's width ([`Self::modal_width`]).
+    /// * `add` - adds the footer's controls, right to left.
     fn modal_foot(ui: &mut egui::Ui, width: f32, add: impl FnOnce(&mut egui::Ui)) {
-        let t = Tokens::get(ui.ctx());
-        let radius = theme::radius::XL - 1;
-        let r = egui::Frame::new()
-            .fill(t.raised())
-            .corner_radius(egui::CornerRadius { nw: 0, ne: 0, sw: radius, se: radius })
-            .outer_margin(egui::Margin { left: 1, right: 1, top: 0, bottom: 1 })
-            .inner_margin(egui::Margin::symmetric(19, 16))
-            .show(ui, |ui| {
-                ui.set_width(width - 40.0);
-                ui.horizontal(|ui| ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), add));
-            });
-        ui.painter().hline(r.response.rect.x_range(), r.response.rect.top(), t.hairline());
+        egui::Frame::new().inner_margin(egui::Margin { left: 20, right: 20, top: 0, bottom: 20 }).show(ui, |ui| {
+            ui.set_width(width - 40.0);
+            ui.horizontal(|ui| ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), add));
+        });
     }
 
     /// The modal's body text: DS Modal body, 14 px ink-secondary.
