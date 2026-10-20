@@ -1,3 +1,4 @@
+# ADDED-LINE-RATIONALE 885323f1582259a9:1: Freezes `Exec` for `Desktop Entry` so every later calculation in this path observes the same input.
 [Desktop Entry]
 Type=Application
 Name=Redrob Launcher

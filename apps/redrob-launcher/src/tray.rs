@@ -1,3 +1,5 @@
+// ADDED-LINE-RATIONALE ecaae614e528a985:1: Freezes `engine` for `new` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE d5b7801705ff00fb:1: Keeps `engine / AI / engine` in `new`'s API-defined order so positional values retain their intended meaning.
 //! The tray (menu bar) icon: show the window, check for updates, quit.
 
 use redrob_launcher_ui_egui::i18n;
@@ -11,7 +13,7 @@ pub enum TrayAction {
     Toggle,
     Show,
     Check,
-    /// Show the window with the engine dialog open.
+    /// Show the window with the AI engine page open.
     Engine,
     Open(&'static str),
     Quit,
@@ -44,7 +46,7 @@ impl Tray {
     pub fn new(wake: impl Fn() + Send + Sync + Clone + 'static, on_quit: impl Fn() + Send + Sync + 'static) -> Result<Self, String> {
         let show = MenuItem::new(i18n::t("Show Redrob Launcher"), true, None);
         let check = MenuItem::new(i18n::t("Check for Updates"), true, None);
-        let engine = MenuItem::new(i18n::t("Redrob Code engine"), true, None);
+        let engine = MenuItem::new(i18n::t("AI engine"), true, None);
         use redrob_launcher_core::catalog::{GITHUB_URL, WEBSITE_URL};
         let website = MenuItem::new(i18n::t("Visit redrob.ai"), true, None);
         let github = MenuItem::new(i18n::t("Redrob on GitHub"), true, None);
@@ -98,7 +100,7 @@ impl Tray {
         let labels = vec![
             (show, "Show Redrob Launcher"),
             (check, "Check for Updates"),
-            (engine, "Redrob Code engine"),
+            (engine, "AI engine"),
             (website, "Visit redrob.ai"),
             (github, "Redrob on GitHub"),
             (quit, "Quit Redrob Launcher"),

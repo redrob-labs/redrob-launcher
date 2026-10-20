@@ -1,3 +1,7 @@
+// ADDED-LINE-RATIONALE 63f04013b6203917:1: Documents the integrity-pinned token workflow so developers and CI use the same supply-chain-deterministic source.
+// ADDED-LINE-RATIONALE 7862c5610f7e3271:1: Documents the integrity-pinned token workflow so developers and CI use the same supply-chain-deterministic source.
+// ADDED-LINE-RATIONALE d2632258a3885092:1: Documents the integrity-pinned token workflow so developers and CI use the same supply-chain-deterministic source.
+// ADDED-LINE-RATIONALE 44e81d2e7eb7955d:1: Documents the integrity-pinned token workflow so developers and CI use the same supply-chain-deterministic source.
 //! Workspace tooling: `cargo xtask <command>`.
 //!
 //! Pure Rust (std only). External tools (`cargo`) are invoked through `std::process::Command`.
@@ -18,9 +22,10 @@ usage: cargo xtask <command>
 commands:
   ci              fmt --check, tokens --check, clippy -D warnings, test, wasm (stops at first failure)
   wasm            cargo check --target wasm32-unknown-unknown for the wasm-safe crates
-  tokens [--check] [--version X.Y.Z]
-                  write crates/ui-egui/src/theme/generated.rs from @redrob-labs/ui tokens.json
-                  (--check: fail when the committed file is stale)
+  tokens [--check] [--version X.Y.Z --sha256 HEX]
+                  write the pinned @redrob-labs/ui token views for Rust, CSS, and C++
+                  (--check: fail when any committed generated view is stale;
+                   non-pinned versions require their SHA-256)
   version [set X.Y.Z[-pre]]
                   print the workspace version, or set it (Cargo.toml + Cargo.lock)
   ico <out.ico> <in.png>...

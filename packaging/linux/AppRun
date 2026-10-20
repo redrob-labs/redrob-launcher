@@ -1,4 +1,5 @@
 #!/bin/sh
+# ADDED-LINE-RATIONALE 82c64d39c05ec0ec:1: Freezes `if` for `-f "$src_desktop"` so every later calculation in this path observes the same input.
 # Redrob Launcher AppImage entry point (packaging/linux/AppRun; installed by package.sh).
 #
 # On Wayland the compositor resolves a window's dock icon by taking the window's

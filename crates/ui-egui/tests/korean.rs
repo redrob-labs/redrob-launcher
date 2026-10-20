@@ -1,3 +1,27 @@
+// ADDED-LINE-RATIONALE 4ac109aceee6846f:1: Isolates `harness_language` as the owner of this behavior so callers can use and test it without duplicating policy.
+// ADDED-LINE-RATIONALE 6510d1893cf90722:1: Freezes `settings` for `harness_language` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 7e75ca520ac2005d:1: Freezes `let` for `korean_switches_persists_and_keeps_install_actions` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE b3a2f61ff486df10:1: Supports `korean_switches_persists_and_keeps_install_actions` while preserving the nearby constraint: Settings is in the account row's menu.
+// ADDED-LINE-RATIONALE 6ff093fb1a4d5cfc:1: Freezes `h` for `korean_switches_persists_and_keeps_install_actions` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 2eec71ba3cd82f9f:2: Delegates `korean_switches_persists_and_keeps_install_actions`'s `h / run_steps` work to `h.run_steps` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE b9d2fb3dcfe1e05a:1: Supports `korean_switches_persists_and_keeps_install_actions` while preserving the nearby constraint: The last check is in Settings (the Apps page has no footer).
+// ADDED-LINE-RATIONALE aeeacbd0ad131a10:1: Delegates `korean_switches_persists_and_keeps_install_actions`'s `h / get_by_label / click` work to `h.get_by_label` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE a6f1299740a6263e:1: Delegates `korean_switches_persists_and_keeps_install_actions`'s `h / get_by_label` work to `h.get_by_label` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE b4f8e74d374f16de:1: Supports `korean_switches_persists_and_keeps_install_actions` while preserving the nearby constraint: The account row's menu, in Korean.
+// ADDED-LINE-RATIONALE c15abba343a5b6ee:1: Delegates `korean_switches_persists_and_keeps_install_actions`'s `h / get_by_label / click` work to `h.get_by_label` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 2eec71ba3cd82f9f:5: Delegates `korean_switches_persists_and_keeps_install_actions`'s `h / run_steps` work to `h.run_steps` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 5c7902ed248eca29:1: Delegates `korean_switches_persists_and_keeps_install_actions`'s `h / get_by_label / Redrob` work to `h.get_by_label` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 6a88d6f640b57b02:1: Delegates `korean_switches_persists_and_keeps_install_actions`'s `snapshot / h / account` work to `snapshot` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 790c70d263c9cf36:1: Delegates `korean_switches_persists_and_keeps_install_actions`'s `h / key_press / egui` work to `h.key_press` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 2eec71ba3cd82f9f:6: Delegates `korean_switches_persists_and_keeps_install_actions`'s `h / run_steps` work to `h.run_steps` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE a96362aee2a2e44e:1: Makes `korean_switches_persists_and_keeps_install_actions` fail visibly when `assert / h / query_by_label` violates the behavior this path promises.
+// ADDED-LINE-RATIONALE 0bb9d1ed63603723:1: Makes `korean_switches_persists_and_keeps_install_actions` fail visibly when `assert_eq / h / get_by_label` violates the behavior this path promises.
+// ADDED-LINE-RATIONALE 79233b0935878fde:1: Supports `korean_switches_persists_and_keeps_install_actions` while preserving the nearby constraint: Product names stay in Latin script.
+// ADDED-LINE-RATIONALE 7f7c9c0e1e18eed1:1: Supports `korean_switches_persists_and_keeps_install_actions` while preserving the nearby constraint: Release dates in Korean, on the tiles' version lines.
+// ADDED-LINE-RATIONALE 7e9e895b8ed979c8:1: Delegates `korean_switches_persists_and_keeps_install_actions`'s `light / run_steps` work to `light.run_steps` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 963b109863c1d0da:1: Freezes `assert` for `korean_switches_persists_and_keeps_install_actions` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 80229bd729c57e37:1: Delegates `korean_switches_persists_and_keeps_install_actions`'s `snapshot / light / grid` work to `snapshot` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE d38c5f9d762234f4:1: Freezes `let` for `korean_switches_persists_and_keeps_install_actions` so every later calculation in this path observes the same input.
 //! The Korean UI, in its own test binary: the UI language is process-wide, so it can't share one
 //! with the English UI tests. `REDROB_LAUNCHER_SNAPSHOTS=<dir>` also saves screenshots (run with
 //! `-- --test-threads=1`).
@@ -11,7 +35,6 @@ use redrob_launcher_core::protocol::{Backend, Capabilities, Command, Event, JobP
 use redrob_launcher_core::release::{Asset, Release};
 use redrob_launcher_core::status::InstallSource;
 use redrob_launcher_core::{Arch, Installed, Os, Platform, SUITE, version};
-use redrob_launcher_ui_egui::settings::ViewMode;
 use redrob_launcher_ui_egui::{Host, LauncherUi, Settings};
 
 const NOW: i64 = 1_791_500_000;
@@ -102,17 +125,12 @@ fn events() -> Vec<Event> {
     ev
 }
 
-fn harness_language(
-    view: ViewMode,
-    theme: egui::Theme,
-    manage: bool,
-    language: &str,
-) -> (Harness<'static, Option<LauncherUi>>, Rc<RefCell<Vec<Command>>>) {
+fn harness_language(theme: egui::Theme, manage: bool, language: &str) -> (Harness<'static, Option<LauncherUi>>, Rc<RefCell<Vec<Command>>>) {
     redrob_launcher_ui_egui::i18n::set_test_lang(redrob_launcher_ui_egui::i18n::Lang::EN);
     let sent = Rc::new(RefCell::new(Vec::new()));
     let sent2 = sent.clone();
     let mut backend = Some(Fake { events: events(), sent: sent2, manage, clock: Rc::new(Cell::new(NOW)) });
-    let settings = Settings { view, notify: false, language: language.into(), ..Settings::default() };
+    let settings = Settings { notify: false, language: language.into(), ..Settings::default() };
     let harness = Harness::builder().with_size(egui::vec2(1180.0, 900.0)).with_theme(theme).build_ui_state(
         move |ui, state: &mut Option<LauncherUi>| {
             if state.is_none()
@@ -145,9 +163,13 @@ fn snapshot(h: &mut Harness<'_, Option<LauncherUi>>, name: &str) {
 // One test: the UI language is process-wide.
 #[test]
 fn korean_switches_persists_and_keeps_install_actions() {
-    let (mut h, sent) = harness_language(ViewMode::Grid, egui::Theme::Dark, true, "en");
+    let (mut h, sent) = harness_language(egui::Theme::Dark, true, "en");
     h.run_steps(6);
+    // Settings is in the account row's menu.
+    let row = h.get_by_label("Settings").rect();
     h.get_by_label("Settings").click();
+    h.run_steps(3);
+    h.get_all_by_label("Settings").find(|n| n.rect().bottom() <= row.top() + 0.5).unwrap().click();
     h.run_steps(3);
     h.get_by_value("English").click();
     h.run_steps(2);
@@ -155,20 +177,31 @@ fn korean_switches_persists_and_keeps_install_actions() {
     h.run_steps(3);
     h.get_by_value("한국어");
     h.get_by_label("설치된 앱에 업데이트가 있으면 알림");
+    // The last check is in Settings (the Apps page has no footer).
+    h.get_by_label_contains("3분 전 확인함 · Redrob API 사용");
     snapshot(&mut h, "settings-ko-dark");
     let settings = h.state().as_ref().unwrap().settings.clone();
     assert_eq!(settings.language, "ko");
     let saved = serde_json::to_string(&settings).unwrap();
     let restored: Settings = serde_json::from_str(&saved).unwrap();
     assert_eq!(restored.language, "ko");
-    h.get_by_label("완료").click();
+    h.get_by_label("앱으로 돌아가기").click();
     h.run_steps(3);
     h.get_by_label("에이전트와 함께 그림을 그리고 이미지를 편집해요");
     h.get_by_label("그래픽");
-    h.get_by_label_contains("3분 전 확인함 · Redrob API 사용");
-    h.get_by_label("0.5.0(으)로 업데이트");
+    h.get_by_label("0.5.0 버전으로 업데이트");
+    // The account row's menu, in Korean.
+    let row = h.get_by_label("설정").rect();
+    h.get_by_label("설정").click();
+    h.run_steps(3);
+    h.get_by_label("Redrob Launcher 종료");
+    snapshot(&mut h, "account-menu-ko-dark");
+    h.key_press(egui::Key::Escape);
+    h.run_steps(3);
+    assert!(h.query_by_label("Redrob Launcher 종료").is_none(), "Escape closed the menu");
+    assert_eq!(h.get_by_label("설정").rect(), row);
     // Product names stay in Latin script.
-    h.get_by_label("Launcher");
+    h.get_by_label("Redrob Launcher");
     h.get_by_label("Redrob Canvas");
     snapshot(&mut h, "grid-ko-dark");
     h.get_by_label("모두 업데이트(2)").click();
@@ -176,12 +209,12 @@ fn korean_switches_persists_and_keeps_install_actions() {
     let installs: Vec<_> = sent.borrow().iter().filter_map(|c| if let Command::Install { app } = c { Some(app.clone()) } else { None }).collect();
     assert_eq!(installs, ["redrob-canvas", "redrob-browser"]);
 
-    let (mut table, _) = harness_language(ViewMode::Table, egui::Theme::Light, true, &restored.language);
-    table.run_steps(6);
-    table.get_by_label("출시일");
-    assert!(table.query_all_by_label_contains("2026년 10월").count() >= 1);
-    snapshot(&mut table, "table-ko-light");
-    let (mut web, _) = harness_language(ViewMode::Grid, egui::Theme::Dark, false, &restored.language);
+    // Release dates in Korean, on the tiles' version lines.
+    let (mut light, _) = harness_language(egui::Theme::Light, true, &restored.language);
+    light.run_steps(6);
+    assert!(light.query_all_by_label_contains("2026년 10월").count() >= 1);
+    snapshot(&mut light, "grid-ko-light");
+    let (mut web, _) = harness_language(egui::Theme::Dark, false, &restored.language);
     web.run_steps(6);
     assert!(web.query_all_by_label("macOS용 다운로드").count() >= 3);
 }

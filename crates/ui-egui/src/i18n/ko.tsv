@@ -26,67 +26,65 @@
 	Newest release	최근 출시
 	GitHub	GitHub
 	Website	웹사이트
-	Create	만들기
-	Work	일하기
 	Install	설치
-	Update to {v}	{v}(으)로 업데이트
+	Update to {v}	{v} 버전으로 업데이트
 	Open	열기
 	Download for {os}	{os}용 다운로드
 	Download	다운로드
-	Coming soon	곧 출시
+	Coming soon	출시 예정
 	Checking…	확인 중…
 	Not available	사용할 수 없음
 	Offline	오프라인
-	Downloading {done} of {total}	{total} 중 {done} 다운로드 중
+	Downloading {done} of {total}	다운로드 중 {done}/{total}
 	Downloading…	다운로드 중…
-	Reconnecting…	다시 연결하는 중…
-	Verifying…	확인하는 중…
-	Installing, then restarting…	설치한 뒤 다시 시작하는 중…
-	Installing…	설치하는 중…
-	Removing…	제거하는 중…
-	Pause download	다운로드 일시 정지
+	Reconnecting…	다시 연결 중…
+	Verifying…	검증 중…
+	Installing, then restarting…	설치 후 다시 시작 중…
+	Installing…	설치 중…
+	Removing…	제거 중…
+	Pause download	다운로드 일시 중지
 	Cancel download	다운로드 취소
-	Resume download	다운로드 계속
-	Discard download	다운로드 버리기
+	Resume download	다운로드 재개
+	Discard download	다운로드 삭제
 	Release notes	릴리스 노트
 	Show in Finder	Finder에서 보기
-	Show in Explorer	탐색기에서 보기
-	Show in Files	파일에서 보기
+	Show in Explorer	파일 탐색기에서 보기
+	Show in Files	파일 관리자에서 보기
 	Reinstall	다시 설치
 	Uninstall…	제거…
 	All releases	모든 릴리스
-	Redrob Launcher {version} is available.	Redrob Launcher {version}이(가) 나왔어요.
+	Redrob Launcher {version} is available.	Redrob Launcher {version} 버전이 나왔어요.
 	Dismiss	닫기
 	Update and restart	업데이트하고 다시 시작
-	A new version is available. Would you like to relaunch with the updated version?	새 버전이 나왔어요. 새 버전으로 다시 시작할까요?
+	A new version is available. Would you like to relaunch with the updated version?	새 버전이 준비됐어요. 지금 다시 시작해서 업데이트할까요?
 	Later	나중에
-	What's new	새로운 점
-	No notes were published with this release.	이 릴리스에는 노트가 없어요.
+	What's new	새로운 기능
+	No notes were published with this release.	이 버전에는 릴리스 노트가 없어요.
 	Released {date}	{date} 출시
 	Open on GitHub	GitHub에서 열기
 	Close	닫기
 	Redrob Launcher {version}	Redrob Launcher {version}
-	Only when I ask	요청할 때만
+	Only when I ask	직접 확인할 때만
 	Automatically download and install updates	업데이트를 자동으로 다운로드하고 설치
 	Notify me when an installed app has an update	설치된 앱에 업데이트가 있으면 알림
-	Include pre-releases (betas and release candidates)	시험판 포함(베타와 출시 후보)
+	Include pre-releases (betas and release candidates)	베타 버전도 받기(베타·출시 후보)
 	Installing on Linux	Linux에 설치
 	Install new apps as	새 앱 설치 형식
 	System package (recommended)	시스템 패키지(권장)
 	Updates always use the format an app was installed with.	업데이트는 앱을 설치한 형식을 그대로 써요.
 	Running in the background	백그라운드 실행
 	Keep running in the tray when the window is closed	창을 닫아도 트레이에서 계속 실행
-	Show the window on the current desktop	현재 데스크톱에 창 보이기
+	Show the window on the current desktop	지금 보고 있는 데스크톱에 창 열기
 	Start Redrob Launcher when I log in	로그인할 때 Redrob Launcher 시작
 	Redrob	Redrob
 	News and source code for every Redrob app	모든 Redrob 앱의 소식과 소스 코드
 	Appearance	모양
 	Quit Redrob Launcher	Redrob Launcher 종료
 	Done	완료
-	Uninstall {name}?	{name}을(를) 제거할까요?
+	Uninstall {name}?	{name} 앱을 제거할까요?
 	The app will be moved to the Trash. Your documents and settings stay.	앱을 휴지통으로 옮겨요. 문서와 설정은 남아요.
 	Windows will remove it like any installed program. Your documents and settings stay.	Windows가 다른 프로그램처럼 제거해요. 문서와 설정은 남아요.
-	Your system's package manager will remove it, and may ask for your password. Your documents and settings stay.	시스템 패키지 관리자가 제거하고, 암호를 물을 수 있어요. 문서와 설정은 남아요.
+	Your system's package manager will remove it, and may ask for your password. Your documents and settings stay.	시스템 패키지 관리자가 제거해요. 이때 암호를 물을 수 있어요. 문서와 설정은 남아요.
 	The app will be removed. Your documents and settings stay.	앱을 제거해요. 문서와 설정은 남아요.
 	Uninstall	제거
 	Cancel	취소
@@ -96,8 +94,8 @@
 	{month} {day}, {year}	{year}년 {month} {day}일
 	Automatically	자동으로
 	Every Redrob app	모든 Redrob 앱
-	Apps on this computer	이 컴퓨터에 있는 앱
-	Installed apps with a newer version	새 버전이 있는 설치된 앱
+	Apps on this computer	이 컴퓨터에 설치된 앱
+	Installed apps with a newer version	업데이트할 수 있는 앱
 	Apps you can install	설치할 수 있는 앱
 	Checked {ago} · using {sources}	{ago} 확인함 · {sources} 사용
 	{a} and {b}	{a}, {b}
@@ -111,14 +109,14 @@
 	{name} icon	{name} 아이콘
 	Loading Redrob Launcher…	Redrob Launcher 불러오는 중…
 	Cancel update	업데이트 취소
-	Stop waiting; the update can be started again later	기다리지 않아요. 업데이트는 나중에 다시 시작할 수 있어요
+	Stop waiting; the update can be started again later	대기를 취소해요. 업데이트는 나중에 다시 시작할 수 있어요
 	Download again	다시 다운로드
 	Install cancelled	설치 취소됨
-	Install cancelled. The download is kept for the next try.	설치를 취소했어요. 다운로드한 파일은 다음에 쓰도록 남겨 둬요.
+	Install cancelled. The download is kept for the next try.	설치를 취소했어요. 다운로드한 파일은 다음에 쓸 수 있게 남겨 뒀어요.
 	Update cancelled	업데이트 취소됨
 	Uninstall cancelled	제거 취소됨
-	Retry install	다시 설치 시도
-	Retry update to {version}	{version}(으)로 다시 업데이트 시도
+	Retry install	설치 다시 시도
+	Retry update to {version}	{version} 업데이트 다시 시도
 	The download is still here. It's checked again, then installed.	다운로드한 파일이 남아 있어요. 다시 확인한 뒤 설치해요.
 	Waiting for another app…	다른 앱을 기다리는 중…
 	Waiting for other installs…	다른 설치를 기다리는 중…
@@ -142,23 +140,22 @@
 	Agent workspace	에이전트 작업 공간
 	Office suite	오피스
 	Not checked yet	아직 확인 안 함
-	GitHub's hourly limit was reached; full details return in {min} min	GitHub 시간당 한도에 걸렸어요. {min}분 뒤에 모든 정보가 돌아와요
-	GitHub limit hit; back in {min} min	GitHub 한도 초과, {min}분 뒤 복구
-	Installing for {platform}	{platform}용으로 설치
-	Downloads for {platform}	{platform}용 다운로드
+	GitHub's hourly limit was reached; full details return in {min} min	GitHub 시간당 요청 한도에 도달했어요. {min}분 뒤에 전체 정보를 다시 불러와요
+	Installing for {platform}	설치 대상: {platform}
+	Downloads for {platform}	다운로드 대상: {platform}
 	No downloads for this system	이 시스템용 다운로드 없음
-	Couldn't open {name}: {e}	{name}을(를) 열지 못했어요: {e}
+	Couldn't open {name}: {e}	{name} 앱을 열지 못했어요: {e}
 	Download cancelled	다운로드 취소됨
 	Available to install	설치 가능
 	Available	설치 가능
-	Installed · up to date	설치됨 · 최신
+	Installed · up to date	설치됨 · 최신 버전
 	Update available	업데이트 있음
 	Installed	설치됨
 	installed	설치됨
-	Not available here	여기서는 쓸 수 없음
+	Not available here	이 시스템 미지원
 	Updating…	업데이트하는 중…
-	Update paused	업데이트 일시 정지됨
-	Download paused	다운로드 일시 정지됨
+	Update paused	업데이트 일시 중지됨
+	Download paused	다운로드 일시 중지됨
 	{version} installed → {latest} released	{version} 설치됨 → {latest} 출시
 	Version {version}	버전 {version}
 	{installed} installed · latest {latest}	{installed} 설치됨 · 최신 {latest}
@@ -169,22 +166,22 @@
 	App	앱
 	Latest	최신
 	Released	출시일
-	Auto	자동
+	Match system ({language})	시스템 언어 따르기({language})
 	Language	언어
 	Per-app language	앱별 언어
-	Same as launcher	런처와 같게
+	Same as launcher	런처 설정 따르기
 	Ascending	오름차순
 	Descending	내림차순
-	Click to reverse the order	눌러서 순서 뒤집기
-	Click to sort by this column	눌러서 이 열로 정렬
-	{done} of {total}	{total} 중 {done}
+	Click to reverse the order	클릭해 정렬 순서 바꾸기
+	Click to sort by this column	클릭해 이 열로 정렬
+	{done} of {total}	{done}/{total}
 	Downloading	다운로드 중
-	Verifying checksum…	체크섬 확인하는 중…
-	Resume	계속
-	{done} of {total} downloaded	{total} 중 {done} 받음
-	{done} downloaded	{done} 받음
-	Checking for updates…	업데이트 확인하는 중…
-	Downloads the new version, replaces this one and opens it again	새 버전을 받아 지금 버전을 바꾸고 다시 열어요
+	Verifying checksum…	체크섬 검증 중…
+	Resume	재개
+	{done} of {total} downloaded	{done}/{total} 다운로드됨
+	{done} downloaded	{done} 다운로드됨
+	Checking for updates…	업데이트 확인 중…
+	Downloads the new version, replaces this one and opens it again	새 버전을 다운로드해 지금 버전과 바꾼 뒤 다시 열어요
 	Couldn't check for updates: {f}	업데이트를 확인하지 못했어요: {f}
 	GitHub repository	GitHub 저장소
 	Update 1 app	앱 1개 업데이트
@@ -196,19 +193,19 @@
 	Match system	시스템 설정 따르기
 	Dark	어둡게
 	Light	밝게
-	Full changelog	전체 변경 기록
+	Full changelog	전체 변경 내역
 	link	링크
-	No apps match	맞는 앱이 없어요
-	Open Redrob Launcher to update.	업데이트하려면 Redrob Launcher를 여세요.
-	{name} {v} is available	{name} {v}이(가) 나왔어요
-	{count} updates are available	업데이트 {count}개가 있어요
+	No apps match	일치하는 앱이 없어요
+	Open Redrob Launcher to update.	Redrob Launcher를 열어 업데이트하세요.
+	{name} {v} is available	{name} {v} 버전이 나왔어요
+	{count} updates are available	업데이트가 {count}개 있어요
 	These notes weren't fetched (GitHub's request limit was reached). They're on the release page.	GitHub 요청 한도에 걸려 노트를 가져오지 못했어요. 릴리스 페이지에서 볼 수 있어요.
-	When on, opening the launcher from the menu bar brings its window to the desktop you're on. When off, macOS switches you to the desktop the window was on.	켜면 메뉴 막대에서 런처를 열 때 창을 지금 데스크톱으로 가져와요. 끄면 macOS가 창이 있던 데스크톱으로 옮겨 줘요.
+	When on, opening the launcher from the menu bar brings its window to the desktop you're on. When off, macOS switches you to the desktop the window was on.	켜면 메뉴 막대에서 런처를 열 때 창을 지금 데스크톱으로 가져와요. 끄면 macOS가 창이 있던 데스크톱으로 화면을 전환해요.
 	Couldn't change the login item: {e}	로그인 항목을 바꾸지 못했어요: {e}
-	Show Redrob Launcher	Redrob Launcher 보기
+	Show Redrob Launcher	Redrob Launcher 열기
 	Check for Updates	업데이트 확인
 	Visit redrob.ai	redrob.ai 방문
-	Redrob on GitHub	GitHub의 Redrob
+	Redrob on GitHub	Redrob GitHub
 	Redrob API	Redrob API
 
 column	App	앱
@@ -221,7 +218,7 @@ redrob-shape	Shape and shade 3D models by prompt	프롬프트로 3D 모델을 �
 redrob-cad	Design, constrain and iterate on parts with an agent	에이전트와 함께 부품을 설계하고 다듬어요
 redrob-canvas	Paint and edit images with an agent	에이전트와 함께 그림을 그리고 이미지를 편집해요
 redrob-design	Open .fig and .pen files and design by prompt	.fig·.pen 파일을 열고 프롬프트로 디자인해요
-redrob-browser	A browser whose agent reads, acts on and automates the web	에이전트가 웹을 읽고, 움직이고, 자동화하는 브라우저
+redrob-browser	A browser whose agent reads, acts on and automates the web	에이전트가 웹을 읽고, 대신 조작하고, 자동화하는 브라우저
 redrob-code	The AI coding agent for your terminal	터미널에서 쓰는 AI 코딩 에이전트
 redrob-cowork	Work with AI agents on your own files	내 파일로 AI 에이전트와 함께 일해요
 redrob-office	Docs, Sheets, Slides, PDF and Hangul in one window	문서·시트·슬라이드·PDF·한글을 한 창에서
@@ -242,16 +239,16 @@ month	Dec	12월
 @plural	{n} h ago|{n} h ago	{n}시간 전
 @plural	{n} day ago|{n} days ago	{n}일 전
 @plural	Redrob Launcher · {n} update available|Redrob Launcher · {n} updates available	Redrob Launcher · 업데이트 {n}개
-@msg	Couldn't open {name}: {e}	{name}을(를) 열지 못했어요: {e}
+@msg	Couldn't open {name}: {e}	{name} 앱을 열지 못했어요: {e}
 @msg	Download cancelled	다운로드 취소됨
-@msg	{name} updated to {version}	{name}을(를) {version}(으)로 업데이트했어요
-@msg	{name} installed: {version}	{name} 설치됨: {version}
-@msg	{name} updated to {version} (this release publishes no checksum, so only its size was checked)	{name}을(를) {version}(으)로 업데이트했어요(이 릴리스는 체크섬이 없어 크기만 확인했어요)
-@msg	{name} installed: {version} (this release publishes no checksum, so only its size was checked)	{name} 설치됨: {version}(이 릴리스는 체크섬이 없어 크기만 확인했어요)
-@msg	{name} was removed	{name}을(를) 제거했어요
-@msg	{name} is running. Quit it, then try again.	{name}이(가) 실행 중이에요. 종료한 뒤 다시 해 보세요.
+@msg	{name} updated to {version}	{name} 앱을 {version} 버전으로 업데이트했어요
+@msg	{name} installed: {version}	{name} {version} 버전을 설치했어요
+@msg	{name} updated to {version} (this release publishes no checksum, so only its size was checked)	{name} 앱을 {version} 버전으로 업데이트했어요. 이 버전은 체크섬을 공개하지 않아 크기만 확인했어요.
+@msg	{name} installed: {version} (this release publishes no checksum, so only its size was checked)	{name} {version} 버전을 설치했어요. 이 버전은 체크섬을 공개하지 않아 크기만 확인했어요.
+@msg	{name} was removed	{name} 앱을 제거했어요
+@msg	{name} is running. Quit it, then try again.	{name} 앱이 실행 중이에요. 앱을 종료한 뒤 다시 시도하세요.
 @id	app.install	설치
-@id	app.update	{v}(으)로 업데이트
+@id	app.update	{v} 버전으로 업데이트
 @id	app.open	열기
 @id	app.download	{os}용 다운로드
 @id	app.reveal	Finder에서 보기
@@ -263,7 +260,7 @@ month	Dec	12월
 @id	app.releases	모든 릴리스
 @id	launcher.update	업데이트하고 다시 시작
 @id	launcher.download	다운로드
-@id	launcher.notes	새로운 점
+@id	launcher.notes	새로운 기능
 @id	launcher.dismiss	닫기
 @id	settings.open	설정
 @id	settings.quit	Redrob Launcher 종료
@@ -285,10 +282,10 @@ month	Dec	12월
 @id	update.check	업데이트 확인
 @id	update.check_auto	업데이트 자동 확인
 @id	update.notify	설치된 앱에 업데이트가 있으면 알림
-@id	update.prereleases	시험판 포함(베타와 출시 후보)
+@id	update.prereleases	베타 버전도 받기(베타·출시 후보)
 @id	linux.preferred_kind	새 앱 설치 형식
 @id	tray.close_to_tray	창을 닫아도 트레이에서 계속 실행
-@id	tray.show_on_current_desktop	현재 데스크톱에 창 보이기
+@id	tray.show_on_current_desktop	지금 보고 있는 데스크톱에 창 열기
 @id	tray.login_item	로그인할 때 Redrob Launcher 시작
 @id	appearance.theme	모양
 
@@ -296,41 +293,41 @@ month	Dec	12월
 	Approve the code on console.redrob.ai	console.redrob.ai에서 코드를 승인하세요
 	Approve this code on console.redrob.ai:	console.redrob.ai에서 이 코드를 승인하세요:
 	Apps	앱
-	Asking console.redrob.ai for a code…	console.redrob.ai에 코드를 받는 중…
+	Asking console.redrob.ai for a code…	console.redrob.ai에서 코드를 받는 중…
 	Connect	연결
 	Connected	연결됨
 	Connected with another key	다른 키로 연결됨
-	Forgets the key on this computer. Revoke it on console.redrob.ai to stop it working everywhere.	이 컴퓨터에서 키를 지워요. 어디서도 못 쓰게 하려면 console.redrob.ai에서 키를 폐기하세요.
-	Gives the app this computer's workspace key	이 컴퓨터의 워크스페이스 키를 앱에 넣어 줘요
+	Forgets the key on this computer. Revoke it on console.redrob.ai to stop it working everywhere.	이 컴퓨터에 저장된 키를 지워요. 모든 곳에서 키를 무효화하려면 console.redrob.ai에서 폐기하세요.
+	Gives the app this computer's workspace key	앱이 이 컴퓨터의 워크스페이스 키를 쓰도록 연결해요
 	Key: {name}	키: {name}
 	Not connected	연결 안 됨
 	Not supported yet	아직 지원 안 됨
-	One sign-in for every Redrob app on this computer	이 컴퓨터의 모든 Redrob 앱을 한 번에 로그인
+	One sign-in for every Redrob app on this computer	로그인 한 번으로 이 컴퓨터의 모든 Redrob 앱 사용
 	Open console.redrob.ai	console.redrob.ai 열기
 	Redrob account	Redrob 계정
 	Sign in	로그인
 	Sign in first	먼저 로그인하세요
 	Sign in once and every Redrob app on this computer can use your workspace. You approve a short code on console.redrob.ai; nobody copies a key.	한 번 로그인하면 이 컴퓨터의 모든 Redrob 앱이 워크스페이스를 쓸 수 있어요. console.redrob.ai에서 짧은 코드만 승인하면 되고, 키를 복사할 일은 없어요.
 	Sign in to Redrob	Redrob에 로그인
-	Sign in to Redrob once for every app on this computer	이 컴퓨터의 모든 앱을 위해 Redrob에 한 번 로그인
+	Sign in to Redrob once for every app on this computer	Redrob에 한 번만 로그인하면 이 컴퓨터의 모든 앱에서 써요
 	Sign out	로그아웃
 	Signing in…	로그인하는 중…
-	Use this sign-in	이 로그인 쓰기
-	Uses this sign-in	이 로그인을 씀
-	Next release uses this sign-in	다음 버전부터 이 로그인을 씁니다
-	Update to use this sign-in	업데이트하면 이 로그인을 씁니다
-	Needs no sign-in	로그인이 필요 없습니다
+	Use this sign-in	이 로그인 사용
+	Uses this sign-in	이 로그인 사용 중
+	Next release uses this sign-in	다음 버전부터 이 로그인 사용
+	Update to use this sign-in	업데이트하면 이 로그인 사용 가능
+	Needs no sign-in	로그인 필요 없음
 	Workspace: {name}	워크스페이스: {name}
-	Your Redrob workspace and the apps that use it	내 Redrob 워크스페이스와 그것을 쓰는 앱
-	{name} is connected. Restart it if it's open.	{name}을(를) 연결했어요. 열려 있으면 다시 시작하세요.
+	Your Redrob workspace and the apps that use it	내 Redrob 워크스페이스와 연결된 앱
+	{name} is connected. Restart it if it's open.	{name} 앱을 연결했어요. 앱이 열려 있으면 다시 시작하세요.
 	{time} left	{time} 남음
 @msg	Couldn't reach console.redrob.ai.	console.redrob.ai에 연결하지 못했어요.
-@msg	console.redrob.ai wouldn't start the sign-in.	console.redrob.ai가 로그인을 시작하지 않았어요.
-@msg	console.redrob.ai didn't return a usable code.	console.redrob.ai가 쓸 수 있는 코드를 주지 않았어요.
-@msg	The sign-in was declined on console.redrob.ai.	console.redrob.ai에서 로그인을 거절했어요.
+@msg	console.redrob.ai wouldn't start the sign-in.	console.redrob.ai에서 로그인을 시작하지 못했어요.
+@msg	console.redrob.ai didn't return a usable code.	console.redrob.ai에서 올바른 코드를 받지 못했어요.
+@msg	The sign-in was declined on console.redrob.ai.	console.redrob.ai에서 로그인 요청이 거절됐어요.
 @msg	The code expired. Sign in again for a new one.	코드가 만료됐어요. 다시 로그인해 새 코드를 받으세요.
 @msg	Couldn't reach console.redrob.ai. Check the network and sign in again.	console.redrob.ai에 연결하지 못했어요. 네트워크를 확인하고 다시 로그인하세요.
-@msg	console.redrob.ai refused the sign-in ({code}).	console.redrob.ai가 로그인을 거부했어요({code}).
+@msg	console.redrob.ai refused the sign-in ({code}).	console.redrob.ai에서 로그인을 거부했어요({code}).
 @msg	Signed in, but the key couldn't be saved: {e}	로그인했지만 키를 저장하지 못했어요: {e}
 @msg	Sign in first.	먼저 로그인하세요.
 @msg	The launcher can't connect this app yet.	런처가 아직 이 앱을 연결할 수 없어요.
@@ -351,21 +348,19 @@ month	Dec	12월
 
 # Model downloads (models.rs) and the manifest's descriptions (assets/models/models.json).
 	Delete	삭제
-	Downloaded	내려받음
+	Downloaded	다운로드됨
 	Every file is checked against its published SHA-256 before an app can use it.	앱이 쓰기 전에 모든 파일을 공개된 SHA-256과 대조해요.
 	Licence and source	라이선스와 출처
-	Models	모델
-	Models…	모델…
 	Not available on this system	이 시스템에서는 쓸 수 없음
-	Not downloaded	내려받지 않음
-	Pause	일시 정지
+	Not downloaded	다운로드 안 됨
+	Pause	일시 중지
 	Try again	다시 시도
-	39 M parameters. Fastest; fine for clear speech, rough on noisy audio.	매개변수 3,900만 개. 가장 빨라요. 또렷한 말소리에는 충분하고, 잡음이 많으면 거칠어요.
+	39 M parameters. Fastest; fine for clear speech, rough on noisy audio.	매개변수 3,900만 개. 가장 빨라요. 또렷한 말소리에는 충분하지만 잡음이 많으면 정확도가 떨어져요.
 	74 M parameters. The default: a good balance of speed and accuracy.	매개변수 7,400만 개. 기본값이에요. 속도와 정확도가 균형 잡혀 있어요.
 	244 M parameters. Most accurate here; about 4× slower than base.	매개변수 2억 4,400만 개. 여기서 가장 정확하지만 base보다 4배쯤 느려요.
 	Nine US English narration voices and the CMUdict pronunciation dictionary.	미국 영어 내레이션 목소리 9개와 CMUdict 발음 사전.
 @msg	HTTPS isn't available on this computer.	이 컴퓨터에서 HTTPS를 쓸 수 없어요.
-@msg	the download doesn't match its published checksum, so it wasn't installed	내려받은 파일이 공개된 체크섬과 맞지 않아 쓰지 않았어요
+@msg	the download doesn't match its published checksum, so it wasn't installed	다운로드한 파일이 공개된 체크섬과 맞지 않아 설치하지 않았어요
 @msg	the app's folder is in use. Close the app and any Command Prompt, PowerShell or File Explorer window open in its folder, then try again.	앱 폴더를 쓰는 중이에요. 앱과, 그 폴더를 연 명령 프롬프트·PowerShell·파일 탐색기 창을 모두 닫은 뒤 다시 해 보세요.
 @msg	the setup couldn't unpack the app. Try again.	설치 프로그램이 앱 압축을 풀지 못했어요. 다시 해 보세요.
 @msg	the download has no app in it. Try again.	내려받은 파일에 앱이 없어요. 다시 해 보세요.
@@ -380,7 +375,7 @@ month	Dec	12월
 	Install Redrob Code, the engine every app runs its AI through	모든 앱이 AI를 돌리는 엔진, Redrob Code를 설치하세요
 	Redrob Code engine	Redrob Code 엔진
 	One engine on this computer; every Redrob app runs its AI through it	이 컴퓨터에 엔진 하나. 모든 Redrob 앱이 그것으로 AI를 돌려요
-	Redrob Code is the engine Cowork, Office, Design, Browser, Film and CAD run their AI through. Install it once and they share it.	Redrob Code는 Cowork, Office, Design, Browser, Film, CAD가 AI를 돌리는 엔진이에요. 한 번 설치하면 함께 써요.
+	Redrob Code is the engine Cowork, Office, Design, Browser, Film and CAD run their AI through. Install it once and they share it.	Redrob Code는 Cowork, Office, Design, Browser, Film, CAD가 AI를 실행하는 엔진이에요. 한 번 설치하면 함께 써요.
 	Install Redrob Code	Redrob Code 설치
 	Not running	실행 중 아님
 	The first app that needs the engine starts it, and it stops on its own when no app has used it for a while. You can also start it here.	엔진이 필요한 첫 앱이 시작하고, 한동안 쓰는 앱이 없으면 스스로 멈춰요. 여기서 직접 시작할 수도 있어요.
@@ -395,13 +390,13 @@ month	Dec	12월
 	Stop	중지
 	Restart	다시 시작
 	Apps reconnect on their own after a stop or restart.	멈추거나 다시 시작해도 앱은 스스로 다시 연결돼요.
-	The engine holds the Redrob key, picks the model provider and masks personal details, once, for every app.	엔진이 Redrob 키를 들고, 모델 제공자를 고르고, 개인 정보를 가려요. 모든 앱을 위해 한 번만요.
+	The engine holds the Redrob key, picks the model provider and masks personal details, once, for every app.	엔진이 모든 앱을 대신해 Redrob 키를 보관하고, 모델 제공자를 고르고, 개인 정보를 가려요.
 	Update now	지금 업데이트
 	Updating the engine…	엔진을 업데이트하는 중…
 	{installed} → {latest}	{installed} → {latest}
-	It updates on its own when no app is using it. You can also update it now.	쓰는 앱이 없을 때 스스로 업데이트돼요. 지금 바로 할 수도 있어요.
+	It updates on its own when no app is using it. You can also update it now.	쓰는 앱이 없을 때 스스로 업데이트돼요. 지금 바로 업데이트할 수도 있어요.
 	Waiting until no app is using it. Using it now: {apps}. Update now stops the engine; apps reconnect on their own.	쓰는 앱이 없을 때까지 기다려요. 지금 쓰는 앱: {apps}. 지금 업데이트하면 엔진이 멈추고, 앱은 스스로 다시 연결돼요.
-	Keep the Redrob Code engine up to date on its own (when no app is using it)	Redrob Code 엔진을 스스로 최신으로 유지 (쓰는 앱이 없을 때)
+	Keep the Redrob Code engine up to date on its own (when no app is using it)	Redrob Code 엔진 자동 업데이트(쓰는 앱이 없을 때)
 	Backend: {backend}	백엔드: {backend}
 	Background removal	배경 제거
 	Chat	대화
@@ -411,51 +406,49 @@ month	Dec	12월
 	GPU memory	GPU 메모리
 	GPU not measured yet	GPU를 아직 측정하지 않았어요
 	Image editing	이미지 편집
-	Image to 3D	이미지에서 3D
+	Image to 3D	이미지로 3D 생성
 	Inpainting	인페인팅
 	Installing {runtime}: {done} of {total}	{runtime} 설치 중: {total} 중 {done}
 	Installing {runtime}…	{runtime} 설치 중…
 	Local models for every Redrob app. Nothing here is required: an app with no local model uses the Redrob Console.	모든 Redrob 앱이 쓰는 로컬 모델이에요. 필수는 아니에요. 로컬 모델이 없는 앱은 Redrob Console을 써요.
-	Local models: what runs on this computer	로컬 모델: 이 컴퓨터에서 돌아가는 것
 	Measure again	다시 측정
 	NPU: {name}	NPU: {name}
 	Needs about {gb} GB of {kind}	{kind} 약 {gb} GB가 필요해요
 	No GPU found; models run on the CPU	GPU가 없어요. 모델은 CPU에서 돌아가요
 	No {runtime} build for this computer	이 컴퓨터용 {runtime} 빌드가 없어요
 	Not measured	측정 안 됨
-	Offer models that need PrismML's llama.cpp fork (Bonsai 2)	PrismML의 llama.cpp 포크가 필요한 모델도 보이기 (Bonsai 2)
+	Offer models that need PrismML's llama.cpp fork (Bonsai 2)	PrismML llama.cpp 포크가 필요한 모델도 표시(Bonsai 2)
 	RAM	RAM
-	Runs here	여기서 됨
-	Runs models up to about {gb} GB	약 {gb} GB까지의 모델이 돌아가요
-	Runs slowly	느리게 됨
+	Runs here	실행 가능
+	Runs models up to about {gb} GB	약 {gb} GB까지의 모델을 실행할 수 있어요
+	Runs slowly	느리게 실행됨
 	Search embeddings	검색 임베딩
 	Selection	선택 영역
-	Serving at {url}	{url} 에서 서빙 중
-	Speech to text	음성을 글로
+	Serving at {url}	{url}에서 제공 중
+	Speech to text	음성 인식
 	Starting…	시작하는 중…
 	Stem separation	음원 분리
-	Text recognition	글자 인식
-	Text to image	글로 이미지 생성
-	Text to speech	글을 음성으로
+	Text recognition	텍스트 인식
+	Text to image	텍스트로 이미지 생성
+	Text to speech	음성 합성
 	This computer	이 컴퓨터
 	Upscaling	업스케일
 	Vectorizing	벡터화
 	Voice detection	음성 구간 감지
-	Won't run here	여기서 안 됨
+	Won't run here	실행 불가
 	{free} free for models	모델용 여유 공간 {free}
 	{gb} GB RAM	RAM {gb} GB
 	{name} (memory not measured)	{name} (메모리 측정 안 됨)
 	{name}, {gb} GB	{name}, {gb} GB
 	{name}, {gb} GB unified memory	{name}, 통합 메모리 {gb} GB
 	{n} cores	{n}코어
-	{runtime} is installed on first start	{runtime}은 처음 시작할 때 설치돼요
+	{runtime} is installed on first start	{runtime}: 처음 시작할 때 설치돼요
 	{runtime} ready	{runtime} 준비됨
 	{runtime}: {e}	{runtime}: {e}
 
 # Models page (purpose headings, plain summaries from assets/models/models.json).
-	The Redrob apps	Redrob 앱
 	Install what the apps need to work offline on this computer. Anything missing is done on Redrob's servers instead.	앱이 이 컴퓨터에서 오프라인으로 일하는 데 필요한 모델을 설치해요. 없는 것은 Redrob 서버에서 처리해요.
-	Only show what runs on this computer	이 컴퓨터에서 되는 것만 보기
+	Only show what runs on this computer	이 컴퓨터에서 실행할 수 있는 모델만 보기
 	for {app}	{app}용
 	Installing	설치 중
 	{done} of {total} installed	{total} 중 {done} 설치됨
@@ -471,9 +464,9 @@ month	Dec	12월
 	Removes things from photos and fills the gap.	사진에서 물체를 지우고 빈자리를 채워요.
 	Cuts the background out of a photo.	사진에서 배경을 잘라내요.
 	Makes small images bigger and sharper.	작은 이미지를 크고 선명하게 키워요.
-	Selects an object in a picture with one click.	한 번 눌러 그림 속 물체를 선택해요.
+	Selects an object in a picture with one click.	클릭 한 번으로 그림 속 물체를 선택해요.
 	Splits music into vocals, drums, bass and the rest.	음악을 보컬, 드럼, 베이스, 나머지로 나눠요.
-	Finds where people speak in a recording.	녹음에서 사람이 말하는 곳을 찾아요.
+	Finds where people speak in a recording.	녹음에서 사람이 말하는 구간을 찾아요.
 	Turns a photo into a 3D model.	사진 한 장을 3D 모델로 만들어요.
 	Reads the text in images and scans.	이미지와 스캔 속 글자를 읽어요.
 	Lets Redrob apps search your files by meaning.	Redrob 앱이 파일을 뜻으로 검색할 수 있게 해요.
@@ -484,22 +477,22 @@ month	Dec	12월
 	A capable assistant for chat and reasoning in every app	모든 앱에서 대화와 추론을 맡는 든든한 어시스턴트
 	A coding assistant that writes and fixes code	코드를 쓰고 고치는 코딩 어시스턴트
 	An assistant that also understands images	이미지도 이해하는 어시스턴트
-	A small, quick assistant that understands images; fits most laptops	이미지를 이해하는 작고 빠른 어시스턴트. 대부분의 노트북에서 돌아감
+	A small, quick assistant that understands images; fits most laptops	이미지를 이해하는 작고 빠른 어시스턴트. 대부분의 노트북에서 실행 가능
 	Lets Redrob apps search your files by meaning, in many languages	Redrob 앱이 여러 언어로 파일을 뜻으로 검색하게 함
 	A full-size assistant squeezed to fit a small GPU (needs the PrismML runtime)	작은 GPU에 맞게 압축한 큰 어시스턴트 (PrismML 런타임 필요)
-	Makes pictures from a text description	글로 설명하면 그림을 만듦
-	Removes objects from photos and fills the gap	사진에서 물체를 지우고 빈자리를 채움
-	Makes pictures from a text description and edits a photo you give it	글로 설명하면 그림을 만들고, 주는 사진도 고침
-	Makes photo-like pictures from a text description in a few steps	글로 설명하면 사진 같은 그림을 몇 단계 만에 만듦
-	Edits a photo from an instruction: change, add or remove things while keeping the rest	지시대로 사진을 고침: 나머지는 그대로 두고 바꾸거나 더하거나 지움
-	Cuts the background out of a photo	사진에서 배경을 잘라냄
-	Enlarges images four times without blur	이미지를 흐려지지 않게 4배 키움
-	Selects an object with one click	한 번 눌러 물체를 선택
-	Reads text aloud in several languages with preset voices	여러 언어의 글을 준비된 목소리로 읽어 줌
-	Korean speech to text, tuned for Korean	한국어에 맞춘 한국어 음성 인식
-	Finds where people speak in a recording	녹음에서 사람이 말하는 곳을 찾음
-	Splits a song into vocals, drums, bass and the rest	노래를 보컬, 드럼, 베이스, 나머지로 나눔
-	Turns one photo into a 3D model	사진 한 장을 3D 모델로 만듦
+	Makes pictures from a text description	텍스트 설명으로 이미지 생성
+	Removes objects from photos and fills the gap	사진 속 물체 제거 및 빈자리 채우기
+	Makes pictures from a text description and edits a photo you give it	텍스트 설명으로 이미지 생성, 주어진 사진 편집
+	Makes photo-like pictures from a text description in a few steps	텍스트 설명으로 사진 같은 이미지를 몇 단계 만에 생성
+	Edits a photo from an instruction: change, add or remove things while keeping the rest	지시대로 사진 편집: 나머지는 그대로 두고 바꾸기·더하기·지우기
+	Cuts the background out of a photo	사진 배경 제거
+	Enlarges images four times without blur	이미지를 흐림 없이 4배 확대
+	Selects an object with one click	클릭 한 번으로 물체 선택
+	Reads text aloud in several languages with preset voices	기본 제공 목소리로 여러 언어 텍스트 읽기
+	Korean speech to text, tuned for Korean	한국어에 최적화된 음성 인식
+	Finds where people speak in a recording	녹음에서 말하는 구간 찾기
+	Splits a song into vocals, drums, bass and the rest	노래를 보컬, 드럼, 베이스, 나머지로 분리
+	Turns one photo into a 3D model	사진 한 장으로 3D 모델 생성
 @plural	{n} model hidden|{n} models hidden	모델 {n}개 숨김
 # Settings > Channels and Settings > Apps.
 	General	일반
@@ -512,11 +505,11 @@ month	Dec	12월
 	Reading the engine's settings…	엔진 설정을 읽는 중…
 	The engine is not running: changes are saved and take effect when it starts.	엔진이 실행 중이 아니에요. 변경 사항은 저장되고 엔진이 시작될 때 적용돼요.
 	Engine not running	엔진 꺼짐
-	Off	끄기
-	On	켜기
+	Off	끔
+	On	켬
 	Start this bot with the engine	엔진과 함께 이 봇을 시작해요
 	Stop this bot	이 봇을 멈춰요
-	Talk to your Redrob Code engine from a chat app on your phone. Pick one below, follow its steps, and save. The first person to message the bot becomes its owner.	휴대폰의 채팅 앱에서 Redrob Code 엔진과 대화해요. 아래에서 하나를 골라 단계대로 따라 한 뒤 저장하세요. 봇에게 가장 먼저 메시지를 보낸 사람이 봇의 주인이 돼요.
+	Talk to your Redrob Code engine from a chat app on your phone. Pick one below, follow its steps, and save. The first person to message the bot becomes its owner.	휴대폰의 채팅 앱에서 Redrob Code 엔진과 대화해요. 아래에서 하나를 골라 단계대로 따라 한 뒤 저장하세요. 봇에게 가장 먼저 메시지를 보낸 사람이 봇의 소유자가 돼요.
 	Easiest: scan a QR code	가장 쉬움: QR 코드 스캔
 	Create your bot	봇 만들기
 	Paste what the platform gave you	받은 내용 붙여 넣기
@@ -524,11 +517,11 @@ month	Dec	12월
 	Send yourself a message	나에게 메시지 보내기
 	Scan this QR with WhatsApp > Linked devices	WhatsApp > 연결된 기기에서 이 QR을 스캔하세요
 	On your phone: WhatsApp > ⋮ or Settings > Linked devices > Link a device, then point the camera here.	휴대폰에서 WhatsApp > ⋮ 또는 설정 > 연결된 기기 > 기기 연결을 누르고 카메라를 여기에 비추세요.
-	Open the chat with your own number in WhatsApp and send anything. That makes you the owner.	WhatsApp에서 내 번호와의 채팅을 열고 아무 말이나 보내세요. 그러면 내가 봇의 주인이 돼요.
+	Open the chat with your own number in WhatsApp and send anything. That makes you the owner.	WhatsApp에서 내 번호와의 채팅을 열고 아무 말이나 보내세요. 그러면 봇의 소유자로 등록돼요.
 	Open BotFather	BotFather 열기
 	Send /newbot, pick a name, then copy the token it gives you.	/newbot을 보내고 이름을 정한 뒤, 알려 주는 토큰을 복사하세요.
-	The token is a long line of letters and numbers; it is the bot's key, so keep it to yourself.	토큰은 글자와 숫자가 길게 이어진 한 줄이에요. 봇의 열쇠이니 다른 사람에게 보여 주지 마세요.
-	Turn the channel on, save, then open your bot in Telegram and send it anything. That makes you the owner.	채널을 켜고 저장한 뒤 Telegram에서 내 봇을 열고 아무 말이나 보내세요. 그러면 내가 봇의 주인이 돼요.
+	The token is a long line of letters and numbers; it is the bot's key, so keep it to yourself.	토큰은 글자와 숫자가 길게 이어진 한 줄이에요. 봇의 비밀번호와 같으니 다른 사람에게 알려 주지 마세요.
+	Turn the channel on, save, then open your bot in Telegram and send it anything. That makes you the owner.	채널을 켜고 저장한 뒤 Telegram에서 내 봇을 열고 아무 말이나 보내세요. 그러면 봇의 소유자로 등록돼요.
 	Create a Discord app	Discord 앱 만들기
 	Name it, open the Bot tab, click Reset Token, copy it. Turn on Message Content Intent.	이름을 정하고 Bot 탭을 열어 Reset Token을 누른 뒤 복사하세요. Message Content Intent를 켜 주세요.
 	Application ID	Application ID
@@ -536,18 +529,18 @@ month	Dec	12월
 	Invite the bot to your server	봇을 내 서버에 초대
 	Paste the Application ID first	먼저 Application ID를 붙여 넣으세요
 	Paste the Application ID above and this button opens the invite page.	위에 Application ID를 붙여 넣으면 이 버튼이 초대 페이지를 열어요.
-	Turn the channel on, save, then write to the bot in your server or by direct message. That makes you the owner.	채널을 켜고 저장한 뒤 서버나 다이렉트 메시지로 봇에게 글을 보내세요. 그러면 내가 봇의 주인이 돼요.
+	Turn the channel on, save, then write to the bot in your server or by direct message. That makes you the owner.	채널을 켜고 저장한 뒤 서버나 다이렉트 메시지로 봇에게 글을 보내세요. 그러면 봇의 소유자로 등록돼요.
 	Click Create, then Install to Workspace. Copy the Bot token (xoxb-) and the App token (xapp-).	Create를 누르고 Install to Workspace를 누르세요. Bot token (xoxb-)과 App token (xapp-)을 복사하세요.
-	Turn the channel on, save, then send the Redrob app a direct message in Slack. That makes you the owner.	채널을 켜고 저장한 뒤 Slack에서 Redrob 앱에 다이렉트 메시지를 보내세요. 그러면 내가 봇의 주인이 돼요.
+	Turn the channel on, save, then send the Redrob app a direct message in Slack. That makes you the owner.	채널을 켜고 저장한 뒤 Slack에서 Redrob 앱에 다이렉트 메시지를 보내세요. 그러면 봇의 소유자로 등록돼요.
 	The engine is not running. Start it and the bot connects.	엔진이 실행 중이 아니에요. 엔진을 시작하면 봇이 연결돼요.
 	Connecting…	연결 중…
-	Could not connect: {e}	연결할 수 없어요: {e}
-	Connected. Owner: {owner}	연결됨. 주인: {owner}
-	Connected. Send your bot any message now to become its owner.	연결됨. 지금 봇에게 아무 메시지나 보내면 내가 주인이 돼요.
-	Nobody owns this bot yet. Turn it off and on again, then message it within 15 minutes.	아직 이 봇의 주인이 없어요. 봇을 끄고 다시 켠 뒤 15분 안에 메시지를 보내세요.
+	Could not connect: {e}	연결하지 못했어요: {e}
+	Connected. Owner: {owner}	연결됨 · 소유자: {owner}
+	Connected. Send your bot any message now to become its owner.	연결됨. 지금 봇에게 아무 메시지나 보내면 소유자로 등록돼요.
+	Nobody owns this bot yet. Turn it off and on again, then message it within 15 minutes.	아직 이 봇의 소유자가 없어요. 봇을 껐다 켠 뒤 15분 안에 메시지를 보내세요.
 	Advanced	고급
-	Who may talk to this bot. The owner is added here by their first message; add more ids for other people.	이 봇과 대화할 수 있는 사람이에요. 주인은 첫 메시지로 여기에 추가되고, 다른 사람은 ID를 더 적어 추가해요.
-	Telegram: send /start to @userinfobot. Discord: Developer Mode, then right-click a name > Copy User ID. Slack: profile > ⋯ > Copy member ID. WhatsApp: the phone number, country code first, digits only.	Telegram: @userinfobot에 /start를 보내세요. Discord: 개발자 모드를 켠 뒤 이름을 오른쪽 클릭 > Copy User ID. Slack: 프로필 > ⋯ > Copy member ID. WhatsApp: 전화번호를 국가 번호부터 숫자만.
+	Who may talk to this bot. The owner is added here by their first message; add more ids for other people.	이 봇과 대화할 수 있는 사람이에요. 소유자는 첫 메시지를 보낼 때 자동으로 추가되고, 다른 사람은 ID를 입력해 추가해요.
+	Telegram: send /start to @userinfobot. Discord: Developer Mode, then right-click a name > Copy User ID. Slack: profile > ⋯ > Copy member ID. WhatsApp: the phone number, country code first, digits only.	Telegram: @userinfobot에 /start를 보내세요. Discord: 개발자 모드를 켠 뒤 이름을 오른쪽 클릭 > Copy User ID. Slack: 프로필 > ⋯ > Copy member ID. WhatsApp: 국가 번호를 포함한 전화번호(숫자만).
 	Bot token	봇 토큰
 	Create the Slack app	Slack 앱 만들기
 	Bot token (xoxb-…)	봇 토큰 (xoxb-…)
@@ -556,7 +549,7 @@ month	Dec	12월
 	Paired	연결됨
 	Unlink this phone? The engine shows a new QR code.	이 휴대폰 연결을 해제할까요? 엔진이 새 QR 코드를 보여 줘요.
 	Unlink	연결 해제
-	The code changes every so often; this picture follows it.	코드는 가끔 바뀌고 이 그림도 따라 바뀌어요.
+	The code changes every so often; this picture follows it.	코드는 주기적으로 바뀌고, 이 QR 코드도 함께 바뀌어요.
 	Not paired. Save with the channel on and a QR code appears here.	연결되지 않았어요. 채널을 켠 채 저장하면 여기에 QR 코드가 나타나요.
 	Not paired. Turn the channel on, save, and scan the QR code that appears here while the engine runs.	연결되지 않았어요. 채널을 켜고 저장한 뒤, 엔진이 실행 중일 때 여기에 나타나는 QR 코드를 스캔하세요.
 	This uses an unofficial WhatsApp client. WhatsApp may ban the account it is paired with.	비공식 WhatsApp 클라이언트를 사용해요. WhatsApp이 연결된 계정을 차단할 수 있어요.
@@ -565,16 +558,47 @@ month	Dec	12월
 	Allow another	다른 ID 허용
 	Save	저장
 	Saving…	저장 중…
-	Saved - engine reloaded	저장됨 - 엔진이 다시 읽었어요
-	Saved - takes effect when the engine starts	저장됨 - 엔진이 시작될 때 적용돼요
+	Saved - engine reloaded	저장했어요. 엔진이 새 설정을 불러왔어요.
+	Saved - takes effect when the engine starts	저장했어요. 엔진이 시작되면 적용돼요.
 	Start at login:	로그인 시 시작:
 	on	켜짐
 	off	꺼짐
-	A bot that is on must survive a reboot, so the engine registers itself to start at login while any channel is on, and removes that when the last one is turned off.	켜져 있는 봇은 재부팅 뒤에도 살아 있어야 하므로, 채널이 하나라도 켜져 있으면 엔진이 로그인 시 시작하도록 스스로 등록하고, 마지막 채널이 꺼지면 등록을 지워요.
+	A bot that is on must survive a reboot, so the engine registers itself to start at login while any channel is on, and removes that when the last one is turned off.	켜 둔 봇이 재부팅 후에도 계속 동작하도록, 채널이 하나라도 켜져 있으면 엔진이 로그인 시 자동으로 시작되게 등록하고, 마지막 채널을 끄면 등록을 해제해요.
 	Redrob apps that are open and bridged to the engine, so a prompt anywhere can use their tools.	열려 있고 엔진에 연결된 Redrob 앱이에요. 어디서든 프롬프트가 이 앱들의 도구를 쓸 수 있어요.
 	Apps appear here once the engine is running and one of them connects.	엔진이 실행되고 앱이 연결되면 여기에 나타나요.
 	No app is connected to the engine. Open a Redrob app and it appears here.	엔진에 연결된 앱이 없어요. Redrob 앱을 열면 여기에 나타나요.
 	Version	버전
 	Tools	도구
-	Last seen	마지막 확인
+	Last seen	마지막 연결
 @plural	{n} tool|{n} tools	도구 {n}개
+	More actions	작업 더 보기
+	No app is in this group right now. Show every app instead.	이 그룹에는 지금 앱이 없어요. 모든 앱을 확인해 보세요.
+	Nothing matches “{query}”. Try a shorter or different word.	‘{query}’ 검색 결과가 없어요. 더 짧거나 다른 단어로 검색해 보세요.
+	Clear search	검색 지우기
+	Show all apps	모든 앱 보기
+	Dismiss notification	알림 닫기
+	Back to apps	앱으로 돌아가기
+	Go to console.redrob.ai	console.redrob.ai로 이동
+	Log in or sign up	로그인 또는 회원가입
+	Signed in	로그인됨
+	Waiting for approval	승인을 기다리는 중
+	{name}: {status}	{name}: {status}
+	All apps	모든 앱
+	Every Redrob app, to install, update and open	Redrob 앱을 설치하고 업데이트하고 여는 곳이에요
+	On-device AI	온디바이스 AI
+	AI models that run on this computer. What you give them stays here.	이 컴퓨터에서 실행되는 AI 모델이에요. 맡긴 내용은 이 컴퓨터 밖으로 나가지 않아요.
+	A model is downloading or starting	모델을 다운로드하거나 시작하는 중이에요
+	AI engine	AI 엔진
+	Ready	준비됨
+	Ready. Your Redrob apps use it for AI	준비됐어요. Redrob 앱이 AI를 쓸 때 이 엔진을 써요
+	In use	사용 중
+@plural	In use by {n} app|In use by {n} apps	앱 {n}개가 사용 중이에요
+	Busy	처리 중
+	Starting or stopping	켜거나 끄는 중이에요
+	Standby	대기 중
+	On standby. It starts on its own when an app needs it	대기 중이에요. 앱이 필요로 하면 저절로 켜져요
+	Not installed. Install it to use AI in your apps	설치되지 않았어요. 앱에서 AI를 쓰려면 설치하세요
+	Your Redrob apps use it to reach AI. It starts on its own when one needs it.	Redrob 앱은 이 엔진을 거쳐 AI를 써요. 앱이 필요로 하면 저절로 켜져요.
+	For your AI engine	AI 엔진을 위한 앱
+	For your everyday work	업무를 위한 앱
+	For your creative work	창작을 위한 앱

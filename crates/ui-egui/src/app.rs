@@ -1,3 +1,116 @@
+// ADDED-LINE-RATIONALE c65f81c3ee035116:1: Gives `app` direct access to `crate / settings / Filter` instead of relying on an implicit platform facility.
+// ADDED-LINE-RATIONALE bd791e931f0556db:1: Supports `Page` while preserving the nearby constraint: The shared Redrob Code engine: running or not, who uses it, start and stop.
+// ADDED-LINE-RATIONALE 2f45a214ed3fe916:1: Supports `Page` while preserving the nearby constraint: Signing in to Redrob, and which apps use it.
+// ADDED-LINE-RATIONALE 1f4cfc3b5846fdae:1: Keeps `Settings` in `Page`'s API-defined order so positional values retain their intended meaning.
+// ADDED-LINE-RATIONALE 9219fc67cca7bea4:1: Delegates `show_engine`'s `set_page / Page / Engine` work to `self.set_page` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 618f2d2c65b8e37f:1: Supports `ui` while preserving the nearby constraint: page's own check below it would look as if nothing had been open.
+// ADDED-LINE-RATIONALE 3aba3e1f3061631e:1: Supports `ui` while preserving the nearby constraint: search, logo and Update sit in a 48 px row over the main area instead.
+// ADDED-LINE-RATIONALE 0ebf8d368d5f24e2:1: Freezes `if` for `ui` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE cff5291e2bf08ce6:1: Delegates `ui`'s `egui / Panel / top` work to `egui::Panel::top` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 0f266cb8cf4ed299:1: Delegates `ui`'s `frame / egui / Frame` work to `frame` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 910f79f861c5bd6e:1: Delegates `ui`'s `exact_size / crate / views` work to `exact_size` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE aa55012480b72796:1: Delegates `ui`'s `resizable` work to `resizable` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE ba158783caff6453:1: Delegates `ui`'s `show / ui / ui` work to `show` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 144e68ae02fb4e12:31: Bounds the `ui` implementation here so `show / ui / ui` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 5e8776d9f15ca3ac:1: Freezes `inset` for `ui` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 8594a272ec2e6603:1: Delegates `ui`'s `egui / Panel / left` work to `egui::Panel::left` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 3ec015161a96f38d:1: Delegates `ui`'s `frame / egui / Frame` work to `frame` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE e73210a336213360:1: Delegates `ui`'s `exact_size / Self / sidebar_width` work to `exact_size` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 42b984a00830490d:1: Delegates `ui`'s `show_separator_line` work to `show_separator_line` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 5cdaa950c4cbb719:1: Delegates `ui`'s `show / ui / ui` work to `show` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 7d7017c4d30812a6:1: Freezes `if` for `ui` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 63f00d1c6154cc55:1: Delegates `ui`'s `egui / Panel / top` work to `egui::Panel::top` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 9b27dd3171ac4d96:1: Delegates `ui`'s `frame / egui / Frame` work to `frame` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 910f79f861c5bd6e:2: Delegates `ui`'s `exact_size / crate / views` work to `exact_size` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE aa55012480b72796:2: Delegates `ui`'s `resizable` work to `resizable` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE ba158783caff6453:2: Delegates `ui`'s `show / ui / ui` work to `show` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 144e68ae02fb4e12:32: Bounds the `ui` implementation here so `show / ui / ui` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 22968439fb5fdfa7:1: Supports `ui` while preserving the nearby constraint: The Apps page has no top bar: its actions are in the chrome and its filter row.
+// ADDED-LINE-RATIONALE 3c3c79864c15a24a:1: Delegates `ui`'s `egui / Panel / top` work to `egui::Panel::top` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 9b27dd3171ac4d96:2: Delegates `ui`'s `frame / egui / Frame` work to `frame` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 28c4ef078517d488:1: Delegates `ui`'s `exact_size / crate / shell` work to `exact_size` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE aa55012480b72796:3: Delegates `ui`'s `resizable` work to `resizable` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 84e531e0438fc432:1: Delegates `ui`'s `show / ui / ui` work to `show` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 144e68ae02fb4e12:33: Bounds the `ui` implementation here so `show / ui / ui` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 812c7814a091aba9:1: Supports `ui` while preserving the nearby constraint: 24 px is inside its scroll area, so the bar hugs the edge like Cowork's.
+// ADDED-LINE-RATIONALE 41ba864cd7d993ac:1: Delegates `ui`'s `frame / egui / Frame` work to `frame` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE b6c314ea7ef199b9:1: Delegates `ui`'s `show / ui / ui` work to `show` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE ecd4ec216af1a58a:1: Freezes `Page` for `ui` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 2b501ee6dcdee398:1: Freezes `Page` for `ui` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE e5bc0f4d92293ce0:1: Delegates `ui`'s `crate / widgets / page_scroll` work to `crate::widgets::page_scroll` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 67eb662455877620:1: Supports `ui` while preserving the nearby constraint: A reading measure, like Cowork's content column.
+// ADDED-LINE-RATIONALE 671594c0ef8e2046:1: Prevents `ui` from applying its side effect outside the `page` state.
+// ADDED-LINE-RATIONALE 7ed59b35662f2e52:1: Freezes `Page` for `ui` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE dac5185a5f962204:1: Freezes `Page` for `ui` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 29532d02deae638d:1: Freezes `_` for `ui` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 42380c443e330c60:1: Supports `ui` while preserving the nearby constraint: Room under the last control, so nothing ends against the window's edge.
+// ADDED-LINE-RATIONALE e4684424052696fe:1: Makes `ui / add_space` an explicit part of `ui` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE 3028d712dcab3272:14: Bounds the `ui` implementation here so `Page / Apps` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE ff9d6d38366878ca:1: Freezes `Page` for `ui` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE c5bb8d6702e3966f:1: Supports `ui` while preserving the nearby constraint: Above the scroll: the page's right padding, as inside it.
+// ADDED-LINE-RATIONALE b8b712bab277c9a7:1: Delegates `ui`'s `inner_margin / egui / Margin` work to `inner_margin` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE e997a09e9e89c7c0:1: Delegates `ui`'s `show / ui / ui` work to `show` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 4f8a3c3333334dd4:1: Freezes `ids` for `ui` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE cd9030d0dda13239:1: Delegates `ui`'s `crate / widgets / page_scroll` work to `crate::widgets::page_scroll` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 487b0d306273dda4:1: Prevents `ui` from applying its side effect outside the `ids / is_empty` state.
+// ADDED-LINE-RATIONALE 03b5fc20524e9586:1: Delegates `ui`'s `empty_state / ui` work to `self.empty_state` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 1ac169fcabb9dd16:1: Makes `empty_state / ui` an explicit part of `ui` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE 2579ddb0a48d8c41:1: Delegates `ui`'s `grid / ui / ids` work to `self.grid` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 9c8ce6e59d9a77d2:2: Bounds the `ui` implementation here so `grid / ui / ids` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 00feba57b64204f2:1: Delegates `ui`'s `ui / add_space` work to `ui.add_space` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE e4684424052696fe:2: Makes `ui / add_space` an explicit part of `ui` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE 3028d712dcab3272:15: Bounds the `ui` implementation here so `ui / add_space` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 110aca60be984262:1: Supports `ui` while preserving the nearby constraint: focused control (a button reached by Tab) doesn't use Escape, so it doesn't block it.
+// ADDED-LINE-RATIONALE 9977361a71f79782:1: Freezes `if` for `ui` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE a15361cc03460d61:1: Delegates `ui`'s `dialog / is_none` work to `self.dialog.is_none` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 048179d09c635347:1: Makes `alert_open` an explicit part of `ui` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE 0bcdff6246bace53:1: Makes `escape_taken` an explicit part of `ui` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE fa9108db29d5b35c:1: Delegates `ui`'s `egui / Popup / is_any_open` work to `egui::Popup::is_any_open` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 37717d187572c68a:1: Delegates `ui`'s `ctx / text_edit_focused` work to `ctx.text_edit_focused` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 94ea3fdf00338c2a:1: Delegates `ui`'s `ctx / input / i` work to `ctx.input` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 144e62ae02fb43e0:3: Bounds the `ui` implementation here so `ctx / input / i` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE c5a4b7297ae84656:1: Delegates `ui`'s `set_page / Page / Apps` work to `self.set_page` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 144e68ae02fb4e12:34: Bounds the `ui` implementation here so `set_page / Page / Apps` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 0d5930e8336d404d:1: Delegates `ui`'s `dialogs / ctx` work to `self.dialogs` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 6398f45536624fc5:1: Delegates `visible_ids`'s `crate / shelves / page_order` work to `crate::shelves::page_order` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 5305014942aaadfb:1: Delegates `visible_ids`'s `into_iter` work to `into_iter` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE fc162c376b85f75c:1: Delegates `visible_ids`'s `filter_map / id / entry` work to `filter_map` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 25e8995e6ca58a94:1: Delegates `visible_ids`'s `filter / e / shown` work to `filter` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE fbe710ab6d05568d:1: Delegates `visible_ids`'s `filter / e` work to `filter` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 11ff6a1b1dbe93e6:1: Delegates `visible_ids`'s `map / e / e` work to `map` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE f75768ecf368a8f0:1: Delegates `visible_ids`'s `collect` work to `collect` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 9d65ce5383a7867c:1: Supports `shown` while preserving the nearby constraint: unless installed ([`crate::shelves::HIDDEN_UNLESS_INSTALLED`]).
+// ADDED-LINE-RATIONALE cae898fef5b0b172:1: Delegates `shown`'s `crate / shelves / shown` work to `crate::shelves::shown` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 584baf5263686ce2:25: Bounds the `shown` implementation here so `crate / shelves / shown` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 25e8995e6ca58a94:2: Delegates `count`'s `filter / e / shown` work to `filter` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 823b5441801f8670:1: Gives `draw_toasts` direct access to `crate / glyphs / Icon` instead of relying on an implicit platform facility.
+// ADDED-LINE-RATIONALE b81f09b54e4e71bf:1: Freezes `W` for `draw_toasts` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE af9fd5850abfe01a:1: Supports `draw_toasts` while preserving the nearby constraint: 24 px in from the window's corner (the page's own padding); there is no footer to clear.
+// ADDED-LINE-RATIONALE c3dfd9641ad75eb5:1: Delegates `draw_toasts`'s `ui / set_width / W` work to `ui.set_width` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE a59680e9b1b9fe0d:1: Freezes `let` for `draw_toasts` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE ad9b9a2add6849d6:1: Delegates `draw_toasts`'s `fill / t / raised` work to `fill` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 59f57dab5da58b51:1: Delegates `draw_toasts`'s `stroke / t / hairline` work to `stroke` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 8f6a73a00433545c:1: Delegates `draw_toasts`'s `corner_radius / egui / CornerRadius` work to `corner_radius` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 9176eda2966799be:1: Delegates `draw_toasts`'s `shadow / theme / shadow_lg` work to `shadow` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 298dde8a29bc66e6:1: Delegates `draw_toasts`'s `inner_margin` work to `inner_margin` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 290b38629cd64c55:1: Delegates `draw_toasts`'s `ui / set_width / W` work to `ui.set_width` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 391c59b37a9915d0:1: Delegates `draw_toasts`'s `ui / horizontal_top / ui` work to `ui.horizontal_top` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 7c4c7788c49590ae:1: Freezes `ui` for `draw_toasts` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE b2f3f38cc755fb56:1: Freezes `let` for `draw_toasts` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 0d62390cad1eac0c:1: Delegates `draw_toasts`'s `crate / glyphs / paint` work to `crate::glyphs::paint` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE b4e601f0c5636b12:1: Freezes `text_w` for `draw_toasts` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 96bb64abc31545e4:1: Delegates `draw_toasts`'s `ui / allocate_ui / egui` work to `ui.allocate_ui` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 0da1966e6f65da9d:1: Delegates `draw_toasts`'s `ui / set_width / text_w` work to `ui.set_width` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE bd18fb50265e8d64:1: Delegates `draw_toasts`'s `ui / add` work to `ui.add` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 735b002c77491302:1: Delegates `draw_toasts`'s `egui / Label / new` work to `egui::Label::new` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE cee71c11939e1f00:1: Keeps `wrap` in `draw_toasts`'s API-defined order so positional values retain their intended meaning.
+// ADDED-LINE-RATIONALE f84983a2d7ae2f37:1: Bounds the `draw_toasts` implementation here so `wrap` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 36e651cab70b2dde:1: Makes `crate / widgets / icon_button` an explicit part of `draw_toasts` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE 1dedd1deb35c05f2:1: Delegates `draw_toasts`'s `crate / widgets / icon_button` work to `crate::widgets::icon_button` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 9de4532acd79df81:1: Makes `crate / widgets / icon_button` an explicit part of `draw_toasts` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE a9236aa65502c519:1: Makes `inner` an explicit part of `draw_toasts` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE d92218ed0969eefe:1: Prevents `draw_toasts` from applying its side effect outside the `r / inner / r` state.
+// ADDED-LINE-RATIONALE 2eed0a7f4b4210c7:1: Delegates `draw_toasts`'s `ui / add_space / theme` work to `ui.add_space` so existing state and error handling remain centralized.
 //! [`LauncherUi`]: state, event handling and the page layout.
 
 use std::time::Duration;
@@ -12,7 +125,7 @@ use redrob_launcher_core::{Platform, SUITE};
 
 use crate::i18n::set_current;
 use crate::model::AppEntry;
-use crate::settings::{Filter, Settings, SortKey, ViewMode};
+use crate::settings::{Filter, Settings};
 use crate::theme::{self, Tokens};
 
 /// Who draws the window's title bar.
@@ -69,11 +182,17 @@ pub struct LanguageChoice {
     pub apps: std::collections::BTreeMap<String, String>,
 }
 
-/// Which page the central panel shows: the apps, or the models they can use.
+/// Which page the main area shows: one per sidebar row.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Page {
     Apps,
+    /// The models the apps can use on this computer.
     Models,
+    /// The shared Redrob Code engine: running or not, who uses it, start and stop.
+    Engine,
+    /// Signing in to Redrob, and which apps use it.
+    Account,
+    Settings,
 }
 
 pub(crate) struct Toast {
@@ -86,13 +205,7 @@ pub(crate) struct Toast {
 pub(crate) enum Dialog {
     Notes(String),
     ConfirmUninstall(String),
-    Settings,
     LauncherUpdate(redrob_launcher_core::Release),
-    /// Signing in to Redrob, and which apps use it.
-    Account,
-    /// The apps' downloadable models.
-    /// The shared Redrob Code engine: running or not, who uses it, start and stop.
-    Engine,
 }
 
 pub struct LauncherUi {
@@ -119,7 +232,7 @@ pub struct LauncherUi {
     pub(crate) toasts: Vec<Toast>,
     pub(crate) dialog: Option<Dialog>,
     pub(crate) page: Page,
-    /// Which page of the Settings dialog is open.
+    /// Which tab of the Settings page is open.
     pub(crate) settings_tab: crate::channels::SettingsTab,
     /// Settings > Channels, as edited.
     pub(crate) channels: crate::channels::ChannelsPanel,
@@ -226,12 +339,12 @@ impl LauncherUi {
     }
 
     /// Looks for updates now (the tray's "Check for Updates").
-    /// Open the engine dialog (the tray's "Redrob Code engine" item).
+    /// Open the engine page (the tray's "AI engine" item).
     pub fn show_engine(&mut self) {
         if let Some(engine) = self.backend.engine() {
             engine.refresh();
         }
-        self.dialog = Some(Dialog::Engine);
+        self.set_page(Page::Engine);
     }
 
     pub fn check_now(&mut self) {
@@ -614,6 +727,10 @@ impl LauncherUi {
     /// Draws the launcher.
     pub fn ui(&mut self, ui: &mut egui::Ui, host: &mut dyn Host) {
         let ctx = ui.ctx().clone();
+        // Whether something already open owns Escape this frame, read before drawing: a list or a
+        // text field handles the key while it is drawn (closing, or giving up focus), so by the
+        // page's own check below it would look as if nothing had been open.
+        let escape_taken = egui::Popup::is_any_open(&ctx) || ctx.text_edit_focused();
         // Set the current language for this frame based on settings.
         let lang = effective_lang(&self.settings.language);
         set_current(lang);
@@ -642,62 +759,109 @@ impl LauncherUi {
             ctx.request_repaint_after(Duration::from_millis(50));
         }
 
-        // The bars' separator lines are the hairlines under the header and over the footer.
-        egui::Panel::top("header")
-            .frame(egui::Frame::new().fill(tokens.bg))
-            .exact_size(crate::views::HEADER_H)
+        // The title bar across the top (Redrob Cowork's 48 px bar on the sunken ground, its hairline
+        // under it), then the sidebar card down the left; each page's top bar spans the main area
+        // only, on the same base ground as the card's gap. There is no footer: what it said (the
+        // last check, GitHub's limit, the platform) is in Settings > Updates.
+        // A window the OS decorates (and the web build) has no title bar of ours: the title bar's
+        // search, logo and Update sit in a 48 px row over the main area instead.
+        let bar = host.title_bar();
+        if bar != TitleBar::Native {
+            egui::Panel::top("header")
+                .frame(egui::Frame::new().fill(tokens.sunken))
+                .exact_size(crate::views::HEADER_H)
+                .resizable(false)
+                .show(ui, |ui| self.header(ui, bar));
+        }
+        let inset = crate::shell::INSET as i8;
+        egui::Panel::left("sidebar")
+            .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin { left: inset, right: inset, top: inset, bottom: inset }))
+            .exact_size(Self::sidebar_width(&ctx))
             .resizable(false)
-            .show(ui, |ui| self.header(ui, host.title_bar()));
-        egui::Panel::bottom("footer")
-            .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin::symmetric(20, 0)))
-            .exact_size(crate::views::FOOTER_H)
-            .resizable(false)
-            .show(ui, |ui| self.footer(ui));
+            .show_separator_line(false)
+            .show(ui, |ui| self.sidebar(ui, host));
+        if bar == TitleBar::Native {
+            egui::Panel::top("chrome")
+                .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin::symmetric(24, 0)))
+                .exact_size(crate::views::HEADER_H)
+                .resizable(false)
+                .show(ui, |ui| self.header(ui, bar));
+        }
+        // The Apps page has no top bar: its actions are in the chrome and its filter row.
+        if self.page != Page::Apps {
+            egui::Panel::top("page-top")
+                .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin::symmetric(24, 0)))
+                .exact_size(crate::shell::PAGE_TOP_H)
+                .resizable(false)
+                .show(ui, |ui| self.page_top_bar(ui));
+        }
+        // The right margin is only the scroll bar's gap from the window's edge: the page's own
+        // 24 px is inside its scroll area, so the bar hugs the edge like Cowork's.
+        let edge = crate::widgets::PAGE_SCROLL_EDGE as i8;
         egui::CentralPanel::default()
-            .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin { left: 20, right: 20, top: 18, bottom: 0 }))
-            .show(ui, |ui| {
-                if self.page == Page::Models {
-                    self.models_page(ui);
-                    return;
-                }
-                self.toolbar(ui);
-                ui.add_space(18.0);
-                let ids = self.visible_ids();
-                // The table is wider than a narrow window: let it scroll sideways too.
-                let scroll = match self.settings.view {
-                    ViewMode::Grid => egui::ScrollArea::vertical(),
-                    ViewMode::Table => egui::ScrollArea::both(),
-                };
-                scroll.auto_shrink(false).show(ui, |ui| {
-                    if ids.is_empty() {
-                        ui.add_space(40.0);
-                        ui.vertical_centered(|ui| {
-                            crate::widgets::hud(ui, tl!("No apps match"), tokens.muted);
-                        });
-                    } else {
-                        match self.settings.view {
-                            ViewMode::Grid => self.grid(ui, &ids),
-                            ViewMode::Table => self.table(ui, &ids),
+            .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin { left: 24, right: edge, top: 20, bottom: 0 }))
+            .show(ui, |ui| match self.page {
+                Page::Models => self.models_page(ui),
+                Page::Engine | Page::Account | Page::Settings => {
+                    crate::widgets::page_scroll(ui, "page", |ui| {
+                        // A reading measure, like Cowork's content column.
+                        ui.set_max_width(720.0);
+                        match self.page {
+                            Page::Engine => self.engine_page(ui),
+                            Page::Account => self.account_page(ui),
+                            _ => self.settings_page(ui, host),
                         }
-                    }
+                        // Room under the last control, so nothing ends against the window's edge.
+                        ui.add_space(32.0);
+                    });
+                }
+                Page::Apps => {
+                    // Above the scroll: the page's right padding, as inside it.
+                    egui::Frame::new()
+                        .inner_margin(egui::Margin { right: crate::widgets::PAGE_SCROLL_PAD as i8, ..egui::Margin::ZERO })
+                        .show(ui, |ui| self.toolbar(ui));
                     ui.add_space(16.0);
-                });
+                    let ids = self.visible_ids();
+                    crate::widgets::page_scroll(ui, "apps", |ui| {
+                        if ids.is_empty() {
+                            self.empty_state(ui);
+                        } else {
+                            self.grid(ui, &ids);
+                        }
+                        ui.add_space(16.0);
+                    });
+                }
             });
-        self.dialogs(&ctx, host);
+        // Escape leaves a page for Apps, when nothing above the page (a dialog, the feed alert, a
+        // menu or a list) or a text field being edited would take the key itself. An ordinary
+        // focused control (a button reached by Tab) doesn't use Escape, so it doesn't block it.
+        let alert_open = self.alerts.iter().any(|a| !self.settings.dismissed_notices.contains(&a.id));
+        if self.page != Page::Apps
+            && self.dialog.is_none()
+            && !alert_open
+            && !escape_taken
+            && !egui::Popup::is_any_open(&ctx)
+            && !ctx.text_edit_focused()
+            && ctx.input(|i| i.key_pressed(egui::Key::Escape))
+        {
+            self.set_page(Page::Apps);
+        }
+        self.dialogs(&ctx);
         self.draw_toasts(&ctx);
         if host.title_bar() == TitleBar::Custom {
             crate::widgets::window_edges(&ctx);
         }
     }
 
-    /// The ids to show, filtered and sorted.
+    /// The ids to show, filtered, in page order ([`crate::shelves::page_order`], the grid's only
+    /// order). Apps kept off the page ([`crate::shelves::shown`]) never appear.
     pub(crate) fn visible_ids(&self) -> Vec<&'static str> {
         let needle = self.search.trim().to_lowercase();
-        let mut list: Vec<(usize, &AppEntry)> = self
-            .entries
-            .iter()
-            .enumerate()
-            .filter(|(_, e)| {
+        crate::shelves::page_order()
+            .into_iter()
+            .filter_map(|id| self.entry(id))
+            .filter(|e| self.shown(e))
+            .filter(|e| {
                 let s = e.status(self.platform, self.caps.manage_apps);
                 let keep = match self.settings.filter {
                     Filter::All => true,
@@ -710,46 +874,8 @@ impl LauncherUi {
                     || e.app.tagline.to_lowercase().contains(&needle)
                     || e.app.like.to_lowercase().contains(&needle))
             })
-            .collect();
-        let platform = self.platform;
-        let manage = self.caps.manage_apps;
-        let desc = self.settings.sort_descending;
-        let dir = |o: std::cmp::Ordering| if desc { o.reverse() } else { o };
-        // Empty cells (not installed, no release) go last whichever way the column sorts.
-        let opt = |a: Option<std::cmp::Ordering>, a_some: bool, b_some: bool| match (a_some, b_some) {
-            (true, true) => dir(a.unwrap_or(std::cmp::Ordering::Equal)),
-            (true, false) => std::cmp::Ordering::Less,
-            (false, true) => std::cmp::Ordering::Greater,
-            (false, false) => std::cmp::Ordering::Equal,
-        };
-        let installed = |e: &AppEntry| e.installed.as_ref().and_then(|i| i.version.clone());
-        let latest = |e: &AppEntry| e.release().and_then(|r| r.version.clone());
-        list.sort_by(|(ia, a), (ib, b)| {
-            let ord = match self.settings.sort {
-                SortKey::Suite => dir(ia.cmp(ib)),
-                SortKey::Name => dir(a.app.name.cmp(b.app.name)),
-                SortKey::InspiredBy => dir(a.app.like.cmp(b.app.like)),
-                SortKey::Status => {
-                    dir(crate::model::status_rank(&a.status(platform, manage)).cmp(&crate::model::status_rank(&b.status(platform, manage))))
-                }
-                SortKey::Installed => {
-                    let (x, y) = (installed(a), installed(b));
-                    opt(x.as_ref().zip(y.as_ref()).map(|(x, y)| x.cmp_precedence(y)), x.is_some(), y.is_some())
-                }
-                SortKey::Latest => {
-                    let (x, y) = (latest(a), latest(b));
-                    opt(x.as_ref().zip(y.as_ref()).map(|(x, y)| x.cmp_precedence(y)), x.is_some(), y.is_some())
-                }
-                SortKey::Released => {
-                    let at = |e: &AppEntry| e.release().and_then(|r| r.published_at);
-                    let (x, y) = (at(a), at(b));
-                    opt(x.zip(y).map(|(x, y)| x.cmp(&y)), x.is_some(), y.is_some())
-                }
-            };
-            // Ties keep suite order.
-            ord.then(ia.cmp(ib))
-        });
-        list.into_iter().map(|(_, e)| e.app.id).collect()
+            .map(|e| e.app.id)
+            .collect()
     }
 
     /// "Redrob API", "GitHub" or "Redrob API and GitHub": the services behind the releases on
@@ -775,9 +901,16 @@ impl LauncherUi {
         }
     }
 
+    /// Whether an app is on the page (and in its counts): every app except those kept off it
+    /// unless installed ([`crate::shelves::HIDDEN_UNLESS_INSTALLED`]).
+    pub(crate) fn shown(&self, e: &AppEntry) -> bool {
+        crate::shelves::shown(e.app.id, e.installed.is_some())
+    }
+
     pub(crate) fn count(&self, filter: Filter) -> usize {
         self.entries
             .iter()
+            .filter(|e| self.shown(e))
             .filter(|e| {
                 let s = e.status(self.platform, self.caps.manage_apps);
                 match filter {
@@ -790,7 +923,10 @@ impl LauncherUi {
             .count()
     }
 
+    /// DS Toasts: 360 wide, raised, radius 8, shadow-lg, a 20 px status icon in its colour, the
+    /// text, and a close button. Clicking a toast also dismisses it.
     fn draw_toasts(&mut self, ctx: &egui::Context) {
+        use crate::glyphs::Icon;
         let now = ctx.input(|i| i.time);
         self.toasts.retain(|t| t.until > now);
         if self.toasts.is_empty() {
@@ -798,28 +934,42 @@ impl LauncherUi {
         }
         ctx.request_repaint_after(Duration::from_millis(250));
         let t = Tokens::get(ctx);
-        let anchor = egui::vec2(-20.0, -(crate::views::FOOTER_H + 12.0));
+        const W: f32 = 360.0;
+        // 24 px in from the window's corner (the page's own padding); there is no footer to clear.
+        let anchor = egui::vec2(-24.0, -24.0);
         egui::Area::new(egui::Id::new("toasts")).anchor(egui::Align2::RIGHT_BOTTOM, anchor).order(egui::Order::Foreground).show(ctx, |ui| {
-            ui.set_max_width(380.0);
+            ui.set_width(W);
             let mut dismiss = None;
             for (i, toast) in self.toasts.iter().enumerate() {
-                let accent = if toast.error { t.bad } else { t.good };
+                let (icon, tone) = if toast.error { (Icon::Close, t.bad) } else { (Icon::Check, t.good) };
                 let r = egui::Frame::new()
-                    .fill(t.bg)
-                    .stroke(egui::Stroke::new(1.0, t.line_strong))
-                    .shadow(theme::shadow(&t))
-                    .inner_margin(egui::Margin::symmetric(14, 10))
+                    .fill(t.raised())
+                    .stroke(t.hairline())
+                    .corner_radius(egui::CornerRadius::same(theme::radius::MD))
+                    .shadow(theme::shadow_lg(&t))
+                    .inner_margin(16)
                     .show(ui, |ui| {
-                        ui.horizontal(|ui| {
-                            let (rect, _) = ui.allocate_exact_size(egui::vec2(6.0, 6.0), egui::Sense::hover());
-                            ui.painter().rect_filled(rect, egui::CornerRadius::ZERO, accent);
-                            ui.add(egui::Label::new(egui::RichText::new(crate::i18n::msg(&toast.text)).color(t.ink)).wrap());
-                        });
+                        ui.set_width(W - 32.0);
+                        ui.horizontal_top(|ui| {
+                            ui.spacing_mut().item_spacing.x = theme::space::S3;
+                            let (r, _) = ui.allocate_exact_size(egui::vec2(20.0, 20.0), egui::Sense::hover());
+                            crate::glyphs::paint(ui.painter(), r, icon, tone);
+                            let text_w = W - 32.0 - 20.0 - theme::control::SM - 2.0 * theme::space::S3;
+                            ui.allocate_ui(egui::vec2(text_w, 0.0), |ui| {
+                                ui.set_width(text_w);
+                                ui.add(
+                                    egui::Label::new(egui::RichText::new(crate::i18n::msg(&toast.text)).size(theme::text::BODY_SM).color(t.ink))
+                                        .wrap(),
+                                );
+                            });
+                            crate::widgets::icon_button(ui, Icon::Close, tl!("Dismiss notification"), theme::control::SM).clicked()
+                        })
+                        .inner
                     });
-                if r.response.interact(egui::Sense::click()).clicked() {
+                if r.inner || r.response.interact(egui::Sense::click()).clicked() {
                     dismiss = Some(i);
                 }
-                ui.add_space(6.0);
+                ui.add_space(theme::space::S2);
             }
             if let Some(i) = dismiss {
                 self.toasts.remove(i);

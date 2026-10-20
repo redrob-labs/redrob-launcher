@@ -1,17 +1,270 @@
-//! The header, toolbar, footer, the grid of cards and the table, laid out like the apps page on
+// ADDED-LINE-RATIONALE feca990f29dae812:1: Gives `views` direct access to `redrob_launcher_core / time` instead of relying on an implicit platform facility.
+// ADDED-LINE-RATIONALE 6aedffd285e15fc5:1: Gives `views` direct access to `crate / glyphs / Icon` instead of relying on an implicit platform facility.
+// ADDED-LINE-RATIONALE 0eb9600b03ec026e:1: Gives `views` direct access to `crate / settings / Filter` instead of relying on an implicit platform facility.
+// ADDED-LINE-RATIONALE 38101cf29987224c:1: Gives `views` direct access to `crate / theme / Tokens` instead of relying on an implicit platform facility.
+// ADDED-LINE-RATIONALE 6d4f6d035d2251cb:1: Supports `Primary` while preserving the nearby constraint: it is wider).
+// ADDED-LINE-RATIONALE eeb5feb32d4f8c89:1: Supports `Primary` while preserving the nearby constraint: A tile's height: padding, the icon row, the version line and the actions row.
+// ADDED-LINE-RATIONALE 9eaa5747b73f9db2:1: Supports `Primary` while preserving the nearby constraint: The space between tiles (DS card gap in a dense grid: space-4).
+// ADDED-LINE-RATIONALE 643f0b48fa7ba895:1: Supports `Primary` while preserving the nearby constraint: DS card padding, dense (space-4).
+// ADDED-LINE-RATIONALE bd5d091f28977474:1: Supports `Primary` while preserving the nearby constraint: The app icon on a tile (was 48).
+// ADDED-LINE-RATIONALE c1ecc2d215ce5b95:1: Supports `Primary` while preserving the nearby constraint: The icon buttons beside an app's main action (pause, cancel, More actions): DS IconButton sm.
+// ADDED-LINE-RATIONALE 3333bdc40b001e4f:1: Supports `Primary` while preserving the nearby constraint: Where the group logo leads (Redrob Cowork's title bar does the same).
+// ADDED-LINE-RATIONALE 49bde4f95a5eb558:1: Supports `Primary` while preserving the nearby constraint: narrow window.
+// ADDED-LINE-RATIONALE 53e25bec5d50f186:1: Freezes `SEARCH_W` for `Primary` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 4bba716e5b7f270f:1: Supports `Primary` while preserving the nearby constraint: Empty title bar left of the controls, so the window can always be dragged.
+// ADDED-LINE-RATIONALE ca62213837e9b938:1: Supports `UpdateStatus` while preserving the nearby constraint: The update-check status lines Settings shows (see [`LauncherUi::update_status`]).
+// ADDED-LINE-RATIONALE 2f3465abcdb3ae69:1: Supports `UpdateStatus` while preserving the nearby constraint: "Checked 3 min ago · using Redrob API", "Checking for updates…" or "Not checked yet".
+// ADDED-LINE-RATIONALE dcd2d228dd4bfbbd:1: Supports `UpdateStatus` while preserving the nearby constraint: GitHub's rate-limit notice, only while the limit applies.
+// ADDED-LINE-RATIONALE 4ef4abed5b9d3b99:1: Supports `UpdateStatus` while preserving the nearby constraint: "Installing for Windows x64" and friends.
+// ADDED-LINE-RATIONALE 22b886c8dbac3da5:4: Bounds the `UpdateStatus` implementation here so `platform / String` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE a74f8a99b7f11d63:1: Supports `UpdateStatus` while preserving the nearby constraint: A run of cards, under an optional meta-line title.
+// ADDED-LINE-RATIONALE 235af52a4656cb91:1: Freezes `bar_w` for `header` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 62b2269578fc3dd3:1: Prevents `header` from applying its side effect outside the `bar` state.
+// ADDED-LINE-RATIONALE 28c83fac77ab7354:1: Freezes `TitleBar` for `header` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE ce1a8f304191eb7f:1: Delegates `header`'s `widgets / window_buttons / ui` work to `widgets::window_buttons` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE dc624c1b115daa70:1: Delegates `header`'s `ui / add_space / theme` work to `ui.add_space` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 9c666adf7d50e0b8:1: Freezes `TitleBar` for `header` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE b7877488d3117edf:1: Freezes `TitleBar` for `header` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 5fdee56e75763a40:1: Delegates `header`'s `chrome_cluster / ui / bar_w` work to `self.chrome_cluster` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE a270e30a5403c2cb:1: Supports `chrome_cluster` while preserving the nearby constraint: window (never under [`SEARCH_MIN_W`]), leaving the bar room to drag.
+// ADDED-LINE-RATIONALE 184479704da8f4c5:1: Freezes `gap` for `chrome_cluster` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 72747cc8b0f5a39a:1: Freezes `updates` for `chrome_cluster` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 486efdd1f78c21aa:1: Freezes `update` for `chrome_cluster` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 30cb8bc98dd83e8e:1: Freezes `if` for `chrome_cluster` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE b4deecd23d42452d:2: Makes `updates / tl / Update` an explicit part of `chrome_cluster` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE 8b4047cfa84ed909:1: Freezes `update_w` for `chrome_cluster` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE d51a229c6f2fd8f9:1: Freezes `room` for `chrome_cluster` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE f51f1cb4deacccf5:1: Freezes `search_w` for `chrome_cluster` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE b305c890bf493eae:1: Supports `chrome_cluster` while preserving the nearby constraint: Typing here from another page shows the apps it finds.
+// ADDED-LINE-RATIONALE ffc1c12dd89eed83:1: Delegates `chrome_cluster`'s `set_page / Page / Apps` work to `self.set_page` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 989c15d468e521e5:3: Bounds the `chrome_cluster` implementation here so `set_page / Page / Apps` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE bbb472e009979e24:1: Delegates `chrome_cluster`'s `ui / add_space / gap` work to `ui.add_space` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE c0b421763c248b70:1: Prevents `chrome_cluster` from applying its side effect outside the `widgets / logo_button / ui` state.
+// ADDED-LINE-RATIONALE 5947b6aa7314cba7:1: Delegates `chrome_cluster`'s `ui / ctx / open_url` work to `ui.ctx` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 989c15d468e521e5:4: Bounds the `chrome_cluster` implementation here so `ui / ctx / open_url` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 9c682cc10a2fdee6:1: Freezes `if` for `chrome_cluster` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 177cb34ceb19fa04:1: Delegates `chrome_cluster`'s `ui / add_space / gap` work to `ui.add_space` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE f62d6aa6a9be11f0:1: Supports `chrome_cluster` while preserving the nearby constraint: Tinted, not filled: the chrome stays quiet (Cowork's title bar has no filled button).
+// ADDED-LINE-RATIONALE b6733d9a3feccb59:1: Delegates `chrome_cluster`'s `update_all` work to `self.update_all` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE b232890f187a0805:2: Bounds the `chrome_cluster` implementation here so `update_all` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 989c15d468e521e5:5: Bounds the `chrome_cluster` implementation here so `update_all` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE af58771aeaabb4c5:3: Bounds the `chrome_cluster` implementation here so `Updates / every / installed` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE d9f7badcb02ca9b1:1: Supports `update_all` while preserving the nearby constraint: Updates every installed app that has an update and isn't busy.
+// ADDED-LINE-RATIONALE cde326a182e09731:1: Freezes `ids` for `update_all` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 08c34429cbfe7984:1: Makes `entries` an explicit part of `update_all` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE df3bf6672b326fcd:1: Delegates `update_all`'s `iter` work to `iter` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 68c5c4758ca32624:1: Delegates `update_all`'s `filter / e / e` work to `filter` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 0cc5d03e0a2c78b3:1: Delegates `update_all`'s `map / e / e` work to `map` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 2263c15bb900ed1e:1: Delegates `update_all`'s `collect` work to `collect` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 03cccd7c66096e6e:1: Applies `update_all` consistently to every `id / in / ids` item rather than handling only the first match.
+// ADDED-LINE-RATIONALE da6c9836d78656a8:1: Delegates `update_all`'s `send / Command / Install` work to `self.send` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 989c15d468e521e5:6: Bounds the `update_all` implementation here so `send / Command / Install` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE af58771aeaabb4c5:4: Bounds the `update_all` implementation here so `send / Command / Install` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 542e2cc5a2525a98:1: Delegates `toolbar`'s `widgets / alert_frame_dense / t` work to `widgets::alert_frame_dense` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE e04fcd46f3d506c4:1: Supports `toolbar` while preserving the nearby constraint: A row is at least interact_size tall: 32 here (the Sm buttons), not the page's 40.
+// ADDED-LINE-RATIONALE 9a4bc1655ac7bd2d:1: Delegates `toolbar`'s `ui / horizontal / ui` work to `ui.horizontal` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 6d0bd7153b6407ea:1: Supports `toolbar` while preserving the nearby constraint: 32 px row (the buttons and the dismiss are Sm).
+// ADDED-LINE-RATIONALE 662a00f586e5d1f1:1: Delegates `toolbar`'s `crate / glyphs / paint` work to `crate::glyphs::paint` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 5e73564bd617c37e:1: Delegates `toolbar`'s `ui / add_space` work to `ui.add_space` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE cba4b687af27861c:1: Delegates `toolbar`'s `ui / label` work to `ui.label` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE fd112d8a46733772:1: Delegates `toolbar`'s `RichText / new / fmt` work to `RichText::new` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 6818dfd601882d76:1: Delegates `toolbar`'s `family / theme / semibold` work to `family` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 950cda68c3c5fde0:1: Keeps `color / t / ink_strong` in `toolbar`'s API-defined order so positional values retain their intended meaning.
+// ADDED-LINE-RATIONALE 0b8ce687ad83de56:1: Bounds the `toolbar` implementation here so `color / t / ink_strong` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 27fec754416e4ebb:1: Delegates `toolbar`'s `ui / with_layout / egui` work to `ui.with_layout` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 76e7dcb749a9c898:1: Freezes `if` for `toolbar` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 0d0f9a2a1fc3f1d0:1: Freezes `let` for `toolbar` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 78738804d488b496:1: Freezes `JobPhase` for `toolbar` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE ac9928c9b9d20a94:1: Keeps `done / as / f32` in `toolbar`'s API-defined order so positional values retain their intended meaning.
+// ADDED-LINE-RATIONALE f5687e66bd91ca6f:1: Delegates `toolbar`'s `fmt` work to `fmt` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 2c93adcf3d528ec7:1: Keeps `tl / Downloading / done` in `toolbar`'s API-defined order so positional values retain their intended meaning.
+// ADDED-LINE-RATIONALE 2bdf1e52ae263180:1: Keeps `done / widgets / human_bytes` in `toolbar`'s API-defined order so positional values retain their intended meaning.
+// ADDED-LINE-RATIONALE c16b6b9b6d8d6f9f:1: Keeps `JobPhase / Downloading / JobPhase` in `toolbar`'s API-defined order so positional values retain their intended meaning.
+// ADDED-LINE-RATIONALE 3be8dfde4764c10f:1: Freezes `JobPhase` for `toolbar` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 3044a0768a377e3e:1: Freezes `JobPhase` for `toolbar` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 2aa65e3d8624a247:1: Freezes `JobPhase` for `toolbar` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 021d528e4b5aa98b:1: Freezes `JobPhase` for `toolbar` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 4848879d5316bbda:1: Bounds the `toolbar` implementation here so `JobPhase / Installing / JobPhase` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE e675efbd2f0132c5:1: Supports `toolbar` while preserving the nearby constraint: Another app's install can hang on a password prompt: the wait can be called off.
+// ADDED-LINE-RATIONALE 149160313897e12e:1: Delegates `toolbar`'s `widgets / icon_button / ui` work to `widgets::icon_button` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 73b055e511bf98ff:1: Delegates `toolbar`'s `on_hover_text / tl / Stop` work to `on_hover_text` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE e0e4fff2c869503a:1: Delegates `toolbar`'s `clicked` work to `clicked` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE a3ec0d4bb0be1953:1: Bounds the `toolbar` implementation here so `clicked` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 2cde3fc8b40f6d34:1: Delegates `toolbar`'s `send / Command / Cancel` work to `self.send` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 6d8378e875a49b32:1: Delegates `toolbar`'s `widgets / progress / ui` work to `widgets::progress` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE e2beafbc3230383d:1: Stops `toolbar` at the `widgets / progress / ui` outcome so no later branch can overwrite that result.
+// ADDED-LINE-RATIONALE 1b9c27340aa34565:1: Bounds the `toolbar` implementation here so `widgets / icon_button / ui` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE f3d11b25dda17b37:1: Prevents `toolbar` from applying its side effect outside the `widgets / icon_button / ui` state.
+// ADDED-LINE-RATIONALE 531889c32f7d50de:1: Freezes `self` for `toolbar` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 1b9c27340aa34565:2: Bounds the `toolbar` implementation here so `launcher_update` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE a3ca6a4a286b1551:1: Prevents `toolbar` from applying its side effect outside the `caps / self_update` state.
+// ADDED-LINE-RATIONALE 2aac7114dca66f30:1: Prevents `toolbar` from applying its side effect outside the `widgets / button_sized / ui` state.
+// ADDED-LINE-RATIONALE e01558134f82154f:1: Delegates `toolbar`'s `on_hover_text / tl / Downloads` work to `on_hover_text` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 9541898d9989f69a:1: Delegates `toolbar`'s `clicked` work to `clicked` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE a3ec0d4bb0be1953:2: Bounds the `toolbar` implementation here so `clicked` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 9a7e241499319ae4:1: Delegates `toolbar`'s `send / Command / UpdateLauncher` work to `self.send` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 2a9d32bd6d76e1b3:1: Makes `url / platform / and_then` an explicit part of `toolbar` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE 5678c8fb46faaa8c:1: Freezes `url` for `toolbar` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 7edc3af159af2326:1: Prevents `toolbar` from applying its side effect outside the `widgets / button_sized / ui` state.
+// ADDED-LINE-RATIONALE b0fb527772ab6ea5:1: Delegates `toolbar`'s `ui / ctx / open_url` work to `ui.ctx` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 1b9c27340aa34565:3: Bounds the `toolbar` implementation here so `ui / add_space` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 961b015f3c548f22:1: Delegates `toolbar`'s `ui / add_space` work to `ui.add_space` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE f7520af6a2365822:1: Delegates `toolbar`'s `widgets / hud_link / ui` work to `widgets::hud_link` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 23844a133122b74d:2: Makes `ui / add_space / theme` an explicit part of `toolbar` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE 63fa232a92be598f:1: Delegates `toolbar`'s `ui / add_space / theme` work to `ui.add_space` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE a25e45466b664fab:1: Prevents `toolbar` from applying its side effect outside the `widgets / icon_button_busy / ui` state.
+// ADDED-LINE-RATIONALE 10842f16475c9133:1: Delegates `toolbar`'s `check_now` work to `self.check_now` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 23844a133122b74d:3: Makes `check_now` an explicit part of `toolbar` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE b4deecd23d42452d:3: Makes `check_now` an explicit part of `toolbar` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE af58771aeaabb4c5:5: Bounds the `toolbar` implementation here so `The / DS / EmptyState` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 784135bdfbdbc852:1: Supports `empty_state` while preserving the nearby constraint: brand-subtle disc with the search glyph, a title, what to relax, and the way back.
+// ADDED-LINE-RATIONALE 7d27916cf6469de4:2: Freezes `t` for `empty_state` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE e81a1e346b98cbe0:1: Freezes `query` for `empty_state` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE bd956cf801c48f09:1: Delegates `empty_state`'s `ui / add_space / theme` work to `ui.add_space` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 2017e4ab56981bff:1: Delegates `empty_state`'s `ui / vertical / ui` work to `ui.vertical` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE ecce7447adbc9652:1: Freezes `ui` for `empty_state` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE b26fcf6c2bf959be:1: Freezes `let` for `empty_state` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 69da364ff38614e4:1: Delegates `empty_state`'s `ui / painter / circle_filled` work to `ui.painter` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 84ffd485f6966b8d:1: Delegates `empty_state`'s `crate / glyphs / paint` work to `crate::glyphs::paint` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE b5c377dd26174a32:1: Delegates `empty_state`'s `ui / label / widgets` work to `ui.label` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 59fc5345f30b2a6a:1: Freezes `text` for `empty_state` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 11077838ed733091:1: Delegates `empty_state`'s `tl / No / app` work to `tl` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE f1aa7c49dcd165d3:1: Makes `tl / No / app` an explicit part of `empty_state` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE 931eb8e4931fe9b1:1: Delegates `empty_state`'s `fmt / tl / Nothing` work to `fmt` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 45e722a6975c015a:1: Bounds the `empty_state` implementation here so `fmt / tl / Nothing` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE f5b383207534b815:1: Delegates `empty_state`'s `ui / scope / ui` work to `ui.scope` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 365151bf39516e00:1: Delegates `empty_state`'s `ui / set_max_width` work to `ui.set_max_width` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE dca3ebcd75872a0a:1: Delegates `empty_state`'s `ui / add / egui` work to `ui.add` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 23844a133122b74d:4: Makes `ui / add / egui` an explicit part of `empty_state` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE 50c3273bf7b7548d:1: Delegates `empty_state`'s `ui / horizontal / ui` work to `ui.horizontal` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE f8e6a4252bcdb5ad:1: Prevents `empty_state` from applying its side effect outside the `query / is_empty / widgets` state.
+// ADDED-LINE-RATIONALE 422e0531a44ef263:1: Delegates `empty_state`'s `search / clear` work to `self.search.clear` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE ddb0e335f470f125:3: Bounds the `empty_state` implementation here so `search / clear` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE d88848103141e5ea:1: Freezes `if` for `empty_state` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 0b70e5b45f16c9ac:1: Freezes `self` for `empty_state` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE e1c80fd81f165798:1: Delegates `announcements`'s `widgets / alert_frame / t` work to `widgets::alert_frame` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE f3d11b25dda17b37:2: Prevents `announcements` from applying its side effect outside the `widgets / icon_button / ui` state.
+// ADDED-LINE-RATIONALE bc57ed5f7e5ab97d:1: Supports `update_status` while preserving the nearby constraint: are installed (or downloaded) for.
+// ADDED-LINE-RATIONALE 38476d71297bf585:1: Freezes `checked` for `update_status` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 22b9b56d06f882d6:1: Freezes `rate_limit` for `update_status` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 40369b2a544d2162:1: Delegates `update_status`'s `fmt / tl / GitHub` work to `fmt` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE b9ad32b259dc7573:1: Makes `UpdateStatus / checked / rate_limit` an explicit part of `update_status` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE 65c5e0aeaeaa3215:1: Supports `grid` while preserving the nearby constraint: DS ConnectorCard tiles, 16 px apart (no shared hairlines).
+// ADDED-LINE-RATIONALE 7956f12c29c12804:1: Freezes `card_w` for `grid` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE ac04fffd7193b955:1: Supports `grid` while preserving the nearby constraint: Every app, unsearched: on its shelf, in page order. One voice across the three headings.
+// ADDED-LINE-RATIONALE 70df5c8e70379ff1:1: Gives `grid` direct access to `crate / shelves / Shelf` instead of relying on an implicit platform facility.
+// ADDED-LINE-RATIONALE bff1031381d288ad:1: Makes `Shelf / ALL` an explicit part of `grid` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE c90dadf8db2282e3:1: Delegates `grid`'s `map / shelf` work to `map` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE ffb9bce9147d8daa:1: Freezes `title` for `grid` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 79a54d0203bf61fb:1: Freezes `Shelf` for `grid` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE fcc7bcf73cfd7150:1: Freezes `Shelf` for `grid` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 76c7b4e4b24e9946:1: Freezes `Shelf` for `grid` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 0a8aee87aca8f61a:1: Bounds the `grid` implementation here so `Shelf / Creative / tl` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 12f17303f2f6c4ee:1: Freezes `list` for `grid` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 67e3dd11f517fdfe:1: Delegates `grid`'s `title / list` work to `Some` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 8cc212d63eeae675:1: Freezes `if` for `grid` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 50902fc6efdbaf94:1: Delegates `grid`'s `widgets / shelf_heading / ui` work to `widgets::shelf_heading` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 0068d2092a5ec82f:1: Delegates `grid`'s `ui / add_space / theme` work to `ui.add_space` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE bf20bf2d5fe4f272:1: Freezes `height` for `grid` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE ce8e0e4cf6704701:1: Freezes `min` for `grid` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 7ced1e2aa094788c:1: Delegates `grid`'s `ui / add_space / theme` work to `ui.add_space` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 43a3734c90f331aa:1: Freezes `status` for `card` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 94169254d944e698:1: Supports `card` while preserving the nearby constraint: explains itself on hover.
+// ADDED-LINE-RATIONALE 9b4689949b6ce9a3:1: Freezes `let` for `card` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE f65785e15803c4cd:1: Freezes `card_name` for `card` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE a9abb36aae586337:1: Delegates `card`'s `card / widget_info / egui` work to `card.widget_info` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 33e67030fc81a73b:1: Freezes `card` for `card` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 3585007c2360454b:1: Freezes `Some` for `card` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 06e9d6b434b3951d:1: Freezes `None` for `card` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 365af5ee3d588c3a:4: Bounds the `card` implementation here so `card` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 2b19af793790829c:1: Delegates `card`'s `card / context_menu / ui` work to `card.context_menu` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 1009b2e6536b851e:1: Delegates `card`'s `ui / set_min_width` work to `ui.set_min_width` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 10d58d80a81c6653:1: Supports `card` while preserving the nearby constraint: DS menu items are about 36 px.
+// ADDED-LINE-RATIONALE 03cad1efbc1e28b6:1: Delegates `card`'s `menu_items / ui / entry` work to `self.menu_items` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE b4deecd23d42452d:6: Makes `menu_items / ui / entry` an explicit part of `card` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE 1c1e60b606c94fee:1: Freezes `k` for `card` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE f5b73716ce5231c7:1: Freezes `radius` for `card` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE b107f3a1920d7595:1: Freezes `painter` for `card` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 9d7abdf37cce75d9:1: Prevents `card` from applying its side effect outside the `k` state.
+// ADDED-LINE-RATIONALE 71ed22afe69d188f:1: Freezes `shadow` for `card` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 17523ba6dc4072da:1: Freezes `shadow` for `card` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE bbfec7ddc98f0523:1: Delegates `card`'s `painter / add / shadow` work to `painter.add` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 9e5436b230b9e1eb:1: Delegates `card`'s `painter / rect / rect` work to `painter.rect` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE b5488a8888c5a5f7:1: Freezes `inner` for `card` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE e0e8330a472da2b7:1: Freezes `ICON` for `card` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 80ae9b5ec1bad283:1: Freezes `let` for `card` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 84ce91305beca779:1: Keeps `FontId / new / theme` in `card`'s API-defined order so positional values retain their intended meaning.
+// ADDED-LINE-RATIONALE 05df3aed8ba6a499:1: Keeps `FontId / proportional / theme` in `card`'s API-defined order so positional values retain their intended meaning.
+// ADDED-LINE-RATIONALE caa166ec3380795f:1: Keeps `FontId / proportional / theme` in `card`'s API-defined order so positional values retain their intended meaning.
+// ADDED-LINE-RATIONALE 457a22a696ff2f7a:1: Bounds the `card` implementation here so `FontId / proportional / theme` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 7be6cf75c0d739e6:1: Freezes `GAP` for `card` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE de6ee81827cff717:1: Delegates `card`'s `egui / Image / new` work to `egui::Image::new` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 63fa232a92be598f:2: Delegates `card`'s `ui / add_space / theme` work to `ui.add_space` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 50b4a409aa8c80ff:1: Delegates `card`'s `widgets / wordmark / ui` work to `widgets::wordmark` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 509ed8e7d00a646f:1: Delegates `card`'s `ui / add_space / theme` work to `ui.add_space` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 27767c03efc1c47c:1: Supports `card` while preserving the nearby constraint: the tooltip.
+// ADDED-LINE-RATIONALE 31f04ddf290f3f0d:1: Freezes `font` for `card` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 38c842691a5c9244:1: Freezes `fits` for `card` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE c6b4113353a762da:1: Prevents `card` from applying its side effect outside the `fits` state.
+// ADDED-LINE-RATIONALE 71674ea732d3b31b:1: Delegates `card`'s `ui / label / RichText` work to `ui.label` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 0cc0c74d542f8333:3: Makes `ui / label / RichText` an explicit part of `card` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE a03ae266bb0edb88:1: Delegates `card`'s `ui / label / RichText` work to `ui.label` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 989c15d468e521e5:11: Bounds the `card` implementation here so `ui / label / RichText` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE d07cbd6903ac4dcb:1: Supports `actions` while preserving the nearby constraint: the primary action; right-click remains a pointer shortcut to the same commands.
+// ADDED-LINE-RATIONALE afa4bf1668588a56:1: Freezes `downloading` for `actions` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 531031d7a8d6927f:1: Supports `actions` while preserving the nearby constraint: before Pause, Cancel, or More can overlap at compact card widths.
+// ADDED-LINE-RATIONALE dc098444fe4feddd:1: Makes `trailing_controls / downloading` an explicit part of `actions` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE 0e1b9aa6c5fbe36c:1: Makes `phase / JobPhase / Waiting` an explicit part of `actions` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE d36dc144f973b236:1: Makes `phase / JobPhase / Waiting` an explicit part of `actions` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE f1aa7c49dcd165d3:2: Makes `phase / JobPhase / Waiting` an explicit part of `actions` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE ecc6d24507a0a9c7:1: Makes `bar_w / width / trailing_controls` an explicit part of `actions` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE 45e722a6975c015a:3: Bounds the `actions` implementation here so `bar_w / width / trailing_controls` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 32a57e39b054cbe1:1: Freezes `bar_w` for `actions` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 621a0e0a44b57746:1: Freezes `caption` for `actions` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE de0d600143d38b19:1: Makes `f / caption / t` an explicit part of `actions` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE e7d1abeac700eabe:1: Freezes `JobPhase` for `actions` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 158e3b9fd9b8f9ca:1: Freezes `JobPhase` for `actions` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 25844aef916714f7:1: Freezes `JobPhase` for `actions` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 467ebec1c227835f:1: Freezes `JobPhase` for `actions` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 0779b73bb53bca46:1: Delegates `actions`'s `widgets / progress / ui` work to `widgets::progress` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 2cf2e4c907bc7493:1: Prevents `actions` from applying its side effect outside the `downloading / widgets / icon_button` state.
+// ADDED-LINE-RATIONALE 3a2707040d1b6fca:1: Delegates `actions`'s `widgets / icon_button / ui` work to `widgets::icon_button` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 8658c58ad003f5ba:1: Delegates `actions`'s `clicked` work to `clicked` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 3949550629f40c49:1: Delegates `actions`'s `menu / ui / entry` work to `self.menu` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 9363ceb445d89a40:1: Supports `actions` while preserving the nearby constraint: Resume yields space to both Discard and the keyboard-reachable More menu.
+// ADDED-LINE-RATIONALE acd0734c3e841c27:1: Prevents `actions` from applying its side effect outside the `widgets / icon_button / ui` state.
+// ADDED-LINE-RATIONALE bed85149b2e8f79c:1: Prevents `actions` from applying its side effect outside the `widgets / button / ui` state.
+// ADDED-LINE-RATIONALE 4ab28d9d2dd999df:1: Delegates `menu`'s `widgets / more_menu / ui` work to `widgets::more_menu` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE af58771aeaabb4c5:13: Bounds the `menu` implementation here so `widgets / more_menu / ui` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE ff9b7b1d996fa80e:1: Supports `menu_items` while preserving the nearby constraint: An app's menu: from the … button or a right-click on its card.
+// ADDED-LINE-RATIONALE 989c0fd468e517b3:3: Bounds the `menu_items` implementation here so `reveal / caps / reveal_label` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 69e9107795a2bbc3:2: Supports `menu_items` while preserving the nearby constraint: DS Menu: the destructive action last, in status-danger.
+// ADDED-LINE-RATIONALE b3fb5ac43eb8947f:1: Delegates `menu_items`'s `ui / separator` work to `ui.separator` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 996ee76f4f36bd11:1: Prevents `menu_items` from applying its side effect outside the `ui / button / RichText` state.
+// ADDED-LINE-RATIONALE 16b998741c4772ef:1: Freezes `self` for `menu_items` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE fd533bb179d2c5da:5: Delegates `menu_items`'s `ui / close` work to `ui.close` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE ddb0e335f470f125:18: Bounds the `menu_items` implementation here so `ui / close` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE b232890f187a0805:24: Bounds the `menu_items` implementation here so `ui / close` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 989c15d468e521e5:17: Bounds the `menu_items` implementation here so `ui / close` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 7e642f7b92af8d46:1: Delegates `version_line`'s `version_line_dated / e / status` work to `version_line_dated` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 22b886c8dbac3da5:6: Bounds the `version_line` implementation here so `version_line_dated / e / status` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE a8e85ccd26738d35:1: Supports `version_line_dated` while preserving the nearby constraint: [`version_line`], with or without the release date.
+// ADDED-LINE-RATIONALE 5017a3f6f3b2fd07:1: Freezes `released` for `version_line_dated` so every later calculation in this path observes the same input.
+//! The header, toolbar and the grid of cards, laid out like the apps page on
 //! the Redrob design system: hairline cells, quiet labels and square controls.
 
 use egui::{Color32, CornerRadius, FontId, Rect, RichText, Sense, Stroke, Ui, vec2};
 use redrob_launcher_core::platform::pick_asset;
 use redrob_launcher_core::protocol::{Command, JobPhase};
 use redrob_launcher_core::status::AppStatus;
-use redrob_launcher_core::{AppGroup, SUITE, time};
+use redrob_launcher_core::time;
 
 use crate::app::{Dialog, LauncherUi, Page, TitleBar};
+use crate::glyphs::Icon;
 use crate::i18n::{current, fmt, t, tn, tr_ctx};
 use crate::model::{self, AppEntry};
-use crate::settings::{Filter, SortKey, ViewMode};
-use crate::theme::{self, Tokens, rgb, tint};
+use crate::settings::Filter;
+use crate::theme::{self, Tokens};
 use crate::widgets::{self, Cell, Kind};
 
 /// Translate a relative timestamp ("just now", "5 min ago", …) into the current language.
@@ -50,78 +303,113 @@ enum Primary {
 
 /// Height of the header bar (the site's nav).
 pub(crate) const HEADER_H: f32 = 48.0;
-/// Height of the footer bar.
-pub(crate) const FOOTER_H: f32 = 34.0;
-/// The footer drops its platform label rather than leave the status less room than this.
-const FOOTER_MIN_STATUS_W: f32 = 300.0;
 
-const CARD_MIN_W: f32 = 320.0;
-const CARD_H: f32 = 280.0;
-/// The card's top strip: number tab and links.
-const STRIP_H: f32 = 40.0;
-const CARD_PAD: f32 = 20.0;
+/// Three tiles across the main area beside the sidebar at the default 1180 px window (four once
+/// it is wider).
+const CARD_MIN_W: f32 = 240.0;
+/// A tile's height: padding, the icon row, the version line and the actions row.
+const CARD_H: f32 = 172.0;
+/// The space between tiles (DS card gap in a dense grid: space-4).
+const CARD_GAP: f32 = 16.0;
+/// DS card padding, dense (space-4).
+const CARD_PAD: f32 = 16.0;
+/// The app icon on a tile (was 48).
+const CARD_ICON: f32 = 40.0;
+/// The icon buttons beside an app's main action (pause, cancel, More actions): DS IconButton sm.
+pub(crate) const ACTION_ICON: f32 = theme::control::SM;
 /// Room macOS's traffic lights take at the left of the header.
 const TRAFFIC_LIGHTS_W: f32 = 72.0;
+/// Where the group logo leads (Redrob Cowork's title bar does the same).
+const CONSOLE_URL: &str = "https://console.redrob.ai";
+/// The search field's width: Cowork's `clamp(260px, 29vw, 416px)`, and the least it shrinks to in a
+/// narrow window.
+const SEARCH_MIN_W: f32 = 160.0;
+const SEARCH_W: std::ops::RangeInclusive<f32> = 260.0..=416.0;
+/// Empty title bar left of the controls, so the window can always be dragged.
+const DRAG_MIN_W: f32 = 24.0;
 
-/// A run of cards, under an optional (number, title) eyebrow.
-type Section = (Option<(&'static str, &'static str)>, Vec<&'static str>);
+/// The update-check status lines Settings shows (see [`LauncherUi::update_status`]).
+pub(crate) struct UpdateStatus {
+    /// "Checked 3 min ago · using Redrob API", "Checking for updates…" or "Not checked yet".
+    pub checked: String,
+    /// GitHub's rate-limit notice, only while the limit applies.
+    pub rate_limit: Option<String>,
+    /// "Installing for Windows x64" and friends.
+    pub platform: String,
+}
+
+/// A run of cards, under an optional meta-line title.
+type Section = (Option<&'static str>, Vec<&'static str>);
 
 impl LauncherUi {
-    /// The header bar; with a custom or macOS title bar it is also the window's title bar.
+    /// The title bar (Redrob Cowork's): with a custom or macOS title bar the whole bar drags the
+    /// window outside its controls. At its right end, right to left: the window buttons (custom
+    /// bar), the search, the Redrob group logo (console.redrob.ai) and, with updates, Update. With
+    /// `TitleBar::Native` (the OS's bar, or the web) the same cluster is a 48 px row over the page.
     pub(crate) fn header(&mut self, ui: &mut Ui, bar: TitleBar) {
-        let t = Tokens::get(ui.ctx());
         let h = HEADER_H;
         if bar != TitleBar::Native {
             widgets::title_bar_drag(ui);
         }
+        let bar_w = ui.max_rect().width();
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = 0.0;
             if bar == TitleBar::MacOs {
                 ui.add_space(TRAFFIC_LIGHTS_W);
             }
-            // The Redrob lockup exactly as supplied (the variant for this ground), in its own cell.
-            let logo = vec2(18.0 * crate::icons::REDROB_LOGO_ASPECT, 18.0);
-            let (cell, _) = ui.allocate_exact_size(vec2(logo.x + 40.0, h), Sense::hover());
-            egui::Image::new(crate::icons::redrob_logo(t.dark)).alt_text(tl!("Redrob")).paint_at(ui, Rect::from_center_size(cell.center(), logo));
-            widgets::rule(ui, h);
-            ui.add_space(16.0);
-            widgets::tag(ui, tl!("Launcher"), t.invert_bg, t.invert_fg);
-            ui.add_space(12.0);
-            // The two pages, as tabs: the apps, and the models they can use on this computer.
-            if widgets::nav_link(ui, tl!("Apps"), tl!("The Redrob apps"), h, self.page == Page::Apps).clicked() {
-                self.page = Page::Apps;
-            }
-            self.models_link(ui, h);
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if bar == TitleBar::Custom {
-                    widgets::window_buttons(ui, h);
-                }
-                if widgets::nav_icon(ui, "⚙", tl!("Settings"), h, false).clicked() {
-                    self.dialog = Some(Dialog::Settings);
-                }
-                if widgets::nav_icon(ui, "⟳", tl!("Check for updates"), h, self.checking).clicked() {
-                    self.check_now();
-                }
-                ui.add_space(6.0);
-                self.account_link(ui, h);
-                self.engine_link(ui, h);
-                ui.add_space(6.0);
-                widgets::rule(ui, h);
-                if self.page == Page::Apps {
-                    ui.add_space(6.0);
-                    // Right to left: Table, then Grid, so they read Grid · Table.
-                    for (mode, label, tip) in
-                        [(ViewMode::Table, tl!("Table"), tl!("Show apps as a table")), (ViewMode::Grid, tl!("Grid"), tl!("Show apps as cards"))]
-                    {
-                        if widgets::nav_link(ui, label, tip, h, self.settings.view == mode).clicked() {
-                            self.settings.view = mode;
-                        }
+                match bar {
+                    TitleBar::Custom => {
+                        widgets::window_buttons(ui, h);
+                        ui.add_space(theme::space::S2);
                     }
-                    ui.add_space(6.0);
-                    widgets::rule(ui, h);
+                    TitleBar::MacOs => ui.add_space(theme::space::S4),
+                    TitleBar::Native => {}
                 }
+                self.chrome_cluster(ui, bar_w);
             });
         });
+    }
+
+    /// Search, the group logo and Update all, right to left. The search shrinks first in a narrow
+    /// window (never under [`SEARCH_MIN_W`]), leaving the bar room to drag.
+    fn chrome_cluster(&mut self, ui: &mut Ui, bar_w: f32) {
+        let gap = theme::space::S2;
+        let updates = if self.caps.manage_apps { self.count(Filter::Updates) } else { 0 };
+        let update = (updates > 0).then(|| {
+            if updates == 1 { tl!("Update 1 app").to_string() } else { fmt(tl!("Update all ({count})"), &[("count", &updates.to_string())]) }
+        });
+        let update_w = update.as_ref().map_or(0.0, |l| widgets::button_width(ui, l, widgets::Size::Sm) + gap);
+        let room = ui.available_width() - theme::control::SM - gap - update_w - DRAG_MIN_W;
+        let search_w = (bar_w * 0.29).clamp(*SEARCH_W.start(), *SEARCH_W.end()).min(room).max(SEARCH_MIN_W);
+        // Typing here from another page shows the apps it finds.
+        if widgets::search_field(ui, &mut self.search, tl!("Search apps"), search_w, "apps").changed() && self.page != Page::Apps {
+            self.set_page(Page::Apps);
+        }
+        ui.add_space(gap);
+        if widgets::logo_button(ui, crate::icons::redrob_mark(), tl!("Go to console.redrob.ai")).clicked() {
+            ui.ctx().open_url(egui::OpenUrl::new_tab(CONSOLE_URL));
+        }
+        if let Some(label) = update {
+            ui.add_space(gap);
+            // Tinted, not filled: the chrome stays quiet (Cowork's title bar has no filled button).
+            if widgets::button_sized(ui, &label, Kind::Tinted, widgets::Size::Sm, 0.0).clicked() {
+                self.update_all();
+            }
+        }
+    }
+
+    /// Updates every installed app that has an update and isn't busy.
+    fn update_all(&mut self) {
+        let ids: Vec<&str> = self
+            .entries
+            .iter()
+            .filter(|e| e.status(self.platform, true) == AppStatus::UpdateAvailable && e.job.is_none())
+            .map(|e| e.app.id)
+            .collect();
+        for id in ids {
+            self.send(Command::Install { app: id.to_string() });
+        }
     }
 
     pub(crate) fn toolbar(&mut self, ui: &mut Ui) {
@@ -129,71 +417,71 @@ impl LauncherUi {
         if self.dialog.is_none()
             && let Some(r) = self.launcher_update.clone()
         {
-            egui::Frame::new()
-                .fill(tint(t.accent, if t.dark { 0.10 } else { 0.07 }))
-                .stroke(Stroke::new(1.0, tint(t.accent, 0.6)))
-                .inner_margin(egui::Margin::symmetric(16, 10))
-                .show(ui, |ui| {
-                    ui.horizontal(|ui| {
-                        widgets::tag(ui, tl!("Update"), t.accent, Color32::WHITE);
-                        ui.add_space(4.0);
-                        ui.label(
-                            RichText::new(fmt(tl!("Redrob Launcher {version} is available."), &[("version", &r.version_label())]))
-                                .family(theme::medium())
-                                .color(t.ink_strong),
-                        );
-                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            if let Some(phase) = self.launcher_job {
-                                let (fraction, caption) = match phase {
-                                    JobPhase::Downloading { done, total } if total > 0 => (
-                                        Some(done as f32 / total as f32),
-                                        fmt(
-                                            tl!("Downloading {done} of {total}"),
-                                            &[("done", &widgets::human_bytes(done)), ("total", &widgets::human_bytes(total))],
-                                        ),
+            widgets::alert_frame_dense(&t).show(ui, |ui| {
+                // A row is at least interact_size tall: 32 here (the Sm buttons), not the page's 40.
+                ui.spacing_mut().interact_size.y = theme::control::SM;
+                ui.horizontal(|ui| {
+                    // A one-line DS Alert: a 16 px icon in the tone's ink, then the title, all on a
+                    // 32 px row (the buttons and the dismiss are Sm).
+                    let (icon, _) = ui.allocate_exact_size(vec2(16.0, 16.0), Sense::hover());
+                    crate::glyphs::paint(ui.painter(), icon, Icon::Download, t.accent_ink);
+                    ui.add_space(4.0);
+                    ui.label(
+                        RichText::new(fmt(tl!("Redrob Launcher {version} is available."), &[("version", &r.version_label())]))
+                            .family(theme::semibold())
+                            .color(t.ink_strong),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if let Some(phase) = self.launcher_job {
+                            let (fraction, caption) = match phase {
+                                JobPhase::Downloading { done, total } if total > 0 => (
+                                    Some(done as f32 / total as f32),
+                                    fmt(
+                                        tl!("Downloading {done} of {total}"),
+                                        &[("done", &widgets::human_bytes(done)), ("total", &widgets::human_bytes(total))],
                                     ),
-                                    JobPhase::Downloading { .. } | JobPhase::Reconnecting { .. } => (None, tl!("Downloading…").to_string()),
-                                    JobPhase::Verifying => (None, tl!("Verifying…").to_string()),
-                                    JobPhase::Waiting => (None, tl!("Waiting for other installs…").to_string()),
-                                    JobPhase::Installing | JobPhase::Removing => (None, tl!("Installing, then restarting…").to_string()),
-                                };
-                                // Another app's install can hang on a password prompt: the wait can be called off.
-                                if phase == JobPhase::Waiting
-                                    && widgets::glyph_button(ui, widgets::Glyph::Close, tl!("Cancel update"))
-                                        .on_hover_text(tl!("Stop waiting; the update can be started again later"))
-                                        .clicked()
-                                {
-                                    self.send(Command::Cancel { app: redrob_launcher_core::catalog::LAUNCHER_ID.to_string() });
-                                }
-                                widgets::progress(ui, fraction, &caption, t.accent, 220.0);
-                                return;
-                            }
-                            if widgets::glyph_button(ui, widgets::Glyph::Close, tl!("Dismiss")).clicked() {
-                                self.launcher_update = None;
-                            }
-                            if self.caps.self_update {
-                                if widgets::button(ui, tl!("Update and restart"), Kind::Primary, 0.0)
-                                    .on_hover_text(tl!("Downloads the new version, replaces this one and opens it again"))
+                                ),
+                                JobPhase::Downloading { .. } | JobPhase::Reconnecting { .. } => (None, tl!("Downloading…").to_string()),
+                                JobPhase::Verifying => (None, tl!("Verifying…").to_string()),
+                                JobPhase::Waiting => (None, tl!("Waiting for other installs…").to_string()),
+                                JobPhase::Installing | JobPhase::Removing => (None, tl!("Installing, then restarting…").to_string()),
+                            };
+                            // Another app's install can hang on a password prompt: the wait can be called off.
+                            if phase == JobPhase::Waiting
+                                && widgets::icon_button(ui, crate::glyphs::Icon::Close, tl!("Cancel update"), theme::control::SM)
+                                    .on_hover_text(tl!("Stop waiting; the update can be started again later"))
                                     .clicked()
-                                {
-                                    self.send(Command::UpdateLauncher);
-                                }
-                            } else {
-                                let url = self.platform.and_then(|p| launcher_download(&r, p)).unwrap_or_else(|| r.html_url.clone());
-                                if widgets::button(ui, tl!("Download"), Kind::Primary, 0.0).clicked() {
-                                    ui.ctx().open_url(egui::OpenUrl::new_tab(url));
-                                }
+                            {
+                                self.send(Command::Cancel { app: redrob_launcher_core::catalog::LAUNCHER_ID.to_string() });
                             }
-                            ui.add_space(8.0);
-                            widgets::hud_link(ui, tl!("What's new"), &r.html_url);
-                        });
+                            widgets::progress(ui, fraction, &caption, t.accent, 220.0);
+                            return;
+                        }
+                        if widgets::icon_button(ui, crate::glyphs::Icon::Close, tl!("Dismiss"), theme::control::SM).clicked() {
+                            self.launcher_update = None;
+                        }
+                        if self.caps.self_update {
+                            if widgets::button_sized(ui, tl!("Update and restart"), Kind::Primary, widgets::Size::Sm, 0.0)
+                                .on_hover_text(tl!("Downloads the new version, replaces this one and opens it again"))
+                                .clicked()
+                            {
+                                self.send(Command::UpdateLauncher);
+                            }
+                        } else {
+                            let url = self.platform.and_then(|p| launcher_download(&r, p)).unwrap_or_else(|| r.html_url.clone());
+                            if widgets::button_sized(ui, tl!("Download"), Kind::Primary, widgets::Size::Sm, 0.0).clicked() {
+                                ui.ctx().open_url(egui::OpenUrl::new_tab(url));
+                            }
+                        }
+                        ui.add_space(8.0);
+                        widgets::hud_link(ui, tl!("What's new"), &r.html_url);
                     });
                 });
-            ui.add_space(14.0);
+            });
+            ui.add_space(theme::space::S3);
         }
         self.announcements(ui);
         ui.horizontal(|ui| {
-            let updates = self.count(Filter::Updates);
             let filters: Vec<(Filter, Cell<'_>)> = [
                 (Filter::All, tl!("All"), tl!("Every Redrob app"), None),
                 // The tab names a group ("installed ones"); the status pill says "Installed".
@@ -206,59 +494,42 @@ impl LauncherUi {
             .map(|(f, label, tip, highlight)| (f, Cell { label, tip, count: Some((self.count(f), highlight)) }))
             .collect();
             widgets::cells(ui, &mut self.settings.filter, &filters);
+            // Check for updates at the row's right end (where the sort was).
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if self.caps.manage_apps && updates > 0 {
-                    let label = if updates == 1 {
-                        tl!("Update 1 app").to_string()
-                    } else {
-                        fmt(tl!("Update all ({count})"), &[("count", &updates.to_string())])
-                    };
-                    if widgets::button(ui, &label, Kind::Primary, 0.0).clicked() {
-                        let ids: Vec<&str> = self
-                            .entries
-                            .iter()
-                            .filter(|e| e.status(self.platform, true) == AppStatus::UpdateAvailable && e.job.is_none())
-                            .map(|e| e.app.id)
-                            .collect();
-                        for id in ids {
-                            self.send(Command::Install { app: id.to_string() });
-                        }
-                    }
-                    ui.add_space(4.0);
+                if widgets::icon_button_busy(ui, Icon::Refresh, tl!("Check for updates"), theme::control::SM, self.checking).clicked() {
+                    self.check_now();
                 }
-                ui.add(
-                    egui::TextEdit::singleline(&mut self.search)
-                        .hint_text(tl!("Search apps"))
-                        .desired_width(200.0)
-                        .min_size(vec2(0.0, theme::CONTROL_H))
-                        .vertical_align(egui::Align::Center)
-                        .margin(vec2(10.0, 0.0)),
-                );
-                if self.settings.view == ViewMode::Grid {
-                    egui::ComboBox::from_id_salt("sort")
-                        .selected_text(RichText::new(sort_label(self.settings.sort)).size(13.0))
-                        .width(140.0)
-                        .show_ui(ui, |ui| {
-                            for key in [
-                                SortKey::Suite,
-                                SortKey::Name,
-                                SortKey::InspiredBy,
-                                SortKey::Status,
-                                SortKey::Installed,
-                                SortKey::Latest,
-                                SortKey::Released,
-                            ] {
-                                if ui.selectable_label(self.settings.sort == key, sort_label(key)).clicked() {
-                                    self.settings.sort = key;
-                                    self.settings.sort_descending = key.starts_descending();
-                                }
-                            }
-                        });
-                    // The caption only where it fits beside the filters (longer in some languages).
-                    let sort = tl!("Sort");
-                    if widgets::hud_galley(ui, sort, t.faint).size().x + ui.spacing().item_spacing.x <= ui.available_width() {
-                        widgets::hud(ui, sort, t.faint);
-                    }
+            });
+        });
+    }
+
+    /// The DS EmptyState for a filter or search that matches nothing: left aligned, a 48 px
+    /// brand-subtle disc with the search glyph, a title, what to relax, and the way back.
+    pub(crate) fn empty_state(&mut self, ui: &mut Ui) {
+        let t = Tokens::get(ui.ctx());
+        let query = self.search.trim().to_string();
+        ui.add_space(theme::space::S12);
+        ui.vertical(|ui| {
+            ui.spacing_mut().item_spacing.y = theme::space::S3;
+            let (disc, _) = ui.allocate_exact_size(vec2(48.0, 48.0), Sense::hover());
+            ui.painter().circle_filled(disc.center(), 24.0, t.brand_subtle());
+            crate::glyphs::paint(ui.painter(), Rect::from_center_size(disc.center(), vec2(22.0, 22.0)), Icon::Search, t.accent_ink);
+            ui.label(widgets::heading(tl!("No apps match"), theme::text::TITLE_3, t.ink));
+            let text = if query.is_empty() {
+                tl!("No app is in this group right now. Show every app instead.").to_string()
+            } else {
+                fmt(tl!("Nothing matches “{query}”. Try a shorter or different word."), &[("query", &query)])
+            };
+            ui.scope(|ui| {
+                ui.set_max_width(420.0);
+                ui.add(egui::Label::new(RichText::new(text).size(theme::text::BODY_SM).color(t.muted)).wrap());
+            });
+            ui.horizontal(|ui| {
+                if !query.is_empty() && widgets::button(ui, tl!("Clear search"), Kind::Secondary, 0.0).clicked() {
+                    self.search.clear();
+                }
+                if self.settings.filter != Filter::All && widgets::button(ui, tl!("Show all apps"), Kind::Secondary, 0.0).clicked() {
+                    self.settings.filter = Filter::All;
                 }
             });
         });
@@ -270,10 +541,10 @@ impl LauncherUi {
         let shown: Vec<redrob_launcher_core::feed::Notice> =
             self.announcements.iter().filter(|n| !self.settings.dismissed_notices.contains(&n.id)).take(3).cloned().collect();
         for notice in shown {
-            egui::Frame::new().fill(t.sunken).stroke(t.hairline()).inner_margin(egui::Margin::symmetric(14, 10)).show(ui, |ui| {
+            widgets::alert_frame(&t).show(ui, |ui| {
                 ui.horizontal(|ui| {
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
-                        if widgets::glyph_button(ui, widgets::Glyph::Close, tl!("Dismiss")).clicked() {
+                        if widgets::icon_button(ui, crate::glyphs::Icon::Close, tl!("Dismiss"), theme::control::SM).clicked() {
                             self.settings.dismissed_notices.insert(notice.id.clone());
                         }
                         if let Some(link) = &notice.link {
@@ -295,10 +566,12 @@ impl LauncherUi {
         }
     }
 
-    pub(crate) fn footer(&mut self, ui: &mut Ui) {
-        let t = Tokens::get(ui.ctx());
+    /// What the footer used to say, now shown in Settings > Updates: when the catalog was last
+    /// checked and from where, GitHub's rate-limit notice while it applies, and the platform apps
+    /// are installed (or downloaded) for.
+    pub(crate) fn update_status(&self) -> UpdateStatus {
         let now = self.backend.now();
-        let status = if self.checking {
+        let checked = if self.checking {
             tl!("Checking for updates…").to_string()
         } else if let Some(at) = self.settings.last_check {
             let ago = ago_text(at, now);
@@ -309,83 +582,39 @@ impl LauncherUi {
         } else {
             tl!("Not checked yet").to_string()
         };
-        // The full notice, and a short one for a narrow window.
-        let notice = self.rate_limited_until.filter(|u| *u > now).map(|until| {
+        let rate_limit = self.rate_limited_until.filter(|u| *u > now).map(|until| {
             let min = ((until - now) / 60).max(1).to_string();
-            let full = fmt(tl!("GitHub's hourly limit was reached; full details return in {min} min"), &[("min", &min)]);
-            let short = fmt(tl!("GitHub limit hit; back in {min} min"), &[("min", &min)]);
-            (format!("· {full}"), format!("· {short}"))
+            fmt(tl!("GitHub's hourly limit was reached; full details return in {min} min"), &[("min", &min)])
         });
         let platform = match self.platform {
             Some(p) if self.caps.manage_apps => fmt(tl!("Installing for {platform}"), &[("platform", &p.label())]),
             Some(p) => fmt(tl!("Downloads for {platform}"), &[("platform", &p.label())]),
             None => tl!("No downloads for this system").into(),
         };
-        use redrob_launcher_core::catalog::{GITHUB_URL, WEBSITE_URL};
-        let links = [(tl!("GitHub"), GITHUB_URL), (tl!("Website"), WEBSITE_URL)];
-        let link_gap = 16.0;
-        // The links and icons on the right keep their size; the status on the left gets what is
-        // left and is cut short with "…", never drawn under them. A narrow window drops the
-        // platform label first, so the status keeps room to be read.
-        let spacing = ui.spacing().item_spacing.x;
-        let links_w: f32 =
-            links.iter().map(|(text, _)| widgets::hud_galley(ui, &format!("{text} ↗"), t.muted).size().x + link_gap).sum::<f32>() - link_gap;
-        let platform_w = widgets::hud_galley(ui, &platform, t.faint).size().x + 16.0 + spacing;
-        let left_w = ui.available_width() - links_w - 16.0 - 3.0 * spacing;
-        let show_platform = left_w - platform_w >= FOOTER_MIN_STATUS_W;
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            if show_platform {
-                widgets::hud(ui, &platform, t.faint);
-                ui.add_space(16.0);
-            }
-            // Right to left, so this reads: Website · GitHub.
-            ui.scope(|ui| {
-                ui.spacing_mut().item_spacing.x = link_gap;
-                for (text, url) in links {
-                    widgets::hud_link(ui, text, url);
-                }
-            });
-            ui.add_space(16.0);
-            ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
-                // While GitHub is rate limited, saying so matters more than when we last checked.
-                let avail = ui.available_width();
-                let text = |s: &str| RichText::new(s).size(12.0).color(t.warn);
-                let width = |ui: &Ui, s: &str| {
-                    egui::WidgetText::from(text(s)).into_galley(ui, Some(egui::TextWrapMode::Extend), f32::INFINITY, egui::TextStyle::Body).size().x
-                        + spacing
-                };
-                // The short notice once the full one would leave the status under a third.
-                let notice = notice.map(|(full, short)| {
-                    let w = width(ui, &full);
-                    if w <= avail * 0.7 { (full, None, w) } else { (short.clone(), Some(full), width(ui, &short)) }
-                });
-                let notice_w = notice.as_ref().map_or(0.0, |(_, _, w)| *w);
-                widgets::hud_elided(ui, &status, t.faint, (avail - notice_w).max(avail * 0.3));
-                if let Some((shown, full, _)) = notice {
-                    let resp = ui.add(egui::Label::new(text(&shown)).truncate());
-                    if let Some(full) = full {
-                        resp.on_hover_text(full);
-                    }
-                }
-            });
-        });
+        UpdateStatus { checked, rate_limit, platform }
     }
 
     // ---- grid ----------------------------------------------------------------------------
 
     pub(crate) fn grid(&mut self, ui: &mut Ui, ids: &[&'static str]) {
         let width = ui.available_width();
-        // Neighbouring cards share their 1 px hairline, like the site's `gap-px` grid.
-        let cols = ((width / CARD_MIN_W).floor() as usize).max(1);
-        let card_w = (width + (cols as f32 - 1.0)) / cols as f32;
-        // In suite order, split into the classic apps and the new ones.
-        let grouped = self.settings.sort == SortKey::Suite && self.settings.filter == Filter::All && self.search.trim().is_empty();
+        // DS ConnectorCard tiles, 16 px apart (no shared hairlines).
+        let cols = (((width + CARD_GAP) / (CARD_MIN_W + CARD_GAP)).floor() as usize).max(1);
+        let card_w = (width - (cols as f32 - 1.0) * CARD_GAP) / cols as f32;
+        // Every app, unsearched: on its shelf, in page order. One voice across the three headings.
+        let grouped = self.settings.filter == Filter::All && self.search.trim().is_empty();
         let sections: Vec<Section> = if grouped {
-            [(AppGroup::Create, "01", tl!("Create")), (AppGroup::Work, "02", tl!("Work"))]
+            use crate::shelves::{Shelf, shelf_of};
+            Shelf::ALL
                 .iter()
-                .map(|(g, index, title)| {
-                    let list = ids.iter().copied().filter(|id| self.entry(id).is_some_and(|e| e.app.group == *g)).collect();
-                    (Some((*index, *title)), list)
+                .map(|shelf| {
+                    let title = match shelf {
+                        Shelf::Engine => tl!("For your AI engine"),
+                        Shelf::Work => tl!("For your everyday work"),
+                        Shelf::Creative => tl!("For your creative work"),
+                    };
+                    let list = ids.iter().copied().filter(|id| self.entry(id).is_some_and(|e| shelf_of(e.app) == *shelf)).collect();
+                    (Some(title), list)
                 })
                 .collect()
         } else {
@@ -396,261 +625,110 @@ impl LauncherUi {
             if list.is_empty() {
                 continue;
             }
-            if let Some((index, title)) = title {
+            if let Some(title) = title {
                 ui.add_space(4.0);
                 ui.horizontal(|ui| {
-                    widgets::eyebrow(ui, index, title);
+                    widgets::shelf_heading(ui, title);
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         widgets::hud(ui, &tn(list.len() as u64, "{n} app", "{n} apps"), t.faint);
                     });
                 });
-                ui.add_space(10.0);
+                ui.add_space(theme::space::S3);
             }
             let rows = list.len().div_ceil(cols);
-            let height = rows as f32 * (CARD_H - 1.0) + 1.0;
+            let height = rows as f32 * (CARD_H + CARD_GAP) - CARD_GAP;
             let (area, _) = ui.allocate_exact_size(vec2(width, height), Sense::hover());
             for (i, id) in list.iter().enumerate() {
                 let (row, col) = (i / cols, i % cols);
-                let min = area.min + vec2(col as f32 * (card_w - 1.0), row as f32 * (CARD_H - 1.0));
+                let min = area.min + vec2(col as f32 * (card_w + CARD_GAP), row as f32 * (CARD_H + CARD_GAP));
                 self.card(ui, id, Rect::from_min_size(min, vec2(card_w, CARD_H)));
             }
-            ui.add_space(24.0);
+            ui.add_space(theme::space::S6);
         }
     }
 
+    /// One app as a DS ConnectorCard: raised, radius 12, a hairline that strengthens with a
+    /// shadow-md on hover (140 ms); the icon exactly as supplied (no shadow, border or tint) beside
+    /// the name, tagline and kind; the version; the actions. No status chip and no links: the
+    /// button says what can be done, and every card exposes its menu through both the named …
+    /// button and right-click. The product's colour is only its icon.
     fn card(&mut self, ui: &mut Ui, id: &str, rect: Rect) {
         let Some(entry) = self.entry(id).cloned() else { return };
         let t = Tokens::get(ui.ctx());
         let app = entry.app;
-        let hovered = ui.rect_contains_pointer(rect);
-        let lift = ui.ctx().animate_bool_with_time(ui.id().with(("card-hover", id)), hovered, 0.3);
-        let app_color = rgb(app.color);
-        let painter = ui.painter_at(rect.expand(16.0));
-        painter.rect(rect, CornerRadius::ZERO, t.bg, t.hairline(), egui::StrokeKind::Inside);
-        // On hover, a 2 px rule in the app's colour wipes in from the left along the top.
-        if lift > 0.0 {
-            painter.rect_filled(Rect::from_min_size(rect.min, vec2(rect.width() * lift, 2.0)), CornerRadius::ZERO, app_color);
-        }
-
-        // The top strip: the app's number in its colour, and its pages.
-        let strip = Rect::from_min_size(rect.min, vec2(rect.width(), STRIP_H));
-        painter.hline(strip.x_range(), strip.bottom() - 0.5, t.hairline());
-        let number = SUITE.iter().position(|a| a.id == app.id).map_or_else(String::new, |i| format!("{:02}", i + 1));
-        {
-            let mut strip_ui = ui.new_child(
-                egui::UiBuilder::new().max_rect(strip.shrink2(vec2(CARD_PAD, 0.0))).layout(egui::Layout::left_to_right(egui::Align::Center)),
-            );
-            // ink-on-brand: white on the mark, as on every Redrob tile.
-            widgets::tag(&mut strip_ui, &number, app_color, Color32::WHITE);
-            strip_ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                ui.spacing_mut().item_spacing.x = 16.0;
-                widgets::hud_link(ui, tl!("GitHub"), &app.repo_url());
-                if let Some(site) = app.website() {
-                    widgets::hud_link(ui, tl!("Website"), &site);
-                }
-            });
-        }
-
         let status = entry.status(self.platform, self.caps.manage_apps);
-        let inner = Rect::from_min_max(egui::pos2(rect.left() + CARD_PAD, strip.bottom() + 18.0), rect.max - vec2(CARD_PAD, CARD_PAD));
+        // The card itself, under its controls (they are added after it, so they win the pointer):
+        // right-click opens the app's menu. With no chip on screen, the card is named for screen
+        // readers by its app and status ("Redrob Film: Available to install"), and a failed check
+        // explains itself on hover.
+        let card = ui.interact(rect, ui.id().with(("card", id)), Sense::click());
+        let (status_text, _) = model::entry_status_text(&entry, &status, self.caps.manage_apps);
+        let card_name = fmt(tl!("{name}: {status}"), &[("name", app.name), ("status", &status_text)]);
+        card.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Other, true, card_name.clone()));
+        let card = match entry.failure() {
+            Some(f) => card.on_hover_text(fmt(tl!("Couldn't check for updates: {f}"), &[("f", f)])),
+            None => card,
+        };
+        card.context_menu(|ui| {
+            ui.set_min_width(200.0);
+            // DS menu items are about 36 px.
+            ui.spacing_mut().interact_size.y = 36.0;
+            self.menu_items(ui, &entry, &status);
+        });
+        let hovered = ui.rect_contains_pointer(rect);
+        let k = ui.ctx().animate_bool_with_time(ui.id().with(("card-hover", id)), hovered, theme::motion::duration(ui.ctx(), theme::motion::FAST));
+        let radius = CornerRadius::same(theme::radius::LG);
+        let painter = ui.painter_at(rect.expand(24.0));
+        if k > 0.0 {
+            let mut shadow = theme::shadow_md(&t);
+            shadow.color = shadow.color.gamma_multiply(k);
+            painter.add(shadow.as_shape(rect, radius));
+        }
+        painter.rect(rect, radius, t.raised(), Stroke::new(1.0, theme::mix(t.line, t.line_strong, k)), egui::StrokeKind::Inside);
+
+        let inner = rect.shrink(CARD_PAD);
         // A detached child: the card's contents never move the next card along.
         let mut child = ui.new_child(egui::UiBuilder::new().max_rect(inner).layout(egui::Layout::top_down(egui::Align::Min)));
         child.set_clip_rect(rect.intersect(ui.clip_rect()));
         let ui = &mut child;
         ui.horizontal(|ui| {
-            const ICON: f32 = 56.0;
-            let [name, tagline, like] = [FontId::new(22.0, theme::display()), FontId::proportional(13.5), FontId::proportional(12.0)];
-            const GAP: f32 = 4.0;
+            const ICON: f32 = CARD_ICON;
+            let [name, tagline, like] = [
+                FontId::new(theme::text::BODY, theme::display()),
+                FontId::proportional(theme::text::BODY_SM),
+                FontId::proportional(theme::text::META),
+            ];
+            const GAP: f32 = 2.0;
             // The slot is as tall as the text beside it when that is taller, so the two share a centre.
             let block = lines_height(ui, &[&name, &tagline, &like], GAP);
             let (slot, icon_response) = ui.allocate_exact_size(vec2(ICON, block.max(ICON)), Sense::hover());
             icon_response.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Image, true, fmt(tl!("{name} icon"), &[("name", app.name)])));
-            // The icon rises a little on hover, over a soft drop shadow (the site's only shadow).
-            let icon_rect = Rect::from_center_size(slot.center(), vec2(ICON, ICON)).translate(vec2(0.0, -4.0 * lift));
-            ui.painter().add(
-                egui::epaint::Shadow { offset: [0, 6], blur: 14, spread: 0, color: Color32::from_black_alpha(71) }
-                    .as_shape(icon_rect.shrink(4.0), CornerRadius::same(12)),
-            );
             if let Some(icon) = crate::icons::app(app.id) {
-                egui::Image::new(icon).paint_at(ui, icon_rect);
+                egui::Image::new(icon).paint_at(ui, Rect::from_center_size(slot.center(), vec2(ICON, ICON)));
             }
-            ui.add_space(6.0);
+            ui.add_space(theme::space::S3);
             centered_lines(ui, &[&name, &tagline, &like], GAP, |ui| {
                 // The name's row is as tall as its text, not as a button.
                 ui.spacing_mut().interact_size.y = 0.0;
-                widgets::wordmark(ui, app, 22.0);
+                widgets::wordmark(ui, app, theme::text::BODY);
                 ui.add(egui::Label::new(RichText::new(tr_ctx(current(), app.id, app.tagline)).font(tagline.clone()).color(t.muted)).truncate());
                 ui.add(egui::Label::new(RichText::new(crate::i18n::tr(current(), app.like)).font(like.clone()).color(t.faint)).truncate());
             });
         });
-        ui.add_space(14.0);
-        ui.horizontal(|ui| {
-            let (text, tone) = model::entry_status_text(&entry, &status, self.caps.manage_apps);
-            let r = widgets::badge(ui, &text, widgets::tone_color(&t, tone));
-            if let Some(f) = entry.failure() {
-                r.on_hover_text(fmt(tl!("Couldn't check for updates: {f}"), &[("f", f)]));
-            }
-        });
-        ui.add_space(4.0);
-        ui.label(RichText::new(version_line(&entry, &status)).size(12.5).color(t.muted));
+        ui.add_space(theme::space::S3);
+        // One line, never cut short: where the dated line doesn't fit the tile, the date moves to
+        // the tooltip.
+        let full = version_line(&entry, &status);
+        let font = FontId::proportional(theme::text::META);
+        let fits = ui.fonts_mut(|f| f.layout_no_wrap(full.clone(), font.clone(), t.muted).size().x) <= ui.available_width();
+        if fits {
+            ui.label(RichText::new(full).font(font).color(t.muted));
+        } else {
+            ui.label(RichText::new(version_line_dated(&entry, &status, false)).font(font).color(t.muted)).on_hover_text(full);
+        }
         ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
             ui.horizontal(|ui| self.actions(ui, &entry, &status, inner.width()));
         });
-    }
-
-    // ---- table ---------------------------------------------------------------------------
-
-    pub(crate) fn table(&mut self, ui: &mut Ui, ids: &[&'static str]) {
-        use egui_extras::{Column, TableBuilder};
-        let t = Tokens::get(ui.ctx());
-        let now = self.backend.now();
-        let mut sort_clicked = None;
-        // The app column's name and tagline line heights, to centre them on the icon.
-        const TITLE_SIZE: f32 = 16.0;
-        const TAGLINE_SIZE: f32 = 12.0;
-        let (title_h, tagline_h) = ui
-            .ctx()
-            .fonts_mut(|f| (f.row_height(&egui::FontId::new(TITLE_SIZE, theme::display())), f.row_height(&egui::FontId::proportional(TAGLINE_SIZE))));
-        // Rows are divided by hairlines across the whole table, drawn from the first cell and
-        // clipped to the scroll area.
-        let clip = ui.clip_rect();
-        let span = ui.available_rect_before_wrap().x_range();
-        let rule = |ui: &Ui| {
-            let y = ui.max_rect().bottom() + ui.spacing().item_spacing.y / 2.0;
-            ui.ctx().layer_painter(ui.layer_id()).with_clip_rect(clip).hline(span, y, t.hairline());
-        };
-        egui::Frame::new().fill(t.bg).stroke(t.hairline()).inner_margin(egui::Margin::symmetric(16, 0)).show(ui, |ui| {
-            TableBuilder::new(ui)
-                .striped(false)
-                .vscroll(false)
-                .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
-                .column(Column::remainder().at_least(220.0).clip(true))
-                .column(Column::exact(172.0).clip(true))
-                .column(Column::exact(176.0))
-                .column(Column::exact(84.0))
-                .column(Column::exact(84.0))
-                .column(Column::exact(104.0))
-                .column(Column::exact(206.0))
-                .header(42.0, |mut header| {
-                    for (key, label) in [
-                        (Some(SortKey::Name), tl!("App")),
-                        (Some(SortKey::InspiredBy), tl!("Kind")),
-                        (Some(SortKey::Status), tl!("Status")),
-                        (Some(SortKey::Installed), tr_ctx(current(), "column", "Installed")),
-                        (Some(SortKey::Latest), tr_ctx(current(), "column", "Latest")),
-                        (Some(SortKey::Released), tr_ctx(current(), "column", "Released")),
-                        (None, ""),
-                    ] {
-                        header.col(|ui| {
-                            if key == Some(SortKey::Name) {
-                                rule(ui);
-                            }
-                            let Some(k) = key else { return };
-                            let active = k == self.settings.sort;
-                            let tip = if active { tl!("Click to reverse the order") } else { tl!("Click to sort by this column") };
-                            // Measure first so the whole header cell (label + arrow) is the target.
-                            let (rect, resp) = ui.allocate_exact_size(ui.available_size(), Sense::click());
-                            let hovered = resp.hovered();
-                            let color = if active || hovered { t.ink_strong } else { t.faint };
-                            let galley = widgets::hud_galley(ui, label, color);
-                            let text_pos = egui::pos2(rect.left(), rect.center().y - galley.size().y / 2.0);
-                            let arrow_x = text_pos.x + galley.size().x + 4.0;
-                            let p = ui.painter();
-                            p.galley(text_pos, galley, color);
-                            // ▲ / ▼ for the active column; a faint hint on hover.
-                            let arrow = if active {
-                                Some(self.settings.sort_descending)
-                            } else if hovered {
-                                Some(k.starts_descending())
-                            } else {
-                                None
-                            };
-                            if let Some(down) = arrow {
-                                let c = egui::pos2(arrow_x + 4.0, rect.center().y);
-                                let (tip_y, base_y) = if down { (c.y + 3.0, c.y - 2.0) } else { (c.y - 3.0, c.y + 2.0) };
-                                let pts = vec![egui::pos2(c.x - 3.5, base_y), egui::pos2(c.x + 3.5, base_y), egui::pos2(c.x, tip_y)];
-                                let arrow_color = if active { t.accent_ink } else { t.faint };
-                                p.add(egui::Shape::convex_polygon(pts, arrow_color, Stroke::NONE));
-                            }
-                            resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, label));
-                            if resp.on_hover_text(tip).on_hover_cursor(egui::CursorIcon::PointingHand).clicked() {
-                                sort_clicked = Some(k);
-                            }
-                        });
-                    }
-                })
-                .body(|mut body| {
-                    let last = ids.len().saturating_sub(1);
-                    for (i, id) in ids.iter().enumerate() {
-                        let Some(entry) = self.entry(id).cloned() else { continue };
-                        let status = entry.status(self.platform, self.caps.manage_apps);
-                        body.row(62.0, |mut row| {
-                            row.col(|ui| {
-                                if i < last {
-                                    rule(ui);
-                                }
-                                if let Some(icon) = crate::icons::app(entry.app.id) {
-                                    ui.add(egui::Image::new(icon).fit_to_exact_size(vec2(38.0, 38.0)));
-                                }
-                                ui.add_space(4.0);
-                                ui.vertical(|ui| {
-                                    const GAP: f32 = 2.0;
-                                    ui.spacing_mut().item_spacing.y = GAP;
-                                    // Name and tagline as one block, centred on the icon.
-                                    let block = title_h + GAP + tagline_h;
-                                    ui.add_space(((ui.available_height() - block) / 2.0).max(0.0));
-                                    widgets::wordmark(ui, entry.app, TITLE_SIZE);
-                                    ui.add(
-                                        egui::Label::new(
-                                            RichText::new(tr_ctx(current(), entry.app.id, entry.app.tagline)).size(TAGLINE_SIZE).color(t.muted),
-                                        )
-                                        .truncate(),
-                                    );
-                                });
-                            });
-                            row.col(|ui| {
-                                ui.add(
-                                    egui::Label::new(RichText::new(crate::i18n::tr(current(), entry.app.like)).size(13.0).color(t.muted)).truncate(),
-                                );
-                            });
-                            row.col(|ui| {
-                                let (text, tone) = model::entry_status_text(&entry, &status, self.caps.manage_apps);
-                                let r = widgets::badge(ui, &text, widgets::tone_color(&t, tone));
-                                if let Some(f) = entry.failure() {
-                                    r.on_hover_text(fmt(tl!("Couldn't check for updates: {f}"), &[("f", f)]));
-                                }
-                            });
-                            row.col(|ui| {
-                                let installed = entry.installed_label();
-                                let color = if installed.is_some() { t.ink } else { t.faint };
-                                ui.label(RichText::new(installed.unwrap_or_else(|| "—".into())).family(egui::FontFamily::Monospace).color(color));
-                            });
-                            row.col(|ui| {
-                                let c = if status == AppStatus::UpdateAvailable { t.warn } else { t.ink };
-                                ui.label(
-                                    RichText::new(entry.latest_label().unwrap_or_else(|| "—".into())).family(egui::FontFamily::Monospace).color(c),
-                                );
-                            });
-                            row.col(|ui| {
-                                let when = entry.release().and_then(|r| r.published_at);
-                                let r = ui.label(RichText::new(when.map_or_else(|| "—".into(), date_text)).color(t.muted));
-                                if let Some(w) = when {
-                                    r.on_hover_text(ago_text(w, now));
-                                }
-                            });
-                            row.col(|ui| self.actions(ui, &entry, &status, 204.0));
-                        });
-                    }
-                });
-        });
-        if let Some(k) = sort_clicked {
-            if self.settings.sort == k {
-                self.settings.sort_descending = !self.settings.sort_descending;
-            } else {
-                self.settings.sort = k;
-                self.settings.sort_descending = k.starts_descending();
-            }
-        }
     }
 
     // ---- actions -------------------------------------------------------------------------
@@ -683,16 +761,26 @@ impl LauncherUi {
         }
     }
 
-    /// The main button (or progress) and the … menu, within `width`.
+    /// The main button (or progress) and the named … menu within `width`.
     fn actions(&mut self, ui: &mut Ui, entry: &AppEntry, status: &AppStatus, width: f32) {
         let t = Tokens::get(ui.ctx());
         let id = entry.app.id.to_string();
-        // One square button (the menu) beside the main one.
         let gap = ui.spacing().item_spacing.x;
-        let main_w = (width - theme::CONTROL_H - gap).max(120.0);
+        // The named menu is always reachable by keyboard, including while an install job replaces
+        // the primary action; right-click remains a pointer shortcut to the same commands.
+        let main_w = (width - ACTION_ICON - gap).max(120.0);
         if let Some(phase) = entry.job {
-            // Two square buttons (pause, cancel) beside the bar while downloading.
-            let bar_w = (width - 2.0 * (theme::CONTROL_H + gap) - 4.0).max(100.0);
+            let downloading = matches!(phase, JobPhase::Downloading { .. } | JobPhase::Reconnecting { .. });
+            // Reserve the exact number of trailing controls so the progress caption yields space
+            // before Pause, Cancel, or More can overlap at compact card widths.
+            let trailing_controls = if downloading {
+                3.0
+            } else if phase == JobPhase::Waiting {
+                2.0
+            } else {
+                1.0
+            };
+            let bar_w = (width - trailing_controls * ACTION_ICON - trailing_controls * gap).max(72.0);
             let short = bar_w < 200.0;
             let amount = |done: u64, total: u64| {
                 if total > 0 {
@@ -705,7 +793,7 @@ impl LauncherUi {
                 JobPhase::Downloading { done, total } => {
                     let f = (total > 0).then(|| done as f32 / total as f32);
                     let pct = f.map(|f| format!(" · {:.0}%", f * 100.0)).unwrap_or_default();
-                    let caption = if bar_w < 150.0 {
+                    let caption = if bar_w < 140.0 {
                         match f {
                             Some(f) => {
                                 fmt(tl!("{done} of {total}"), &[("done", &format!("{:.0}%", f * 100.0)), ("total", &widgets::human_bytes(total))])
@@ -717,39 +805,39 @@ impl LauncherUi {
                     } else {
                         format!("{} {}{pct}", tl!("Downloading"), amount(done, total))
                     };
-                    (f, caption, rgb(entry.app.color))
+                    (f, caption, t.accent)
                 }
                 JobPhase::Reconnecting { done, total } => {
                     let f = (total > 0).then(|| done as f32 / total as f32);
                     (f, if short { tl!("Reconnecting…").into() } else { format!("{} {}", tl!("Reconnecting…"), amount(done, total)) }, t.warn)
                 }
-                JobPhase::Verifying => (None, tl!("Verifying checksum…").into(), rgb(entry.app.color)),
-                JobPhase::Waiting => (None, tl!("Waiting for another app…").into(), rgb(entry.app.color)),
-                JobPhase::Installing => (None, tl!("Installing…").into(), rgb(entry.app.color)),
-                JobPhase::Removing => (None, tl!("Removing…").into(), rgb(entry.app.color)),
+                JobPhase::Verifying => (None, tl!("Verifying checksum…").into(), t.accent),
+                JobPhase::Waiting => (None, tl!("Waiting for another app…").into(), t.accent),
+                JobPhase::Installing => (None, tl!("Installing…").into(), t.accent),
+                JobPhase::Removing => (None, tl!("Removing…").into(), t.accent),
             };
-            let downloading = matches!(phase, JobPhase::Downloading { .. } | JobPhase::Reconnecting { .. });
             // A job waiting for the installer hasn't started it yet, so it can still be called off.
             let waiting = phase == JobPhase::Waiting;
-            // Waiting has one square button beside the bar, like the menu otherwise.
-            widgets::progress(ui, fraction, &caption, color, if downloading { bar_w } else { main_w });
-            if downloading && widgets::glyph_button(ui, widgets::Glyph::Pause, tl!("Pause download")).clicked() {
+            widgets::progress(ui, fraction, &caption, color, bar_w);
+            if downloading && widgets::icon_button(ui, crate::glyphs::Icon::Pause, tl!("Pause download"), ACTION_ICON).clicked() {
                 self.send(Command::Pause { app: id.clone() });
             }
             if (downloading || waiting)
-                && widgets::glyph_button(ui, widgets::Glyph::Close, if waiting { tl!("Cancel") } else { tl!("Cancel download") }).clicked()
+                && widgets::icon_button(ui, crate::glyphs::Icon::Close, if waiting { tl!("Cancel") } else { tl!("Cancel download") }, ACTION_ICON)
+                    .clicked()
             {
                 self.send(Command::Cancel { app: id });
             }
+            self.menu(ui, entry, status);
             return;
         }
         if let Some(p) = entry.paused
             && self.caps.manage_apps
         {
             let pct = if p.total > 0 { format!(" · {:.0}%", p.done as f32 / p.total as f32 * 100.0) } else { String::new() };
-            // Resume, then discard and the menu (two squares).
-            let resume_w = (width - 2.0 * (theme::CONTROL_H + gap)).max(90.0);
-            // Narrow (the table): just tl!("Resume"); the tooltip says how far it got.
+            // Resume yields space to both Discard and the keyboard-reachable More menu.
+            let resume_w = (width - 2.0 * (ACTION_ICON + gap)).max(90.0);
+            // Narrow: just tl!("Resume"); the tooltip says how far it got.
             let label = match resume_w {
                 w if w < 150.0 => tl!("Resume").to_string(),
                 w if w < 220.0 => format!("{}{pct}", tl!("Resume")),
@@ -764,7 +852,7 @@ impl LauncherUi {
             if resp.on_hover_text(tip).clicked() {
                 self.send(Command::Install { app: id.clone() });
             }
-            if widgets::glyph_button(ui, widgets::Glyph::Close, tl!("Discard download")).clicked() {
+            if widgets::icon_button(ui, crate::glyphs::Icon::Close, tl!("Discard download"), ACTION_ICON).clicked() {
                 self.send(Command::Cancel { app: id.clone() });
             }
             self.menu(ui, entry, status);
@@ -815,11 +903,17 @@ impl LauncherUi {
         self.menu(ui, entry, status);
     }
 
+    /// The … button and its menu.
     fn menu(&mut self, ui: &mut Ui, entry: &AppEntry, status: &AppStatus) {
+        widgets::more_menu(ui, |ui| self.menu_items(ui, entry, status));
+    }
+
+    /// An app's menu: from the … button or a right-click on its card.
+    fn menu_items(&mut self, ui: &mut Ui, entry: &AppEntry, status: &AppStatus) {
         let id = entry.app.id.to_string();
         let manage = self.caps.manage_apps;
         let reveal = self.caps.reveal_label;
-        widgets::more_menu(ui, |ui| {
+        {
             if entry.release().is_some() && ui.button(tl!("Release notes")).clicked() {
                 self.dialog = Some(Dialog::Notes(id.clone()));
                 ui.close();
@@ -843,11 +937,6 @@ impl LauncherUi {
                 }
                 if *status == AppStatus::UpToDate && ui.button(tl!("Reinstall")).clicked() {
                     self.send(Command::Install { app: id.clone() });
-                    ui.close();
-                }
-                ui.separator();
-                if ui.button(RichText::new(tl!("Uninstall…")).color(Tokens::get(ui.ctx()).bad)).clicked() {
-                    self.dialog = Some(Dialog::ConfirmUninstall(id.clone()));
                     ui.close();
                 }
             }
@@ -883,25 +972,26 @@ impl LauncherUi {
             }
             link(ui, tl!("GitHub repository"), entry.app.repo_url());
             link(ui, tl!("All releases"), entry.app.releases_url());
-        });
-    }
-}
-
-fn sort_label(k: SortKey) -> &'static str {
-    match k {
-        SortKey::Suite => tl!("Suite order"),
-        SortKey::Name => tl!("Name"),
-        SortKey::InspiredBy => tl!("Kind"),
-        SortKey::Status => tl!("Status"),
-        SortKey::Installed => tl!("Installed version"),
-        SortKey::Latest => tl!("Latest version"),
-        SortKey::Released => tl!("Newest release"),
+            // DS Menu: the destructive action last, in status-danger.
+            if manage && status.is_installed() {
+                ui.separator();
+                if ui.button(RichText::new(tl!("Uninstall…")).color(Tokens::get(ui.ctx()).bad)).clicked() {
+                    self.dialog = Some(Dialog::ConfirmUninstall(id.clone()));
+                    ui.close();
+                }
+            }
+        }
     }
 }
 
 /// "0.4.1 installed → 0.5.0 released · Oct 8, 2026" and friends.
 fn version_line(e: &AppEntry, status: &AppStatus) -> String {
-    let released = e.release().and_then(|r| r.published_at).map(|at| format!(" · {}", date_text(at))).unwrap_or_default();
+    version_line_dated(e, status, true)
+}
+
+/// [`version_line`], with or without the release date.
+fn version_line_dated(e: &AppEntry, status: &AppStatus, dated: bool) -> String {
+    let released = e.release().and_then(|r| r.published_at).filter(|_| dated).map(|at| format!(" · {}", date_text(at))).unwrap_or_default();
     match (status, e.installed_label(), e.latest_label()) {
         (AppStatus::UpdateAvailable, Some(i), Some(l)) => {
             format!("{}{released}", fmt(tl!("{version} installed → {latest} released"), &[("version", i.as_str()), ("latest", l.as_str())]))

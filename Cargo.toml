@@ -1,3 +1,4 @@
+# ADDED-LINE-RATIONALE acc0be926d937f78:1: Supports `workspace.lints.rust` while preserving the nearby constraint: `snap_layouts.rs`) can `#![allow(unsafe_code)]`. No other code may.
 [workspace]
 resolver = "3"
 members = ["crates/*", "apps/*", "xtask"]
@@ -10,7 +11,9 @@ rust-version = "1.90"
 repository = "https://github.com/redrob-labs/redrob-launcher"
 
 [workspace.lints.rust]
-unsafe_code = "forbid"
+# `deny`, not `forbid`, so the one module that needs Win32 calls (the launcher's
+# `snap_layouts.rs`) can `#![allow(unsafe_code)]`. No other code may.
+unsafe_code = "deny"
 
 [workspace.lints.clippy]
 dbg_macro = "warn"

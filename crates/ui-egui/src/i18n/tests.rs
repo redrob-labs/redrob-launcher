@@ -1,3 +1,48 @@
+// ADDED-LINE-RATIONALE 235774add9df67c1:1: Keeps `include_str / glyphs / rs` in `complete_catalogs_cover_every_ui_literal`'s API-defined order so positional values retain their intended meaning.
+// ADDED-LINE-RATIONALE 70520e80ba77a2fc:1: Keeps `include_str / shell / rs` in `complete_catalogs_cover_every_ui_literal`'s API-defined order so positional values retain their intended meaning.
+// ADDED-LINE-RATIONALE ee1880eba322e7c9:1: Makes `korean_counts_dates_and_messages_work` fail visibly when `assert_eq / message / Lang` violates the behavior this path promises.
+// ADDED-LINE-RATIONALE 7119b00a25aff2f1:13: Supports `korean_counts_dates_and_messages_work` while preserving the nearby constraint: claiming Hangul and shadowing Wanted Sans.
+// ADDED-LINE-RATIONALE 65d216217f350233:1: Supports `bundled_font_cmaps_enforce_latin_then_korean_fallback` while preserving the nearby constraint: [test].
+// ADDED-LINE-RATIONALE a874ab102154c106:1: Gives `bundled_font_cmaps_enforce_latin_then_korean_fallback` direct access to `skrifa / FontRef / MetadataProvider` instead of relying on an implicit platform facility.
+// ADDED-LINE-RATIONALE 3a0f8b6451852b37:1: Freezes `HANGUL_RANGES` for `bundled_font_cmaps_enforce_latin_then_korean_fallback` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 6fa7cff80a4af8cc:1: Applies `bundled_font_cmaps_enforce_latin_then_korean_fallback` consistently to every `bytes / in` item rather than handling only the first match.
+// ADDED-LINE-RATIONALE 0a2563a1b2082b0c:1: Keeps `Pretendard / Regular / crate` in `bundled_font_cmaps_enforce_latin_then_korean_fallback`'s API-defined order so positional values retain their intended meaning.
+// ADDED-LINE-RATIONALE 8b3b3c70b8f364f8:1: Keeps `Pretendard / Medium / crate` in `bundled_font_cmaps_enforce_latin_then_korean_fallback`'s API-defined order so positional values retain their intended meaning.
+// ADDED-LINE-RATIONALE d70171e591cd9f64:1: Keeps `Pretendard / SemiBold / crate` in `bundled_font_cmaps_enforce_latin_then_korean_fallback`'s API-defined order so positional values retain their intended meaning.
+// ADDED-LINE-RATIONALE 71ca729d801120e2:1: Makes `Pretendard / SemiBold / crate` an explicit part of `bundled_font_cmaps_enforce_latin_then_korean_fallback` because the regression suite can pin the refreshed behavior before release.
+// ADDED-LINE-RATIONALE 4b9e70b7614e0c15:1: Freezes `font` for `bundled_font_cmaps_enforce_latin_then_korean_fallback` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 558e81bd4364cc4c:1: Makes `bundled_font_cmaps_enforce_latin_then_korean_fallback` fail visibly when `assert / font / is_ok` violates the behavior this path promises.
+// ADDED-LINE-RATIONALE e24da33dec04ec56:1: Freezes `Ok` for `bundled_font_cmaps_enforce_latin_then_korean_fallback` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 6c7b40a391bca49b:1: Freezes `charmap` for `bundled_font_cmaps_enforce_latin_then_korean_fallback` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 56d070915b5dd9df:1: Applies `bundled_font_cmaps_enforce_latin_then_korean_fallback` consistently to every `character / in / A` item rather than handling only the first match.
+// ADDED-LINE-RATIONALE f2acd934f633b1c8:1: Makes `bundled_font_cmaps_enforce_latin_then_korean_fallback` fail visibly when `assert / charmap / map` violates the behavior this path promises.
+// ADDED-LINE-RATIONALE 90f4560386d21a5f:15: Bounds the `bundled_font_cmaps_enforce_latin_then_korean_fallback` implementation here so `assert / charmap / map` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 1a1f0670a8589741:1: Applies `bundled_font_cmaps_enforce_latin_then_korean_fallback` consistently to every `start / end / in` item rather than handling only the first match.
+// ADDED-LINE-RATIONALE 7c3a44d680669848:1: Freezes `for` for `bundled_font_cmaps_enforce_latin_then_korean_fallback` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE f8dbbba8d0ff80b2:1: Makes `bundled_font_cmaps_enforce_latin_then_korean_fallback` fail visibly when `assert / charmap / map` violates the behavior this path promises.
+// ADDED-LINE-RATIONALE dbc407117eb4b95f:10: Bounds the `bundled_font_cmaps_enforce_latin_then_korean_fallback` implementation here so `assert / charmap / map` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 90f4560386d21a5f:16: Bounds the `bundled_font_cmaps_enforce_latin_then_korean_fallback` implementation here so `assert / charmap / map` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE f068b19edecdeb5f:16: Bounds the `bundled_font_cmaps_enforce_latin_then_korean_fallback` implementation here so `wanted_sans / FontRef / from_index` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 2e8a0611003c997c:1: Freezes `wanted_sans` for `bundled_font_cmaps_enforce_latin_then_korean_fallback` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 46fafd739f34a1c3:1: Makes `bundled_font_cmaps_enforce_latin_then_korean_fallback` fail visibly when `assert / wanted_sans / is_ok` violates the behavior this path promises.
+// ADDED-LINE-RATIONALE 08aa0c6784619671:1: Freezes `Ok` for `bundled_font_cmaps_enforce_latin_then_korean_fallback` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE ed8e26aee1ad57a5:1: Freezes `charmap` for `bundled_font_cmaps_enforce_latin_then_korean_fallback` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE f17a68d34eb25c4a:1: Supports `bundled_font_cmaps_enforce_latin_then_korean_fallback` while preserving the nearby constraint: Every modern precomposed Hangul syllable is bundled, not merely today's catalog glyphs.
+// ADDED-LINE-RATIONALE db2b7f72c90b6286:1: Makes `bundled_font_cmaps_enforce_latin_then_korean_fallback` fail visibly when `assert / charmap / map` violates the behavior this path promises.
+// ADDED-LINE-RATIONALE f068b19edecdeb5f:17: Bounds the `bundled_font_cmaps_enforce_latin_then_korean_fallback` implementation here so `assert / charmap / map` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 7f2364fdd9b92c5f:16: Bounds the `bundled_font_cmaps_enforce_latin_then_korean_fallback` implementation here so `assert / charmap / map` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE dda377c114d2d47b:1: Supports `language_labels_come_from_the_registry` while preserving the nearby constraint: `cfg(test)` pins the system language to English.
+// ADDED-LINE-RATIONALE 18e288166bbd22ce:1: Makes `language_labels_come_from_the_registry` fail visibly when `assert_eq / Settings / language_label` violates the behavior this path promises.
+// ADDED-LINE-RATIONALE 7f2364fdd9b92c5f:18: Bounds the `language_labels_come_from_the_registry` implementation here so `assert_eq / Settings / language_label` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 7119b00a25aff2f1:16: Declares the `test` contract on `language_labels_come_from_the_registry` so the compiler or runner applies it before execution.
+// ADDED-LINE-RATIONALE e7367c19e772be38:1: Supports `the_setup_language_only_pins_when_it_differs_from_the_system` while preserving the nearby constraint: [test].
+// ADDED-LINE-RATIONALE c2b3749b229ba891:2: Gives `the_setup_language_only_pins_when_it_differs_from_the_system` direct access to `crate / settings / Settings` instead of relying on an implicit platform facility.
+// ADDED-LINE-RATIONALE 0434c1c468b1524f:1: Supports `the_setup_language_only_pins_when_it_differs_from_the_system` while preserving the nearby constraint: Accepting the setup's preselection (the system language) keeps following the system.
+// ADDED-LINE-RATIONALE 0b056babb17ad399:1: Makes `the_setup_language_only_pins_when_it_differs_from_the_system` fail visibly when `assert_eq / Settings / language_from_installer` violates the behavior this path promises.
+// ADDED-LINE-RATIONALE 9b8d8b28ed1f0435:1: Supports `the_setup_language_only_pins_when_it_differs_from_the_system` while preserving the nearby constraint: A different pick is the person's choice and is kept.
+// ADDED-LINE-RATIONALE d10860fcbc75858c:1: Makes `the_setup_language_only_pins_when_it_differs_from_the_system` fail visibly when `assert_eq / Settings / language_from_installer` violates the behavior this path promises.
+// ADDED-LINE-RATIONALE ed8f070128be3b4d:1: Supports `the_setup_language_only_pins_when_it_differs_from_the_system` while preserving the nearby constraint: Nothing usable recorded: follow the system.
+// ADDED-LINE-RATIONALE cb7ead6a095a03fc:1: Makes `the_setup_language_only_pins_when_it_differs_from_the_system` fail visibly when `assert_eq / Settings / language_from_installer` violates the behavior this path promises.
 //! Tests for the i18n catalogs (format, duplicates, placeholders, plural forms, coverage) and the
 //! lookups.
 
@@ -127,10 +172,12 @@ fn complete_catalogs_cover_every_ui_literal() {
         include_str!("../channels.rs"),
         include_str!("../dialogs.rs"),
         include_str!("../engine.rs"),
+        include_str!("../glyphs.rs"),
         include_str!("../model.rs"),
         include_str!("../models.rs"),
         include_str!("../notes.rs"),
         include_str!("../settings.rs"),
+        include_str!("../shell.rs"),
         include_str!("../views.rs"),
         include_str!("../widgets.rs"),
         // The desktop shell's tray menu and tooltip.
@@ -227,8 +274,45 @@ fn korean_counts_dates_and_messages_work() {
     }
     assert_eq!(super::tr_ctx(Lang::KO, "month", "Mar"), "3월");
     assert_eq!(tr(Lang::KO, "{month} {day}, {year}"), "{year}년 {month} {day}일");
-    assert_eq!(message(Lang::KO, "Redrob Canvas updated to 0.5.0"), "Redrob Canvas을(를) 0.5.0(으)로 업데이트했어요");
+    assert_eq!(message(Lang::KO, "Redrob Canvas updated to 0.5.0"), "Redrob Canvas 앱을 0.5.0 버전으로 업데이트했어요");
     assert_eq!(tr(Lang::KO, "Untranslated diagnostic"), "Untranslated diagnostic");
+}
+
+/// The concrete cmap boundary is what makes egui's family order select Pretendard for Latin and
+/// Wanted Sans for Korean. Testing only the assembled families would not catch the first face
+/// claiming Hangul and shadowing Wanted Sans.
+#[test]
+fn bundled_font_cmaps_enforce_latin_then_korean_fallback() {
+    use skrifa::{FontRef, MetadataProvider};
+
+    const HANGUL_RANGES: [(u32, u32); 3] = [(0x1100, 0x11ff), (0x3130, 0x318f), (0xac00, 0xd7a3)];
+    for (name, bytes) in [
+        ("Pretendard Regular", crate::theme::PRETENDARD_REGULAR),
+        ("Pretendard Medium", crate::theme::PRETENDARD_MEDIUM),
+        ("Pretendard SemiBold", crate::theme::PRETENDARD_SEMIBOLD),
+    ] {
+        let font = FontRef::from_index(bytes, 0);
+        assert!(font.is_ok(), "could not parse {name}");
+        let Ok(font) = font else { continue };
+        let charmap = font.charmap();
+        for character in ['A', 'é', '…'] {
+            assert!(charmap.map(character).is_some(), "{name} does not claim Latin {character:?}");
+        }
+        for (start, end) in HANGUL_RANGES {
+            for value in start..=end {
+                assert!(charmap.map(value).is_none(), "{name} unexpectedly claims U+{value:04X}");
+            }
+        }
+    }
+
+    let wanted_sans = FontRef::from_index(crate::theme::KOREAN_FONT, 0);
+    assert!(wanted_sans.is_ok(), "could not parse Wanted Sans");
+    let Ok(wanted_sans) = wanted_sans else { return };
+    let charmap = wanted_sans.charmap();
+    // Every modern precomposed Hangul syllable is bundled, not merely today's catalog glyphs.
+    for value in 0xac00..=0xd7a3 {
+        assert!(charmap.map(value).is_some(), "Wanted Sans is missing U+{value:04X}");
+    }
 }
 
 /// The bundled fonts draw the whole Korean catalog in every UI family: Hangul never depends on
@@ -269,8 +353,23 @@ fn language_labels_come_from_the_registry() {
     for lang in Lang::all() {
         assert_eq!(Settings::language_label(lang.code()), lang.name());
     }
-    assert_eq!(Settings::language_label(Settings::LANGUAGE_AUTO), "Auto");
-    assert_eq!(Settings::language_label("xx"), "Auto");
+    // `cfg(test)` pins the system language to English.
+    assert_eq!(Settings::language_label(Settings::LANGUAGE_AUTO), "Match system (English)");
+    assert_eq!(Settings::language_label("xx"), "Match system (English)");
+}
+
+#[test]
+fn the_setup_language_only_pins_when_it_differs_from_the_system() {
+    use crate::settings::Settings;
+    // Accepting the setup's preselection (the system language) keeps following the system.
+    assert_eq!(Settings::language_from_installer("ko", Lang::KO), Settings::LANGUAGE_AUTO);
+    assert_eq!(Settings::language_from_installer("EN", Lang::EN), Settings::LANGUAGE_AUTO);
+    // A different pick is the person's choice and is kept.
+    assert_eq!(Settings::language_from_installer("ko", Lang::EN), "ko");
+    assert_eq!(Settings::language_from_installer("en", Lang::KO), "en");
+    // Nothing usable recorded: follow the system.
+    assert_eq!(Settings::language_from_installer("", Lang::KO), Settings::LANGUAGE_AUTO);
+    assert_eq!(Settings::language_from_installer("xx", Lang::EN), Settings::LANGUAGE_AUTO);
 }
 
 // The parser.
