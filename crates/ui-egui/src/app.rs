@@ -161,6 +161,10 @@ pub(crate) fn effective_lang(pref: &str) -> crate::i18n::Lang {
 const RESCAN_EVERY: i64 = 5 * 60;
 /// Coming back to the window re-checks, but not more often than this.
 const RESCAN_ON_FOCUS_AFTER: i64 = 30;
+/// The main area's left padding. The sidebar card already keeps an 8 px gap to its right
+/// ([`crate::shell::INSET`]), so 16 here puts the content 24 px from the card's edge: the same as
+/// the 24 px from the content's right end to the window's edge (scroll gap + page padding).
+const PAGE_LEFT: i8 = (crate::widgets::PAGE_SCROLL_EDGE + crate::widgets::PAGE_SCROLL_PAD - crate::shell::INSET) as i8;
 
 impl LauncherUi {
     pub fn new(ctx: &egui::Context, backend: Box<dyn Backend>, settings: Settings) -> Self {
@@ -677,7 +681,7 @@ impl LauncherUi {
         // The Apps page has no top bar: its actions (Update all, Check for updates) are in its filter row.
         if self.page != Page::Apps {
             egui::Panel::top("page-top")
-                .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin::symmetric(24, 0)))
+                .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin { left: PAGE_LEFT, right: 24, top: 0, bottom: 0 }))
                 .exact_size(crate::shell::PAGE_TOP_H)
                 .resizable(false)
                 .show(ui, |ui| self.page_top_bar(ui));
@@ -689,7 +693,7 @@ impl LauncherUi {
         // (see below), so the cards scroll right up to the title bar's hairline.
         let top = if self.page == Page::Apps { 0 } else { 20 };
         egui::CentralPanel::default()
-            .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin { left: 24, right: edge, top, bottom: 0 }))
+            .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin { left: PAGE_LEFT, right: edge, top, bottom: 0 }))
             .show(ui, |ui| match self.page {
                 Page::Models => self.models_page(ui),
                 Page::Engine | Page::Account | Page::Settings => {
