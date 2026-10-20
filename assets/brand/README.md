@@ -6,7 +6,7 @@ from these and nothing else.
 
 | Files | From | Used for |
 |---|---|---|
-| `redrob-icon.svg` | `@redrob-labs/ui@1.8.0` `dist/brand/app-icons/redrob/` | The launcher's app icon and tray icon (the Redrob group icon, 2026, `icon` variant) |
+| `redrob-icon-web.svg` | `@redrob-labs/ui@1.8.0` `dist/brand/app-icons/redrob/` | The launcher's app icon and tray icon (the Redrob group icon, 2026, `icon-web` variant: superellipse, transparent corners) |
 | `redrob-<app>-icon-web.svg` | `@redrob-labs/ui@1.8.0` `dist/brand/app-icons/redrob-<app>/` | Each app's icon in the launcher (2026, `icon-web` variant: superellipse, transparent corners) |
 | `symbol-white-*.png` | design system `Favicons/` | The symbol alone on transparent, for a dark ground that is not Redrob Blue |
 | `redrob-logo-primary.png`, `redrob-logo-primary-white.png` | design system `Logos/` | The header lockup: dark wordmark on light grounds, white wordmark on dark grounds |
@@ -24,7 +24,7 @@ The Film, Shape, CAD and Canvas icons are marked "not yet" approved in the 1.8.0
 
 | Source | sha256 (`manifest.json`) |
 |---|---|
-| `redrob-icon.svg` | `572e331fe3175438c723440fed0e555ce4e671f1d13b11dcd1041e13f924ec92` |
+| `redrob-icon-web.svg` | `33a664b1f70f44006f19f684026728b003db5e72c6cb40b732cb43d9da229589` |
 | `redrob-browser-icon-web.svg` | `1ce12193746cdeb767c058300dc9f3e7756ea187f53a8f2671480e620c91db8e` |
 | `redrob-cad-icon-web.svg` | `664ff7cd83c8e1667dd7c41a7542a061c7d4e8d5196b676ad6f7072d598a85a2` |
 | `redrob-canvas-icon-web.svg` | `1c0878b003927a459a365db32ba6e4c30959eb822d62335590f36ddbb83f07e2` |

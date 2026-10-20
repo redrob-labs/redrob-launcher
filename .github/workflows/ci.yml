@@ -27,6 +27,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      # Seconds, and runs for version-only PRs too: a version bump is exactly when Cargo.lock goes
+      # stale, and release.yml builds with --locked (v0.9.0 failed there).
+      - name: Cargo.lock is current
+        run: cargo metadata --locked --format-version 1 >/dev/null
       - id: diff
         env:
           EVENT: ${{ github.event_name }}
@@ -43,7 +47,9 @@ jobs:
   test:
     name: test (${{ matrix.os }})
     needs: changes
-    if: needs.changes.outputs.heavy == 'true'
+    # A failed `changes` (stale Cargo.lock) runs this job too, so the required check goes red
+    # instead of being skipped.
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.heavy == 'true') }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
