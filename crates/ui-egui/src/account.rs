@@ -29,9 +29,7 @@ impl LauncherUi {
             (_, ConnectState::Starting | ConnectState::Waiting(_), _) => HeaderAccount::Busy,
             (_, _, LoginState::SigningIn) => HeaderAccount::BrowserSignIn,
             (Some(w), _, _) => HeaderAccount::SignedIn(w.account_name),
-            (None, _, LoginState::SignedIn(name)) => {
-                HeaderAccount::SignedIn(if name.is_empty() { tl!("Redrob account").to_string() } else { name })
-            }
+            (None, _, LoginState::SignedIn(name)) => HeaderAccount::SignedIn(if name.is_empty() { tl!("Redrob account").to_string() } else { name }),
             (None, _, _) => HeaderAccount::SignedOut,
         }
     }

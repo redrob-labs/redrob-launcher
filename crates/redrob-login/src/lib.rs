@@ -176,7 +176,8 @@ impl Http {
     }
 
     fn post_form(&self, url: &str, form: &[(&str, &str)]) -> Result<(u16, Value)> {
-        let resp = self.0.post(url).header("accept", "application/json").send_form(form.iter().copied()).map_err(|e| Error::Network(e.to_string()))?;
+        let resp =
+            self.0.post(url).header("accept", "application/json").send_form(form.iter().copied()).map_err(|e| Error::Network(e.to_string()))?;
         read(resp)
     }
 }
@@ -420,7 +421,8 @@ impl Session {
                 log::warn!("couldn't revoke the refresh token: {e}");
             }
             if let Some(id) = &t.id_token
-                && let Ok(url) = url::Url::parse_with_params(&endpoints.end_session, [("id_token_hint", id.as_str()), ("client_id", self.client_id.as_str())])
+                && let Ok(url) =
+                    url::Url::parse_with_params(&endpoints.end_session, [("id_token_hint", id.as_str()), ("client_id", self.client_id.as_str())])
                 && let Err(e) = self.http.get(url.as_str(), None)
             {
                 log::warn!("couldn't end the redrob-auth sign-in: {e}");
@@ -595,17 +597,18 @@ pub fn login_with_device_code(client_id: &str, on_code: impl FnOnce(&DeviceCode)
         if Instant::now() >= deadline {
             return Err(Error::Expired);
         }
-        let (status, b) =
-            match http.post_form(&endpoints.token, &[("grant_type", DEVICE_GRANT), ("device_code", device_code.as_str()), ("client_id", client_id)]) {
-                Ok(answer) => answer,
-                Err(e) => {
-                    unreachable += 1;
-                    if unreachable >= MAX_UNREACHABLE {
-                        return Err(e);
-                    }
-                    continue;
+        let (status, b) = match http
+            .post_form(&endpoints.token, &[("grant_type", DEVICE_GRANT), ("device_code", device_code.as_str()), ("client_id", client_id)])
+        {
+            Ok(answer) => answer,
+            Err(e) => {
+                unreachable += 1;
+                if unreachable >= MAX_UNREACHABLE {
+                    return Err(e);
                 }
-            };
+                continue;
+            }
+        };
         unreachable = 0;
         if ok(status) {
             let tokens = Tokens::from_answer(&b).ok_or_else(|| Error::Server("no access token in the answer".into()))?;
