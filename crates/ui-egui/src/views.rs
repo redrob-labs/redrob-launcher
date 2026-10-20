@@ -268,8 +268,6 @@ impl LauncherUi {
                                 ui.ctx().open_url(egui::OpenUrl::new_tab(url));
                             }
                         }
-                        ui.add_space(8.0);
-                        widgets::hud_link(ui, tl!("What's new"), &r.html_url);
                     });
                 });
             });

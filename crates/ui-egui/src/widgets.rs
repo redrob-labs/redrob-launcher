@@ -136,17 +136,13 @@ pub fn alert_frame(t: &Tokens) -> egui::Frame {
         .inner_margin(egui::Margin::symmetric(16, 12))
 }
 
-/// A one-line, neutral notice bar (the launcher's own update): the page's base ground (white in
-/// light) with a 1 px `border-strong` edge, radius 8, padding 12 / 6, so with a 32 px control the
-/// bar is 44 px tall. Neutral rather than brand-tinted, so it sits quietly above the hero.
+/// A one-line, neutral notice bar (the launcher's own update): the filter cells' sunken grey
+/// track with no edge, radius 8, padding 12 / 6, so with a 32 px control the bar is 44 px tall.
+/// Neutral rather than brand-tinted, so it sits quietly above the hero.
 ///
 /// * `t` - the active appearance's tokens.
 pub fn notice_bar_frame(t: &Tokens) -> egui::Frame {
-    egui::Frame::new()
-        .fill(t.bg)
-        .stroke(Stroke::new(1.0, t.line_strong))
-        .corner_radius(CornerRadius::same(theme::radius::MD))
-        .inner_margin(egui::Margin::symmetric(12, 6))
+    egui::Frame::new().fill(t.sunken).corner_radius(CornerRadius::same(theme::radius::MD)).inner_margin(egui::Margin::symmetric(12, 6))
 }
 
 /// How far a page's scroll bar sits from the window's right edge: clear of the 5 px resize band of
