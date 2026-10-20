@@ -47,8 +47,8 @@ Redrob apps, a language page, an `.exe` that can carry the Redrob icon and build
 
 ## Build
 
-Visual Studio with the C++ toolset (found with `vswhere`; the x86 and ARM64 compilers for those targets) and
-Python 3:
+Visual Studio with the C++ toolset (found with `vswhere`; the x86 and ARM64 compilers for those targets),
+Python 3, and fontTools (`py -3 -m pip install fonttools`):
 
 ```
 py -3 installer\windows\build.py --out <dir> --arch x64 --payload redrob-launcher-X.Y.Z-windows-x64-portable.zip --version X.Y.Z
@@ -62,24 +62,30 @@ action through Azure Artifact Signing).
 ## Look
 
 The window follows Windows' light or dark app theme and is two columns: a brand panel on the left, drawn in
-Direct2D (Redrob Blue radial gradient `#2E7EFF` -> `#2B52FF` -> `#2746EE`, a white glint top-left and a
+Direct2D (Redrob Blue radial gradient `#2E7EFF` → `#2B52FF` → `#2746EE`, a white glint top-left and a
 `#8B82FF` glint bottom-right) with the design system's white symbol, `assets/brand/symbol-white-192.png`,
 embedded as is; and a left-aligned content column with the design system's button, checkbox, progress bar
 and step dots. No new art file is committed for it.
 
-Type is Pretendard SemiBold and Regular from `assets/fonts`, cut by `build.py` (fontTools) to the characters
-the window draws (about 68 KB each). Without fontTools the build embeds no font and the window uses Segoe
-UI Variable.
+Type is a deterministic, private DirectWrite collection built from committed `assets/fonts`: Pretendard
+SemiBold/Regular covers Latin and shared punctuation, while Wanted Sans covers every Hangul range. `build.py`
+uses fontTools to subset only characters found in UI string literals, verifies each requested cmap entry, and
+fails the build if a source, tool, glyph, or resource is missing. `--allow-system-fonts` is an explicit
+developer-only escape hatch and is never used by packaging or release workflows.
 
-`res/background.png`, `res/background.html`, `res/lockup.png` and `build-art.py` belong to the previous
-dark centred window; this build no longer embeds them. `assets/app-icon/redrob-launcher.ico` comes from
-`packaging/brand-assets.sh`.
+The painted window exposes a real UI Automation fragment tree. Titles are live status text; the stepper and
+body are named text; buttons implement Invoke; options implement Toggle and checked state; progress is a
+read-only RangeValue; and fragment bounds/focus/actions use the same rectangles and stage machine as drawing
+and pointer/keyboard input. This avoids hidden or off-screen accessibility duplicates.
 
-`--render-stages <dir>` draws every screen in both languages; add `--theme light` or `--theme dark` to pick
-the theme (otherwise Windows' own).
+`--render-stages <dir>` creates the destination and draws every install/uninstall screen in both languages;
+add `--theme light` or `--theme dark` to pick the theme (otherwise Windows' own). PR CI compiles x86 and
+x64 demo binaries with warnings as errors, renders and validates the PNG matrix, and walks the live UIA
+structure and patterns. ARM64 CI retains its native silent install/uninstall checks, including remembered
+shortcut state.
 
 ## Verify
 
-On a Windows machine: install from the setup, check the Start-menu shortcut, the Settings > Apps entry and
+On a Windows machine: install from the setup, check the Start menu shortcut, the Settings > Apps entry and
 the signed exe; run the setup again over the install (an update); try it while the launcher runs (refused with
 Retry); uninstall. Both languages: `--lang ko` and `--lang en`.

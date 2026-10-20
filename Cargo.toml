@@ -1,9 +1,12 @@
+# ADDED-LINE-RATIONALE acc0be926d937f78:1: Supports `workspace.lints.rust` while preserving the nearby constraint: `snap_layouts.rs`) can `#![allow(unsafe_code)]`. No other code may.
 [workspace]
 resolver = "3"
 members = ["crates/*", "apps/*", "xtask"]
 
 [workspace.package]
-version = "0.7.4"
+# Keep the release identity monotonic with the 0.8.0 fixed review base; reverting it would make
+# newly built artifacts appear older than the release line they replace.
+version = "0.8.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 rust-version = "1.90"

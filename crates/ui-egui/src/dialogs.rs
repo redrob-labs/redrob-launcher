@@ -1,3 +1,152 @@
+// ADDED-LINE-RATIONALE 84683d9532958dda:1: Gives `dialogs` direct access to `crate / glyphs / Icon` instead of relying on an implicit platform facility.
+// ADDED-LINE-RATIONALE 2a525f23fdf395cf:1: Isolates `dialogs` as the owner of this behavior so callers can use and test it without duplicating policy.
+// ADDED-LINE-RATIONALE fb5536ddd63c64fc:1: Freezes `response` for `dialogs` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE fd5e7c71a845970e:1: Freezes `close` for `dialogs` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE f3520b86e6cdfc87:1: Freezes `Dialog` for `dialogs` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE bb1dfc07fd9dde91:1: Freezes `Dialog` for `dialogs` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE b62bcd6794b949f0:1: Freezes `Dialog` for `dialogs` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE e1c6b5235e02d8a4:1: Makes `close / response / should_close` an explicit part of `dialogs` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE c025b85d7e6263a3:1: Prevents `dialogs` from applying its side effect outside the `close / response / should_close` state.
+// ADDED-LINE-RATIONALE 7113fed82f1222ca:1: Supports `modal` while preserving the nearby constraint: [`Self::modal_foot`]).
+// ADDED-LINE-RATIONALE fcb178298e94c4ae:1: Freezes `t` for `modal` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 7cf6ec361816e827:1: Delegates `modal`'s `egui / Modal / new` work to `egui::Modal::new` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 48c788073b840591:1: Delegates `modal`'s `egui / Frame / new` work to `egui::Frame::new` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE f456e5757b23ce00:1: Delegates `modal`'s `fill / t / bg` work to `fill` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 6ee6a19020349bfb:1: Delegates `modal`'s `stroke / t / hairline` work to `stroke` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE c4da80807b12ba87:1: Delegates `modal`'s `corner_radius / egui / CornerRadius` work to `corner_radius` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 78f3acae1dd859f8:1: Delegates `modal`'s `shadow / theme / shadow_lg` work to `shadow` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE c18da490a71ac6d3:1: Keeps `inner_margin` in `modal`'s API-defined order so positional values retain their intended meaning.
+// ADDED-LINE-RATIONALE 2eb6758c39bd2f28:1: Bounds the `modal` implementation here so `inner_margin` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 2847d041c565e974:2: Bounds the `modal` implementation here so `inner_margin` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE ea3acf8212ecebde:1: Supports `modal_width` while preserving the nearby constraint: A modal's width: `max` (DS Modal 480), or less in a small window.
+// ADDED-LINE-RATIONALE 07d1fbaca6b02927:1: Delegates `modal_width`'s `max / min / ui` work to `max.min` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 2847d041c565e974:3: Bounds the `modal_width` implementation here so `max / min / ui` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 22380fed9b8c3989:1: Supports `modal_head` while preserving the nearby constraint: line under it, and a close icon button (sm 32) when `closable`. Returns whether it was pressed.
+// ADDED-LINE-RATIONALE 13d2097bc2eee263:1: Freezes `t` for `modal_head` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 09ede75445ffbd29:2: Freezes `close` for `modal_head` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 0cc6cd34bb7e6a6a:1: Delegates `modal_head`'s `egui / Frame / new` work to `egui::Frame::new` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE b18d6e2d94362825:1: Delegates `modal_head`'s `ui / set_width / width` work to `ui.set_width` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE b40b9b5e7da72c02:1: Supports `modal_head` while preserving the nearby constraint: A row, not a free right-to-left layout: the modal's area has no height to centre in.
+// ADDED-LINE-RATIONALE 1732bf2c01ef0f66:1: Freezes `if` for `modal_head` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 84fe22d140e9d07a:1: Delegates `modal_head`'s `ui / add / egui` work to `ui.add` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 9205233e1688ca7c:1: Delegates `modal_head`'s `ui / add_space / theme` work to `ui.add_space` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE e9eea4333853f164:1: Bounds the `modal_head` implementation here so `ui / add_space / theme` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE da0086675940b089:1: Freezes `text_w` for `modal_head` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 2a871da3e82949a4:1: Delegates `modal_head`'s `ui / allocate_ui / vec2` work to `ui.allocate_ui` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE b2fec5788e234e43:1: Delegates `modal_head`'s `ui / set_width / text_w` work to `ui.set_width` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 5eb1da465284a190:1: Delegates `modal_head`'s `ui / vertical / ui` work to `ui.vertical` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE e22b0ffda133b7dc:1: Freezes `ui` for `modal_head` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE c51be26888eeb6e8:1: Delegates `modal_head`'s `ui / add / egui` work to `ui.add` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE ab64dac67fbab4b1:1: Prevents `modal_head` from applying its side effect outside the `subtitle / is_empty` state.
+// ADDED-LINE-RATIONALE a11f8245b17eeea1:1: Delegates `modal_head`'s `widgets / hud / ui` work to `widgets::hud` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE b85a494c478466c4:1: Bounds the `modal_head` implementation here so `widgets / hud / ui` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 2e88f04766415134:1: Makes `widgets / hud / ui` an explicit part of `modal_head` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE a143eace57031004:1: Makes `closable` an explicit part of `modal_head` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE 779328bb9fe1784a:1: Prevents `modal_head` from applying its side effect outside the `closable` state.
+// ADDED-LINE-RATIONALE 37806c3bbb854bcc:1: Freezes `close` for `modal_head` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE e9eea4333853f164:2: Bounds the `modal_head` implementation here so `close / widgets / icon_button` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE c6c3d9aeccf794d4:1: Makes `close / widgets / icon_button` an explicit part of `modal_head` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE e1c6b5235e02d8a4:2: Makes `close` an explicit part of `modal_head` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE 62a3c6e042fba0df:1: Makes `close` an explicit part of `modal_head` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE 2847d041c565e974:4: Bounds the `modal_head` implementation here so `close` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 91b02ba3e2fcdff7:1: Supports `modal_body` while preserving the nearby constraint: DS Modal body: padding 12 20 20, 14 px ink-secondary text.
+// ADDED-LINE-RATIONALE 04e34ecd296805ff:1: Delegates `modal_body`'s `egui / Frame / new` work to `egui::Frame::new` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE b18d6e2d94362825:2: Delegates `modal_body`'s `ui / set_width / width` work to `ui.set_width` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE b5856f63b415a79e:1: Delegates `modal_body`'s `add / ui` work to `add` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE e1c6b5235e02d8a4:3: Makes `add / ui` an explicit part of `modal_body` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE 2847d041c565e974:5: Bounds the `modal_body` implementation here so `add / ui` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 24c5c66e2e90b4cb:1: Supports `modal_foot` while preserving the nearby constraint: runs right to left, so the first thing added is the rightmost (the main action).
+// ADDED-LINE-RATIONALE 13d2097bc2eee263:2: Freezes `t` for `modal_foot` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE fedf597ba84e0ab1:1: Freezes `radius` for `modal_foot` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 58662e0bace91dcd:1: Freezes `r` for `modal_foot` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE b2686574e0844b24:1: Delegates `modal_foot`'s `fill / t / raised` work to `fill` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 1a2c4ff48a7e5671:1: Delegates `modal_foot`'s `corner_radius / egui / CornerRadius` work to `corner_radius` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 7eee6a2b79ef1c54:1: Delegates `modal_foot`'s `outer_margin / egui / Margin` work to `outer_margin` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 4f86255c7e5f8a10:1: Delegates `modal_foot`'s `inner_margin / egui / Margin` work to `inner_margin` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE b37da01851160b71:1: Delegates `modal_foot`'s `show / ui / ui` work to `show` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE feb354180ce20015:1: Delegates `modal_foot`'s `ui / set_width / width` work to `ui.set_width` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE ff9317d5bfc5dc77:1: Delegates `modal_foot`'s `ui / horizontal / ui` work to `ui.horizontal` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE c6c3d9aeccf794d4:2: Makes `ui / horizontal / ui` an explicit part of `modal_foot` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE a6fdd6d9a2297fa5:1: Delegates `modal_foot`'s `ui / painter / hline` work to `ui.painter` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 2847d041c565e974:6: Bounds the `modal_foot` implementation here so `ui / painter / hline` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 92b358c4e80a43e7:1: Supports `body_text` while preserving the nearby constraint: The modal's body text: DS Modal body, 14 px ink-secondary.
+// ADDED-LINE-RATIONALE 13d2097bc2eee263:3: Freezes `t` for `body_text` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 6c22e09fbc5fac53:1: Delegates `body_text`'s `ui / add / egui` work to `ui.add` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 2847d041c565e974:7: Bounds the `body_text` implementation here so `ui / add / egui` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 03d19b4685078a48:1: Delegates `alert_popup`'s `Self / modal / feed_alert` work to `Self::modal` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE e6fa291294fa7b0d:1: Freezes `width` for `alert_popup` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 757a2a36ec5a4ff6:1: Supports `alert_popup` while preserving the nearby constraint: Only OK acknowledges it: no close button, and Escape or a click outside leaves it for later.
+// ADDED-LINE-RATIONALE 0a697fba51b883bc:1: Delegates `alert_popup`'s `Self / modal_body / ui` work to `Self::modal_body` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 427294494004c9f2:1: Delegates `alert_popup`'s `egui / ScrollArea / vertical` work to `egui::ScrollArea::vertical` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE aa0326e42f7e5ad8:1: Delegates `alert_popup`'s `Self / modal_foot / ui` work to `Self::modal_foot` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 98d5b5b1e7bb3818:1: Supports `notes_dialog` while preserving the nearby constraint: Release notes read better a little wider than the DS's 480.
+// ADDED-LINE-RATIONALE 21dea1bf182faf6d:1: Freezes `close` for `notes_dialog` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 8ce8d7f848a7d8ac:1: Delegates `notes_dialog`'s `Self / modal_body / ui` work to `Self::modal_body` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 021d0ab9eb65364c:1: Delegates `notes_dialog`'s `egui / ScrollArea / vertical` work to `egui::ScrollArea::vertical` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE f3b5e781d84e154d:1: Delegates `notes_dialog`'s `ui / set_width / ui` work to `ui.set_width` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 4aa0a383faf9f0fe:1: Prevents `notes_dialog` from applying its side effect outside the `release / notes / is_empty` state.
+// ADDED-LINE-RATIONALE 693180b16f75a0e1:1: Delegates `notes_dialog`'s `Self / body_text / ui` work to `Self::body_text` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 762152878f2b8d0c:1: Makes `Self / body_text / ui` an explicit part of `notes_dialog` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE 7ba8665fdfa3fece:1: Delegates `notes_dialog`'s `crate / notes / show` work to `crate::notes::show` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE e9eea4333853f164:4: Bounds the `notes_dialog` implementation here so `crate / notes / show` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE c6c3d9aeccf794d4:5: Makes `crate / notes / show` an explicit part of `notes_dialog` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE 9c74ace553bc4708:1: Delegates `notes_dialog`'s `Self / modal_foot / ui` work to `Self::modal_foot` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 9d5f70dc8ed7249d:1: Freezes `width` for `launcher_update_dialog` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 92ca457bb052e164:1: Freezes `close` for `launcher_update_dialog` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 8ce8d7f848a7d8ac:2: Delegates `launcher_update_dialog`'s `Self / modal_body / ui` work to `Self::modal_body` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 7244105fd3d1a5b5:1: Delegates `launcher_update_dialog`'s `Self / body_text / ui` work to `Self::body_text` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE e1c6b5235e02d8a4:7: Makes `Self / body_text / ui` an explicit part of `launcher_update_dialog` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE 9c74ace553bc4708:2: Delegates `launcher_update_dialog`'s `Self / modal_foot / ui` work to `Self::modal_foot` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 500daeaeb0943c3e:1: Prevents `launcher_update_dialog` from applying its side effect outside the `caps / self_update` state.
+// ADDED-LINE-RATIONALE b81e25a773ec81ff:1: Prevents `launcher_update_dialog` from applying its side effect outside the `widgets / button / ui` state.
+// ADDED-LINE-RATIONALE ab931df0048b5fe8:1: Delegates `launcher_update_dialog`'s `on_hover_text / tl / Downloads` work to `on_hover_text` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 48eba5b5cdd08199:1: Delegates `launcher_update_dialog`'s `clicked` work to `clicked` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE e9eea2333853edfe:2: Bounds the `launcher_update_dialog` implementation here so `clicked` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 2c118f0d6908f731:1: Delegates `launcher_update_dialog`'s `send / Command / UpdateLauncher` work to `self.send` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE dada3a255a611039:1: Freezes `close` for `launcher_update_dialog` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 8673f2f70691be9c:1: Makes `url / platform / and_then` an explicit part of `launcher_update_dialog` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE d12a4e17762c6e50:1: Freezes `url` for `launcher_update_dialog` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE fef70652d7866d77:1: Prevents `launcher_update_dialog` from applying its side effect outside the `widgets / button / ui` state.
+// ADDED-LINE-RATIONALE ab878031fd4d898c:1: Delegates `launcher_update_dialog`'s `ui / ctx / open_url` work to `ui.ctx` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 44b2cff69240e8d4:2: Bounds the `launcher_update_dialog` implementation here so `widgets / button / ui` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 2f664385a221c7db:1: Prevents `launcher_update_dialog` from applying its side effect outside the `widgets / button / ui` state.
+// ADDED-LINE-RATIONALE c4db2afd8c7db189:1: Freezes `close` for `launcher_update_dialog` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 44b2cff69240e8d4:3: Bounds the `launcher_update_dialog` implementation here so `close` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 72cd58f73a16fcb2:1: Delegates `launcher_update_dialog`'s `ui / with_layout / egui` work to `ui.with_layout` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 3f5be90e8e01aaf5:1: Delegates `launcher_update_dialog`'s `widgets / hud_link / ui` work to `widgets::hud_link` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 9d5f70dc8ed7249d:2: Freezes `width` for `uninstall_dialog` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 53c3088c3cc0f8f5:1: Freezes `close` for `uninstall_dialog` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 11e27f7023e8ecf4:1: Delegates `uninstall_dialog`'s `Self / modal_body / ui` work to `Self::modal_body` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 9c74ace553bc4708:3: Delegates `uninstall_dialog`'s `Self / modal_foot / ui` work to `Self::modal_foot` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 119f0c4a3c3d0e2c:1: Supports `settings_page` while preserving the nearby constraint: segmented control, Quit at the foot of General. The top bar's back button and Escape leave it.
+// ADDED-LINE-RATIONALE c9212b9cfbec3a45:1: Freezes `SettingsTab` for `settings_page` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE fbb0b2db06636949:1: Delegates `settings_general`'s `ui / selectable_value / lang_code` work to `ui.selectable_value` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 8d14f8aa376ba0d3:1: Supports `settings_general` while preserving the nearby constraint: limit while it applies, and the platform apps are for.
+// ADDED-LINE-RATIONALE 05b4512a97d8c2b1:1: Delegates `settings_general`'s `ui / add / egui` work to `ui.add` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE dc96d912544a28c7:1: Freezes `if` for `settings_general` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 8b953be473d8deca:1: Delegates `settings_general`'s `ui / add / egui` work to `ui.add` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 2eb6a98c39bd8784:7: Bounds the `settings_general` implementation here so `ui / add / egui` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 8f95f1de8b988966:1: Delegates `settings_general`'s `ui / add / egui` work to `ui.add` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 8e9747284e4bc315:1: Delegates `settings_general`'s `ui / add_space` work to `ui.add_space` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 1de35c71ec711737:1: Delegates `settings_general`'s `widgets / switch / ui` work to `widgets::switch` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 17cc6704fb9914f6:1: Delegates `settings_general`'s `widgets / switch` work to `widgets::switch` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 5bc1b1ce2f94e669:2: Keeps `ui` in `settings_general`'s API-defined order so positional values retain their intended meaning.
+// ADDED-LINE-RATIONALE 802a795c1d379696:1: Keeps `settings / engine_auto_update` in `settings_general`'s API-defined order so positional values retain their intended meaning.
+// ADDED-LINE-RATIONALE 89cb6f1884eaac31:1: Keeps `tl / Keep / the` in `settings_general`'s API-defined order so positional values retain their intended meaning.
+// ADDED-LINE-RATIONALE fba2c6fa83592979:2: Bounds the `settings_general` implementation here so `tl / Keep / the` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 1ab80021e33afba9:1: Delegates `settings_general`'s `widgets / switch / ui` work to `widgets::switch` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 88269aee5b92cf12:1: Delegates `settings_general`'s `widgets / switch / ui` work to `widgets::switch` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 2ff3f7a5921eb60f:1: Delegates `settings_general`'s `widgets / switch / ui` work to `widgets::switch` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 43d432b3e31643c5:1: Delegates `settings_general`'s `widgets / switch / ui` work to `widgets::switch` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 4868bde88c653881:1: Delegates `settings_general`'s `widgets / switch / ui` work to `widgets::switch` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 56306aeed7852fab:1: Delegates `settings_general`'s `widgets / switch / ui` work to `widgets::switch` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 6739115d71d98d10:1: Supports `settings_general` while preserving the nearby constraint: Secondary: a settings page has no primary action of its own.
+// ADDED-LINE-RATIONALE d1cce5fc524b1e94:4: Prevents `settings_general` from applying its side effect outside the `caps / manage_apps` state.
+// ADDED-LINE-RATIONALE ab98277060c9e805:1: Delegates `settings_general`'s `ui / add_space` work to `ui.add_space` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE dfdc941904e86e2c:1: Prevents `settings_general` from applying its side effect outside the `widgets / button / ui` state.
+// ADDED-LINE-RATIONALE f00a91e9173c6770:1: Delegates `settings_general`'s `host / quit` work to `host.quit` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 44b2cff69240e8d4:14: Bounds the `settings_general` implementation here so `host / quit` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 2eb6a98c39bd8784:13: Bounds the `settings_general` implementation here so `host / quit` cannot leak into the adjacent declaration or control path.
 //! Modal dialogs: release notes, uninstall confirmation, settings.
 
 use crate::i18n::fmt;

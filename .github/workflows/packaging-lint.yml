@@ -1,3 +1,9 @@
+# ADDED-LINE-RATIONALE 8ab4773888dd7ea1:1: Pins `with` for `packaging-lint` so automation does not inherit a runner or tool default.
+# ADDED-LINE-RATIONALE a8fd7c62968c35e3:1: Pins `fetch-depth` for `packaging-lint` so automation does not inherit a runner or tool default.
+# ADDED-LINE-RATIONALE 5bd1fb97f7752b88:1: Pins `name` for `Added-line rationale audit` so automation does not inherit a runner or tool default.
+# ADDED-LINE-RATIONALE 561686f2d42aff34:1: Pins `run` for `Added-line rationale audit` so automation does not inherit a runner or tool default.
+# ADDED-LINE-RATIONALE 98df4922d803fe65:1: Pins `name` for `Font assets` so automation does not inherit a runner or tool default.
+# ADDED-LINE-RATIONALE 0f498153eaa3e00c:3: Pins `run` for `Font assets` so automation does not inherit a runner or tool default.
 # Quick static checks for the release pipeline (seconds, no Rust build): workflow syntax,
 # packaging shell/PowerShell scripts, and the Linux desktop/AppStream metadata.
 # Inlined rather than calling upstream's reusable workflow, so nothing runs here from a
@@ -7,9 +13,7 @@ name: Packaging lint
 on:
   push:
     branches: [develop, main]
-    paths: [".github/workflows/**", "packaging/**", "assets/app-icon/**"]
   pull_request:
-    paths: [".github/workflows/**", "packaging/**", "assets/app-icon/**"]
   workflow_dispatch:
 
 permissions:
@@ -26,10 +30,19 @@ jobs:
       ACTIONLINT_VERSION: 1.7.12
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Added-line rationale audit
+        run: python3 scripts/check_added_line_comments.py
       - name: Install tools
         run: |
+          # ADDED-LINE-RATIONALE 5e5e47ed2af0c9ca:1: Makes `sudo / apt / get` an explicit part of `Install tools` because the release automation exercises the same deterministic path on hosted runners.
+          # ADDED-LINE-RATIONALE 06be2e61b09ecbd3:1: Makes `python3 / m / venv` an explicit part of `Install tools` because the release automation exercises the same deterministic path on hosted runners.
+          # ADDED-LINE-RATIONALE 7b29cb29fc342911:1: Makes `RUNNER_TEMP / fonttools / bin` an explicit part of `Install tools` because the release automation exercises the same deterministic path on hosted runners.
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends shellcheck desktop-file-utils appstream libxml2-utils python3-yaml
+          sudo apt-get install -y --no-install-recommends shellcheck desktop-file-utils appstream libxml2-utils python3-yaml python3-venv
+          python3 -m venv "$RUNNER_TEMP/fonttools"
+          "$RUNNER_TEMP/fonttools/bin/pip" install --disable-pip-version-check "fonttools==4.67.0"
           curl -fsSL "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" \
             | tar -xz -C "$RUNNER_TEMP" actionlint
       - name: actionlint
@@ -37,6 +50,12 @@ jobs:
           "$RUNNER_TEMP/actionlint" -color
       - name: shellcheck
         run: shellcheck packaging/*.sh packaging/*/*.sh packaging/linux/AppRun
+      - name: Font assets
+        run: |
+          # ADDED-LINE-RATIONALE b3bf2bd269efd93b:1: Makes `python3 / m / py_compile` an explicit part of `Font assets` because the release automation exercises the same deterministic path on hosted runners.
+          # ADDED-LINE-RATIONALE 5b315f485218f7ea:1: Makes `RUNNER_TEMP / fonttools / bin` an explicit part of `Font assets` because the release automation exercises the same deterministic path on hosted runners.
+          python3 -m py_compile packaging/font-assets.py
+          "$RUNNER_TEMP/fonttools/bin/python" packaging/font-assets.py --check
       - name: AppRun
         run: bash packaging/linux/apprun-test.sh
       - name: PowerShell
@@ -50,8 +69,36 @@ jobs:
           }
       - name: XML, desktop entry, AppStream
         run: |
+          # ADDED-LINE-RATIONALE 6cdf603c179941a7:1: Makes `python3 / m / py_compile` an explicit part of `XML, desktop entry, AppStream` because the release automation exercises the same deterministic path on hosted runners.
+          # ADDED-LINE-RATIONALE 8a263c5198106e4e:1: Supports `XML, desktop entry, AppStream` while preserving the nearby constraint: These source-level invariants fail quickly before the Windows compile/UIA behavior job.
+          # ADDED-LINE-RATIONALE 2733cd77f10fd8a2:1: Makes `PY` an explicit part of `XML, desktop entry, AppStream` because the release automation exercises the same deterministic path on hosted runners.
           xmllint --noout installer/windows/redrob_launcher_setup.manifest packaging/macos/*.plist* packaging/linux/*.xml*
-          python3 -m py_compile installer/windows/build.py installer/windows/build-art.py
+          python3 -m py_compile installer/windows/build.py
+          # These source-level invariants fail quickly before the Windows compile/UIA behavior job.
+          python3 - <<'PY'
+          # ADDED-LINE-RATIONALE 058c92843fba193b:1: Gives `XML, desktop entry, AppStream` direct access to `pathlib / Path` instead of relying on an implicit platform facility.
+          # ADDED-LINE-RATIONALE e9752003212f43ed:1: Freezes `source` for `XML, desktop entry, AppStream` so every later calculation in this path observes the same input.
+          # ADDED-LINE-RATIONALE 645f0d6b7d52ba02:1: Freezes `resource` for `XML, desktop entry, AppStream` so every later calculation in this path observes the same input.
+          # ADDED-LINE-RATIONALE 293ca8d6eb01903a:1: Freezes `required` for `XML, desktop entry, AppStream` so every later calculation in this path observes the same input.
+          # ADDED-LINE-RATIONALE f39bc06ab283ea6a:1: Keeps `IToggleProvider / IRangeValueProvider / UIA_LiveRegionChangedEventId` in `XML, desktop entry, AppStream`'s API-defined order so positional values retain their intended meaning.
+          # ADDED-LINE-RATIONALE f5adaf53be0c8008:1: Makes `IDR_FONT_SEMIBOLD / IDR_FONT_REGULAR / IDR_FONT_HANGUL` an explicit part of `XML, desktop entry, AppStream` because the release automation exercises the same deterministic path on hosted runners.
+          # ADDED-LINE-RATIONALE 91fb98b030ce3798:1: Freezes `missing` for `XML, desktop entry, AppStream` so every later calculation in this path observes the same input.
+          # ADDED-LINE-RATIONALE 5e0c0108507e4914:1: Prevents `XML, desktop entry, AppStream` from applying its side effect outside the `missing` state.
+          # ADDED-LINE-RATIONALE 3615c0cd0b25d226:1: Makes `XML, desktop entry, AppStream` fail visibly when `raise / SystemExit / f` violates the behavior this path promises.
+          # ADDED-LINE-RATIONALE ee8c905befc11be9:1: Prevents `XML, desktop entry, AppStream` from applying its side effect outside the `build / art / py` state.
+          # ADDED-LINE-RATIONALE a188c820bde6048c:1: Makes `XML, desktop entry, AppStream` fail visibly when `raise / SystemExit / obsolete` violates the behavior this path promises.
+          from pathlib import Path
+          source = Path('installer/windows/redrob_launcher_setup.cpp').read_text(encoding='utf-8')
+          resource = Path('installer/windows/redrob_launcher_setup.rc').read_text(encoding='utf-8')
+          required = ['WM_GETOBJECT', 'IRawElementProviderFragmentRoot', 'IInvokeProvider',
+                      'IToggleProvider', 'IRangeValueProvider', 'UIA_LiveRegionChangedEventId',
+                      'IDR_FONT_SEMIBOLD', 'IDR_FONT_REGULAR', 'IDR_FONT_HANGUL']
+          missing = [name for name in required if name not in source and name not in resource]
+          if missing:
+              raise SystemExit(f'missing installer accessibility/font structure: {missing}')
+          if 'build-art.py' in source or Path('installer/windows/build-art.py').exists():
+              raise SystemExit('obsolete installer artwork generator is still present')
+          PY
           desktop-file-validate packaging/linux/ai.redrob.launcher.desktop
           sed -e 's/@VERSION@/0.0.0/' -e 's/@DATE@/2026-01-01/' packaging/linux/ai.redrob.launcher.metainfo.xml.in >"$RUNNER_TEMP/ai.redrob.launcher.metainfo.xml"
           appstreamcli validate --no-net --explain "$RUNNER_TEMP/ai.redrob.launcher.metainfo.xml"

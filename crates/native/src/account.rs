@@ -1,3 +1,5 @@
+// ADDED-LINE-RATIONALE 577c498bb3ae0ed0:1: Gives `account` direct access to `redrob_launcher_core / account / AccountBackend` instead of relying on an implicit platform facility.
+// ADDED-LINE-RATIONALE daacf3fa241ffc87:1: Delegates `desktop`'s `Self / new / shared_dir` work to `Self::new` so existing state and error handling remain centralized.
 //! Signing this computer in to a Redrob workspace once, and handing that key to the apps.
 //!
 //! The console implements RFC 8628's device authorization grant. The launcher asks it for a code

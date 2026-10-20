@@ -8,3 +8,5 @@ builds/
 /dist
 /temp
 /craft-fonts
+__pycache__/
+*.py[cod]

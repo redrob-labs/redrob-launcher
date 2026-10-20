@@ -1,4 +1,115 @@
-//! The engine dialog: the shared Redrob Code daemon every Redrob app on this computer runs its AI
+// ADDED-LINE-RATIONALE 37b27cf8a516a099:1: Gives `engine` direct access to `crate / app / LauncherUi` instead of relying on an implicit platform facility.
+// ADDED-LINE-RATIONALE 67e56e9cec68f977:1: Gives `engine` direct access to `crate / glyphs / Icon` instead of relying on an implicit platform facility.
+// ADDED-LINE-RATIONALE 8c5ba205cde4960d:1: Supports `engine_nav` while preserving the nearby constraint: "Standby" is its normal state, not a fault.
+// ADDED-LINE-RATIONALE c83bdac984cd72e2:1: Freezes `t` for `engine_nav` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 856366d600627ff2:1: Freezes `let` for `engine_nav` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 62c0437352eed530:1: Freezes `EngineState` for `engine_nav` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 6d39aa6c98bc03c8:1: Freezes `EngineState` for `engine_nav` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 3c1245efe7ae42fa:1: Freezes `EngineState` for `engine_nav` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE d17e3740b37a28d4:1: Freezes `EngineState` for `engine_nav` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE b0c8036bd0ee0afc:1: Freezes `EngineState` for `engine_nav` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE b7d368389d34f86b:1: Freezes `label` for `engine_nav` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE dd9827bfab570902:1: Freezes `if` for `engine_nav` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 7fec77e99789f23f:1: Delegates `engine_nav`'s `set_page / Page / Engine` work to `self.set_page` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE fdb3b80ecabc792d:1: Supports `engine_page` while preserving the nearby constraint: The engine page (its title is in the page's top bar).
+// ADDED-LINE-RATIONALE bcc1c5bb1ece2e2c:2: Freezes `Some` for `engine_page` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 3b43166d5968346d:1: Gives `engine_page` direct access to `theme / space` instead of relying on an implicit platform facility.
+// ADDED-LINE-RATIONALE 5ce89bce470172bb:1: Supports `engine_page` while preserving the nearby constraint: What the footer offers in this state: (label, kind, request), the trailing one first.
+// ADDED-LINE-RATIONALE 4c1df5ebe6373e59:1: Freezes `EngineState` for `engine_page` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE cc06660f4ee597ce:1: Freezes `EngineState` for `engine_page` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 8e9a397049e3603c:1: Freezes `EngineState` for `engine_page` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE ca531793d88cff78:1: Freezes `EngineState` for `engine_page` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE a2ac2259330e400c:2: Bounds the `engine_page` implementation here so `EngineState / Running / _` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 176e7ece4d9f80a4:1: Supports `engine_page` while preserving the nearby constraint: footer on a full-width hairline with the actions on the trailing edge.
+// ADDED-LINE-RATIONALE f3be4c78dc782d4b:1: Freezes `ui` for `engine_page` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 9f4346c115d207dd:1: Freezes `body` for `engine_page` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 7f2fca45308a7d4c:1: Delegates `engine_page`'s `ui / add / egui` work to `ui.add` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE e6c9706f3231000c:1: Bounds the `engine_page` implementation here so `ui / add / egui` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE b46ced2d53e23b72:1: Delegates `engine_page`'s `ui / add_space / space` work to `ui.add_space` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 4ce9e1556c47f874:1: Delegates `engine_page`'s `body / ui / tl` work to `body` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE b46ced2d53e23b72:2: Delegates `engine_page`'s `ui / add_space / space` work to `ui.add_space` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 12179173f3c8c2e7:1: Delegates `engine_page`'s `body / ui / tl` work to `body` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 3ea4a075b1a589d9:1: Delegates `engine_page`'s `widgets / tight_row / ui` work to `widgets::tight_row` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 84437db21aa7b53d:1: Delegates `engine_page`'s `widgets / loader_inline / ui` work to `widgets::loader_inline` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 33ead776cff59041:1: Delegates `engine_page`'s `ui / label / RichText` work to `ui.label` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 3ea4a075b1a589d9:2: Delegates `engine_page`'s `widgets / tight_row / ui` work to `widgets::tight_row` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 11e3a6200bdfc8c7:1: Delegates `engine_page`'s `widgets / meta_sep / ui` work to `widgets::meta_sep` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE b46ced2d53e23b72:3: Delegates `engine_page`'s `ui / add_space / space` work to `ui.add_space` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 81f186cf906d3fc7:1: Delegates `engine_page`'s `body / ui / text` work to `body` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE d55e08179e8056d1:1: Delegates `engine_page`'s `ui / add_space / space` work to `ui.add_space` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE d195e2b397cda6ae:1: Delegates `engine_page`'s `widgets / row_rule / ui` work to `widgets::row_rule` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE a80254305c1d16d1:1: Delegates `engine_page`'s `ui / add_space / space` work to `ui.add_space` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 6fcd27b35e1e09d9:1: Delegates `engine_page`'s `widgets / tight_row / ui` work to `widgets::tight_row` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 11e23554ae6c0bb9:1: Delegates `engine_page`'s `ui / with_layout / egui` work to `ui.with_layout` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 7ad30efa835296b3:1: Delegates `engine_page`'s `widgets / hud / ui` work to `widgets::hud` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 999426932a347dfb:1: Makes `widgets / hud / ui` an explicit part of `engine_page` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE a80254305c1d16d1:2: Delegates `engine_page`'s `ui / add_space / space` work to `ui.add_space` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE b96a4099ebcad6d1:1: Delegates `engine_page`'s `ui / add_space / space` work to `ui.add_space` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE bf2a3c96910fd901:1: Delegates `engine_page`'s `ui / add / egui` work to `ui.add` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE fbad0b7e391719c3:1: Prevents `engine_page` from applying its side effect outside the `actions / is_empty` state.
+// ADDED-LINE-RATIONALE e6e9455a267aa74d:1: Freezes `attached` for `engine_page` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 84b480834d336bc1:1: Supports `engine_page` while preserving the nearby constraint: A list ends on its own last row; anything else gets the footer's breathing room.
+// ADDED-LINE-RATIONALE ce2c602d62668cbb:1: Delegates `engine_page`'s `ui / add_space / space` work to `ui.add_space` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 1038fb0708d041ff:5: Bounds the `engine_page` implementation here so `ui / add_space / space` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE e9d8baee06462293:1: Supports `engine_page` while preserving the nearby constraint: The footer's hairline runs to the card's edges, through its padding.
+// ADDED-LINE-RATIONALE 00e6092db5dcf540:1: Freezes `ui` for `engine_page` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE c9e39299f4e1ccbb:1: Delegates `engine_page`'s `ui / add_space / space` work to `ui.add_space` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 07ff046029ce6fc4:1: Prevents `engine_page` from applying its side effect outside the `attached` state.
+// ADDED-LINE-RATIONALE 6858293fee32831f:1: Delegates `engine_page`'s `widgets / hud / ui` work to `widgets::hud` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 6c2f9b870d0a81ff:2: Bounds the `engine_page` implementation here so `widgets / hud / ui` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 67923dfa42a30bb9:1: Delegates `engine_page`'s `ui / with_layout / egui` work to `ui.with_layout` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE f213f69f2162f2f3:1: Applies `engine_page` consistently to every `label / kind / what` item rather than handling only the first match.
+// ADDED-LINE-RATIONALE eec6039ef6a3dc64:1: Prevents `engine_page` from applying its side effect outside the `widgets / button / ui` state.
+// ADDED-LINE-RATIONALE bb9c5d7c0290b7c0:1: Freezes `ask` for `engine_page` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 8c27234e9b0b01ff:1: Bounds the `engine_page` implementation here so `ask / what` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE a17cf8b37908c1ff:2: Bounds the `engine_page` implementation here so `ask / what` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 76d3fe466b7b7dfb:3: Makes `ask / what` an explicit part of `engine_page` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE d582bd9197673dfb:1: Makes `ask / what` an explicit part of `engine_page` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE 3d163bd5e21a01ff:4: Bounds the `engine_page` implementation here so `A / newer / engine` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 78fb8c91c16abdfb:2: Makes `A / newer / engine` an explicit part of `engine_page` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE 53033c4416db35e4:1: Supports `engine_page` while preserving the nearby constraint: A newer engine: a DS Alert under the card, until it is installed.
+// ADDED-LINE-RATIONALE cc53e08c6a490cbb:1: Delegates `engine_page`'s `ui / add_space / space` work to `ui.add_space` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE b554a2d88f59c4b2:1: Delegates `engine_page`'s `widgets / alert_frame / t` work to `widgets::alert_frame` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 2e423a4f78a91c9a:1: Delegates `engine_page`'s `ui / set_width / ui` work to `ui.set_width` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE ac39e7cab8d2ed4b:1: Freezes `ui` for `engine_page` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE d65df7621fcf49d9:1: Delegates `engine_page`'s `widgets / tight_row / ui` work to `widgets::tight_row` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE b96a4099ebcad6d1:2: Delegates `engine_page`'s `ui / add_space / space` work to `ui.add_space` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 3ea4a075b1a589d9:3: Delegates `engine_page`'s `widgets / tight_row / ui` work to `widgets::tight_row` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 84437db21aa7b53d:2: Delegates `engine_page`'s `widgets / loader_inline / ui` work to `widgets::loader_inline` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE d23a7f0f1b275037:1: Delegates `engine_page`'s `ui / label / RichText` work to `ui.label` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 326f717709f59c07:1: Freezes `text` for `engine_page` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 0af07f5f58a1ffd5:1: Delegates `engine_page`'s `tl / It / updates` work to `tl` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 47d8b5143a00f979:2: Makes `tl / It / updates` an explicit part of `engine_page` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE 9a91bcb618d13981:1: Delegates `engine_page`'s `fmt` work to `fmt` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 4652824a9d738189:1: Keeps `tl / Waiting / until` in `engine_page`'s API-defined order so positional values retain their intended meaning.
+// ADDED-LINE-RATIONALE ed71a3684af981bd:1: Keeps `apps / waiting_on / join` in `engine_page`'s API-defined order so positional values retain their intended meaning.
+// ADDED-LINE-RATIONALE a17d44b379094323:1: Bounds the `engine_page` implementation here so `apps / waiting_on / join` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE df670a7b28da800c:1: Bounds the `engine_page` implementation here so `The / explanation / and` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE f2d2965b07b8344c:1: Supports `engine_page` while preserving the nearby constraint: The explanation, and Update now on the trailing edge, centred on it.
+// ADDED-LINE-RATIONALE ccd5c5b147b7a637:1: Delegates `engine_page`'s `ui / horizontal / ui` work to `ui.horizontal` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 29e2d1067db29f1e:1: Freezes `text_w` for `engine_page` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 4a8257005f8c9259:1: Delegates `engine_page`'s `ui / vertical / ui` work to `ui.vertical` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 75ae222fa5022e38:1: Delegates `engine_page`'s `ui / set_width / text_w` work to `ui.set_width` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 20bb808aec273d4c:1: Delegates `engine_page`'s `ui / add / egui` work to `ui.add` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 61af2622a9f3bdfb:1: Makes `ui / add / egui` an explicit part of `engine_page` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE af2031a07fff4bb9:1: Delegates `engine_page`'s `ui / with_layout / egui` work to `ui.with_layout` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 11c22cab30a40d0f:1: Prevents `engine_page` from applying its side effect outside the `widgets / button / ui` state.
+// ADDED-LINE-RATIONALE f13aa58f6205b762:1: Freezes `ask` for `engine_page` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 8c27234e9b0b01ff:2: Bounds the `engine_page` implementation here so `ask / Ask / UpdateNow` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 61af2622a9f3bdfb:2: Makes `ask / Ask / UpdateNow` an explicit part of `engine_page` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE 76d3fe466b7b7dfb:5: Makes `ask / Ask / UpdateNow` an explicit part of `engine_page` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE 59873bf24976fdfb:1: Makes `what / ask` an explicit part of `engine_page` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE 5133bd2092a7c1ff:2: Bounds the `engine_page` implementation here so `what / ask` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 256ca16774917f80:1: Delegates `engine_page`'s `ui / add_space / theme` work to `ui.add_space` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 0fd9ca2238f7957d:1: Delegates `engine_page`'s `ui / add` work to `ui.add` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE bd74e973df18170a:1: Delegates `engine_page`'s `egui / Label / new` work to `egui::Label::new` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 9e6a2182dbcc0c9e:1: Delegates `engine_page`'s `RichText / new / tl` work to `RichText::new` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE f995942bfb95bc17:1: Delegates `engine_page`'s `size / theme / text` work to `size` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE be47ff2728920364:1: Keeps `color / t / faint` in `engine_page`'s API-defined order so positional values retain their intended meaning.
+// ADDED-LINE-RATIONALE 3d1687d5e21a8323:1: Bounds the `engine_page` implementation here so `color / t / faint` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE e6f394352ee5708f:1: Keeps `wrap` in `engine_page`'s API-defined order so positional values retain their intended meaning.
+// ADDED-LINE-RATIONALE a3ae9a5933ea01c8:1: Bounds the `engine_page` implementation here so `wrap` cannot leak into the adjacent declaration or control path.
+//! The AI engine page: the shared Redrob Code daemon every Redrob app on this computer runs its AI
 //! through. Whether it is up, which version, which apps are attached, and Start / Stop / Restart.
 //! The backend does the work ([`EngineBackend`]); this only shows states and sends requests.
 

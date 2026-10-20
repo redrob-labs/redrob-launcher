@@ -1,3 +1,14 @@
+// ADDED-LINE-RATIONALE e105b16052435484:1: Freezes `None` for `language_label` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE a1bba464383ed026:3: Bounds the `language_label` implementation here so `Self / system_language_label` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 405ef4eebf62bf76:3: Bounds the `language_label` implementation here so `Self / system_language_label` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 1ec14476c3713b1d:1: Supports `system_language_label` while preserving the nearby constraint: the person sees what "system" means on this computer.
+// ADDED-LINE-RATIONALE 0bfeca3645b28b23:1: Freezes `system` for `system_language_label` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE ace68129740e387c:1: Delegates `system_language_label`'s `crate / i18n / fmt` work to `crate::i18n::fmt` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 405ef4eebf62bf76:4: Bounds the `system_language_label` implementation here so `crate / i18n / fmt` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 9023c5ea9f9755a0:1: Supports `language_from_installer` while preserving the nearby constraint: purpose and is kept.
+// ADDED-LINE-RATIONALE 375be6233ae7d8cc:2: Prevents `language_from_installer` from applying its side effect outside the `crate / i18n / Lang` state.
+// ADDED-LINE-RATIONALE 280d0e07082c1901:1: Freezes `Some` for `language_from_installer` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 056e28ef7ce45999:1: Freezes `_` for `language_from_installer` so every later calculation in this path observes the same input.
 //! The user's choices, saved between runs by the shell.
 
 use std::collections::BTreeMap;
@@ -104,7 +115,7 @@ pub struct Settings {
     #[serde(default)]
     pub auto_update: bool,
     /// Keep the shared Redrob Code engine on its newest release by itself (when no app is using
-    /// it; "Update now" in the engine dialog overrides). On by default: the engine is shared
+    /// it; "Update now" on the AI engine page overrides). On by default: the engine is shared
     /// infrastructure, and a fix there is a fix for every app.
     #[serde(default = "default_true")]
     pub engine_auto_update: bool,

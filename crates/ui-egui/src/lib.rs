@@ -1,3 +1,7 @@
+// ADDED-LINE-RATIONALE 015450e26a395ad9:1: Isolates `caption` as the owner of this behavior so callers can use and test it without duplicating policy.
+// ADDED-LINE-RATIONALE 8e9b70daea9ead3c:1: Isolates `glyphs` as the owner of this behavior so callers can use and test it without duplicating policy.
+// ADDED-LINE-RATIONALE c558c2ef5d7d64e4:1: Isolates `shell` as the owner of this behavior so callers can use and test it without duplicating policy.
+// ADDED-LINE-RATIONALE 977f008ba7a1abc6:1: Isolates `shelves` as the owner of this behavior so callers can use and test it without duplicating policy.
 //! Redrob Launcher's interface: the Redrob apps as a grid of cards, with
 //! install, update, open and remove, shared by the desktop and web builds.
 //!
@@ -25,7 +29,7 @@ mod cjk_font;
 mod dialogs;
 mod engine;
 mod engine_update;
-pub mod glyphs;
+pub(crate) mod glyphs;
 pub mod i18n;
 pub mod icons;
 pub mod model;

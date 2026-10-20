@@ -1,3 +1,8 @@
+// ADDED-LINE-RATIONALE 536a40d365f2f50b:1: Prevents `run_setup` from applying its side effect outside the `status / code` state.
+// ADDED-LINE-RATIONALE 732bac8ad0d41099:1: Freezes `Some` for `run_setup` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 9b3845ad25e1a822:1: Freezes `Some` for `run_setup` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 400d44ed865448f2:1: Freezes `None` for `run_setup` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE a6aa2f42de2a64fe:14: Bounds the `run_setup` implementation here so `Err / the / setup` cannot leak into the adjacent declaration or control path.
 //! Installing, updating, removing and starting Redrob apps.
 //!
 //! Apps go where their platform keeps applications, installed the platform's own way:

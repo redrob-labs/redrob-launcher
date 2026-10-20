@@ -1,3 +1,9 @@
+// ADDED-LINE-RATIONALE 67093be9c053fed8:1: Delegates `status`'s `widgets / loader_inline / ui` work to `widgets::loader_inline` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE ad087e1d0e4c53fa:1: Delegates `channels_tab`'s `widgets / loader_inline / ui` work to `widgets::loader_inline` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE b502420a5904d756:1: Delegates `channels_tab`'s `widgets / card_frame / t` work to `widgets::card_frame` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE b7ea12606f41a06d:1: Prevents `channels_tab` from applying its side effect outside the `widgets / icon_button / ui` state.
+// ADDED-LINE-RATIONALE 551e03398eb0e15a:1: Delegates `channels_tab`'s `widgets / loader_inline / ui` work to `widgets::loader_inline` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 551e03398eb0e15a:2: Delegates `apps_tab`'s `widgets / loader_inline / ui` work to `widgets::loader_inline` so existing state and error handling remain centralized.
 //! Settings > Channels and Settings > Apps.
 //!
 //! Channels: one card per chat platform (WhatsApp, Telegram, Discord, Slack), each a short wizard

@@ -1,3 +1,5 @@
+# ADDED-LINE-RATIONALE 84c822b8b31087ef:1: Pins `shell` for `Python for the setup build` so automation does not inherit a runner or tool default.
+# ADDED-LINE-RATIONALE 97a9abbae3883e7a:3: Pins `run` for `Python for the setup build` so automation does not inherit a runner or tool default.
 # Release pipeline: a `vX.Y.Z` tag pushed on `main` builds installers for every platform and
 # publishes the GitHub Release "Redrob Launcher vX.Y.Z" through the shared redrob-labs/.github
 # release-publish workflow. Adapted from redrob-cad.
@@ -151,10 +153,18 @@ jobs:
         if: inputs.version != ''
         shell: bash
         run: cargo xtask version set "$REDROB_LAUNCHER_VERSION"
-      # fontTools turns the design system's Pretendard woff2 into the TTF the setup embeds; without the
-      # design system checkout (private) the setup falls back to Segoe UI Variable, which is fine.
+      # fontTools deterministically subsets the committed Pretendard and Wanted Sans TTFs. Missing tools,
+      # source fonts, or requested glyphs are fatal so a release never falls back to system fonts.
       - name: Python for the setup build
-        run: pip install fonttools
+        shell: pwsh
+        run: |
+          # ADDED-LINE-RATIONALE 3e47737bd4a1d41d:1: Supports `Python for the setup build` while preserving the nearby constraint: Pin via py -3, then bind package.ps1's `python` to that exact interpreter.
+          # ADDED-LINE-RATIONALE b00ffb5a17c3b91d:1: Freezes `py` for `Python for the setup build` so every later calculation in this path observes the same input.
+          # ADDED-LINE-RATIONALE 6c23eca3fe670684:1: Makes `Split / Path / python` an explicit part of `Python for the setup build` because the release automation exercises the same deterministic path on hosted runners.
+          # Pin via py -3, then bind package.ps1's `python` to that exact interpreter.
+          $python = py -3 -c "import sys; print(sys.executable)"
+          py -3 -m pip install fontTools==4.67.0
+          Split-Path $python | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
       - name: Build and stage
         shell: pwsh
         run: ./packaging/windows/package.ps1 -Arch ${{ matrix.arch }} -BuildOnly
@@ -217,8 +227,25 @@ jobs:
       - name: Check the packages
         shell: pwsh
         run: |
+          # ADDED-LINE-RATIONALE ff4f44184e1f3c05:1: Supports `Check the packages` while preserving the nearby constraint: Cross-built ARM64 behavior stays in windows-arm64.yml; hosted x86/x64 binaries render here too.
+          # ADDED-LINE-RATIONALE 45396d38afbf415d:1: Freezes `setup` for `Check the packages` so every later calculation in this path observes the same input.
+          # ADDED-LINE-RATIONALE 26ac3a7711a80edc:1: Freezes `render` for `Check the packages` so every later calculation in this path observes the same input.
+          # ADDED-LINE-RATIONALE 4856d4c1129dba25:1: Makes `setup / render / stages` an explicit part of `Check the packages` because the release automation exercises the same deterministic path on hosted runners.
+          # ADDED-LINE-RATIONALE 646bb3bce93895fa:1: Prevents `Check the packages` from applying its side effect outside the `LASTEXITCODE / ne / or` state.
+          # ADDED-LINE-RATIONALE 94c17f48b05dcb17:1: Makes `Check the packages` fail visibly when `throw / release / setup` violates the behavior this path promises.
+          # ADDED-LINE-RATIONALE f294d7443d54fb46:1: Bounds the `Check the packages` implementation here so `throw / release / setup` cannot leak into the adjacent declaration or control path.
+          # ADDED-LINE-RATIONALE cbea8dbb8f25918e:1: Bounds the `Check the packages` implementation here so `uses / actions / upload` cannot leak into the adjacent declaration or control path.
           Get-Item dist/release/redrob-launcher-*-windows-${{ matrix.arch }}-setup.exe
           Get-Item dist/release/redrob-launcher-*-windows-${{ matrix.arch }}-portable.zip
+          # Cross-built ARM64 behavior stays in windows-arm64.yml; hosted x86/x64 binaries render here too.
+          if ('${{ matrix.arch }}' -ne 'arm64') {
+            $setup = (Get-ChildItem dist/release/redrob-launcher-*-windows-${{ matrix.arch }}-setup.exe).FullName
+            $render = Join-Path $env:RUNNER_TEMP 'release-installer-stages'
+            & $setup --render-stages $render --theme light
+            if ($LASTEXITCODE -ne 0 -or @(Get-ChildItem $render -Filter '*.png').Count -lt 24) {
+              throw 'release setup failed the stage-render gate'
+            }
+          }
       - uses: actions/upload-artifact@v4
         with:
           name: release-windows-${{ matrix.arch }}

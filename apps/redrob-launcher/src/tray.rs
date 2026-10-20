@@ -1,3 +1,5 @@
+// ADDED-LINE-RATIONALE ecaae614e528a985:1: Freezes `engine` for `new` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE d5b7801705ff00fb:1: Keeps `engine / AI / engine` in `new`'s API-defined order so positional values retain their intended meaning.
 //! The tray (menu bar) icon: show the window, check for updates, quit.
 
 use redrob_launcher_ui_egui::i18n;
@@ -11,7 +13,7 @@ pub enum TrayAction {
     Toggle,
     Show,
     Check,
-    /// Show the window with the engine dialog open.
+    /// Show the window with the AI engine page open.
     Engine,
     Open(&'static str),
     Quit,

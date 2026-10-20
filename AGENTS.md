@@ -53,10 +53,11 @@ settings file must produce an error the user can act on, never a panic.
   `#![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]`.
 - **No `unsafe`.** The workspace denies `unsafe_code`. The single exception is
   `apps/redrob-launcher/src/snap_layouts.rs` (`#![allow(unsafe_code)]`): Win32 calls on the
-  launcher's own window that answer `HTMAXBUTTON` over the drawn Maximize button and keep
-  `WS_SYSMENU` off (with it, Windows ties the flyout to its own invisible caption buttons), so
-  Windows 11 shows Snap Layouts as it does over Redrob Cowork's. Every `unsafe` block there carries a
-  `SAFETY:` comment. Don't add `unsafe` anywhere else.
+  launcher's own window answer `HTMAXBUTTON` over the drawn Maximize button and suppress
+  `WS_SYSMENU`, whose invisible caption buttons otherwise steal the Windows 11 Snap Layout flyout.
+  The subclass replaces the style's lost Alt+Space behavior with the standard system menu and
+  dispatches its commands through `WM_SYSCOMMAND`. Every `unsafe` block there carries a `SAFETY:`
+  comment. Don't add `unsafe` anywhere else.
 - **Everything from the network is hostile.** Use `get()` instead of indexing, checked arithmetic
   for sizes and offsets, and cap downloads and JSON sizes.
 
@@ -80,7 +81,10 @@ capitals, no second typeface), and the system's colour roles (`theme::Tokens`, e
 derived role commented with its token). Blue acts; a product's colour marks only its app icon,
 never text or controls. The chrome is Redrob Cowork's: a 48 px title bar and a floating sidebar
 card on one base ground. Build new UI from `widgets.rs` and the drawn icons in `glyphs.rs`, with
-the radius, space, type and motion tokens in `theme`; never hard-code a colour.
+the radius, space, type and motion tokens in `theme`; never hard-code a colour in a consumer.
+Design-system roles and approved platform/brand exceptions are declared only in
+`xtask/src/tokens.rs`; `cargo xtask tokens` emits the checked Rust, loading-page CSS, and Windows
+installer header views.
 
 ### Languages
 

@@ -1,3 +1,27 @@
+// ADDED-LINE-RATIONALE 4ac109aceee6846f:1: Isolates `harness_language` as the owner of this behavior so callers can use and test it without duplicating policy.
+// ADDED-LINE-RATIONALE 6510d1893cf90722:1: Freezes `settings` for `harness_language` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 7e75ca520ac2005d:1: Freezes `let` for `korean_switches_persists_and_keeps_install_actions` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE b3a2f61ff486df10:1: Supports `korean_switches_persists_and_keeps_install_actions` while preserving the nearby constraint: Settings is in the account row's menu.
+// ADDED-LINE-RATIONALE 6ff093fb1a4d5cfc:1: Freezes `h` for `korean_switches_persists_and_keeps_install_actions` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 2eec71ba3cd82f9f:2: Delegates `korean_switches_persists_and_keeps_install_actions`'s `h / run_steps` work to `h.run_steps` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE b9d2fb3dcfe1e05a:1: Supports `korean_switches_persists_and_keeps_install_actions` while preserving the nearby constraint: The last check is in Settings (the Apps page has no footer).
+// ADDED-LINE-RATIONALE aeeacbd0ad131a10:1: Delegates `korean_switches_persists_and_keeps_install_actions`'s `h / get_by_label / click` work to `h.get_by_label` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE a6f1299740a6263e:1: Delegates `korean_switches_persists_and_keeps_install_actions`'s `h / get_by_label` work to `h.get_by_label` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE b4f8e74d374f16de:1: Supports `korean_switches_persists_and_keeps_install_actions` while preserving the nearby constraint: The account row's menu, in Korean.
+// ADDED-LINE-RATIONALE c15abba343a5b6ee:1: Delegates `korean_switches_persists_and_keeps_install_actions`'s `h / get_by_label / click` work to `h.get_by_label` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 2eec71ba3cd82f9f:5: Delegates `korean_switches_persists_and_keeps_install_actions`'s `h / run_steps` work to `h.run_steps` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 5c7902ed248eca29:1: Delegates `korean_switches_persists_and_keeps_install_actions`'s `h / get_by_label / Redrob` work to `h.get_by_label` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 6a88d6f640b57b02:1: Delegates `korean_switches_persists_and_keeps_install_actions`'s `snapshot / h / account` work to `snapshot` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 790c70d263c9cf36:1: Delegates `korean_switches_persists_and_keeps_install_actions`'s `h / key_press / egui` work to `h.key_press` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 2eec71ba3cd82f9f:6: Delegates `korean_switches_persists_and_keeps_install_actions`'s `h / run_steps` work to `h.run_steps` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE a96362aee2a2e44e:1: Makes `korean_switches_persists_and_keeps_install_actions` fail visibly when `assert / h / query_by_label` violates the behavior this path promises.
+// ADDED-LINE-RATIONALE 0bb9d1ed63603723:1: Makes `korean_switches_persists_and_keeps_install_actions` fail visibly when `assert_eq / h / get_by_label` violates the behavior this path promises.
+// ADDED-LINE-RATIONALE 79233b0935878fde:1: Supports `korean_switches_persists_and_keeps_install_actions` while preserving the nearby constraint: Product names stay in Latin script.
+// ADDED-LINE-RATIONALE 7f7c9c0e1e18eed1:1: Supports `korean_switches_persists_and_keeps_install_actions` while preserving the nearby constraint: Release dates in Korean, on the tiles' version lines.
+// ADDED-LINE-RATIONALE 7e9e895b8ed979c8:1: Delegates `korean_switches_persists_and_keeps_install_actions`'s `light / run_steps` work to `light.run_steps` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 963b109863c1d0da:1: Freezes `assert` for `korean_switches_persists_and_keeps_install_actions` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 80229bd729c57e37:1: Delegates `korean_switches_persists_and_keeps_install_actions`'s `snapshot / light / grid` work to `snapshot` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE d38c5f9d762234f4:1: Freezes `let` for `korean_switches_persists_and_keeps_install_actions` so every later calculation in this path observes the same input.
 //! The Korean UI, in its own test binary: the UI language is process-wide, so it can't share one
 //! with the English UI tests. `REDROB_LAUNCHER_SNAPSHOTS=<dir>` also saves screenshots (run with
 //! `-- --test-threads=1`).

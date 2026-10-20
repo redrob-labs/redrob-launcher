@@ -33,13 +33,13 @@ The release check that finds a newer Redrob Code release drives `ui-egui/src/eng
 | Daemon | What happens |
 | --- | --- |
 | not running | the new version is installed right away |
-| running, nobody attached | `service stop`, install, `service start` -- the daemon comes back on the new binary |
-| running, apps attached | nothing yet; the dialog shows **Update available**, which apps hold it back, and **Update now** |
+| running, nobody attached | `service stop`, install, `service start` — the daemon comes back on the new binary |
+| running, apps attached | nothing yet; the AI engine page shows **Update available**, which apps hold it back, and **Update now** |
 
 **Update now** stops the daemon even with apps attached (they reconnect on their own, as after
 any restart). A version that failed to install is not retried on its own; **Update now** retries
 it. The setting *Keep the Redrob Code engine up to date on its own* (on by default) turns the
-automatic part off; the dialog's **Update now** still works with it off. Swapping the binary under
+automatic part off; the page's **Update now** still works with it off. Swapping the binary under
 a running daemon is never done: on Windows the running exe is locked, and on every platform the
 daemon would keep serving the old version until something restarted it.
 

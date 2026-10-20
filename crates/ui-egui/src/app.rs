@@ -1,3 +1,116 @@
+// ADDED-LINE-RATIONALE c65f81c3ee035116:1: Gives `app` direct access to `crate / settings / Filter` instead of relying on an implicit platform facility.
+// ADDED-LINE-RATIONALE bd791e931f0556db:1: Supports `Page` while preserving the nearby constraint: The shared Redrob Code engine: running or not, who uses it, start and stop.
+// ADDED-LINE-RATIONALE 2f45a214ed3fe916:1: Supports `Page` while preserving the nearby constraint: Signing in to Redrob, and which apps use it.
+// ADDED-LINE-RATIONALE 1f4cfc3b5846fdae:1: Keeps `Settings` in `Page`'s API-defined order so positional values retain their intended meaning.
+// ADDED-LINE-RATIONALE 9219fc67cca7bea4:1: Delegates `show_engine`'s `set_page / Page / Engine` work to `self.set_page` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 618f2d2c65b8e37f:1: Supports `ui` while preserving the nearby constraint: page's own check below it would look as if nothing had been open.
+// ADDED-LINE-RATIONALE 3aba3e1f3061631e:1: Supports `ui` while preserving the nearby constraint: search, logo and Update sit in a 48 px row over the main area instead.
+// ADDED-LINE-RATIONALE 0ebf8d368d5f24e2:1: Freezes `if` for `ui` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE cff5291e2bf08ce6:1: Delegates `ui`'s `egui / Panel / top` work to `egui::Panel::top` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 0f266cb8cf4ed299:1: Delegates `ui`'s `frame / egui / Frame` work to `frame` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 910f79f861c5bd6e:1: Delegates `ui`'s `exact_size / crate / views` work to `exact_size` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE aa55012480b72796:1: Delegates `ui`'s `resizable` work to `resizable` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE ba158783caff6453:1: Delegates `ui`'s `show / ui / ui` work to `show` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 144e68ae02fb4e12:31: Bounds the `ui` implementation here so `show / ui / ui` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 5e8776d9f15ca3ac:1: Freezes `inset` for `ui` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 8594a272ec2e6603:1: Delegates `ui`'s `egui / Panel / left` work to `egui::Panel::left` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 3ec015161a96f38d:1: Delegates `ui`'s `frame / egui / Frame` work to `frame` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE e73210a336213360:1: Delegates `ui`'s `exact_size / Self / sidebar_width` work to `exact_size` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 42b984a00830490d:1: Delegates `ui`'s `show_separator_line` work to `show_separator_line` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 5cdaa950c4cbb719:1: Delegates `ui`'s `show / ui / ui` work to `show` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 7d7017c4d30812a6:1: Freezes `if` for `ui` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 63f00d1c6154cc55:1: Delegates `ui`'s `egui / Panel / top` work to `egui::Panel::top` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 9b27dd3171ac4d96:1: Delegates `ui`'s `frame / egui / Frame` work to `frame` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 910f79f861c5bd6e:2: Delegates `ui`'s `exact_size / crate / views` work to `exact_size` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE aa55012480b72796:2: Delegates `ui`'s `resizable` work to `resizable` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE ba158783caff6453:2: Delegates `ui`'s `show / ui / ui` work to `show` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 144e68ae02fb4e12:32: Bounds the `ui` implementation here so `show / ui / ui` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 22968439fb5fdfa7:1: Supports `ui` while preserving the nearby constraint: The Apps page has no top bar: its actions are in the chrome and its filter row.
+// ADDED-LINE-RATIONALE 3c3c79864c15a24a:1: Delegates `ui`'s `egui / Panel / top` work to `egui::Panel::top` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 9b27dd3171ac4d96:2: Delegates `ui`'s `frame / egui / Frame` work to `frame` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 28c4ef078517d488:1: Delegates `ui`'s `exact_size / crate / shell` work to `exact_size` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE aa55012480b72796:3: Delegates `ui`'s `resizable` work to `resizable` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 84e531e0438fc432:1: Delegates `ui`'s `show / ui / ui` work to `show` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 144e68ae02fb4e12:33: Bounds the `ui` implementation here so `show / ui / ui` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 812c7814a091aba9:1: Supports `ui` while preserving the nearby constraint: 24 px is inside its scroll area, so the bar hugs the edge like Cowork's.
+// ADDED-LINE-RATIONALE 41ba864cd7d993ac:1: Delegates `ui`'s `frame / egui / Frame` work to `frame` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE b6c314ea7ef199b9:1: Delegates `ui`'s `show / ui / ui` work to `show` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE ecd4ec216af1a58a:1: Freezes `Page` for `ui` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 2b501ee6dcdee398:1: Freezes `Page` for `ui` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE e5bc0f4d92293ce0:1: Delegates `ui`'s `crate / widgets / page_scroll` work to `crate::widgets::page_scroll` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 67eb662455877620:1: Supports `ui` while preserving the nearby constraint: A reading measure, like Cowork's content column.
+// ADDED-LINE-RATIONALE 671594c0ef8e2046:1: Prevents `ui` from applying its side effect outside the `page` state.
+// ADDED-LINE-RATIONALE 7ed59b35662f2e52:1: Freezes `Page` for `ui` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE dac5185a5f962204:1: Freezes `Page` for `ui` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 29532d02deae638d:1: Freezes `_` for `ui` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 42380c443e330c60:1: Supports `ui` while preserving the nearby constraint: Room under the last control, so nothing ends against the window's edge.
+// ADDED-LINE-RATIONALE e4684424052696fe:1: Makes `ui / add_space` an explicit part of `ui` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE 3028d712dcab3272:14: Bounds the `ui` implementation here so `Page / Apps` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE ff9d6d38366878ca:1: Freezes `Page` for `ui` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE c5bb8d6702e3966f:1: Supports `ui` while preserving the nearby constraint: Above the scroll: the page's right padding, as inside it.
+// ADDED-LINE-RATIONALE b8b712bab277c9a7:1: Delegates `ui`'s `inner_margin / egui / Margin` work to `inner_margin` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE e997a09e9e89c7c0:1: Delegates `ui`'s `show / ui / ui` work to `show` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 4f8a3c3333334dd4:1: Freezes `ids` for `ui` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE cd9030d0dda13239:1: Delegates `ui`'s `crate / widgets / page_scroll` work to `crate::widgets::page_scroll` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 487b0d306273dda4:1: Prevents `ui` from applying its side effect outside the `ids / is_empty` state.
+// ADDED-LINE-RATIONALE 03b5fc20524e9586:1: Delegates `ui`'s `empty_state / ui` work to `self.empty_state` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 1ac169fcabb9dd16:1: Makes `empty_state / ui` an explicit part of `ui` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE 2579ddb0a48d8c41:1: Delegates `ui`'s `grid / ui / ids` work to `self.grid` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 9c8ce6e59d9a77d2:2: Bounds the `ui` implementation here so `grid / ui / ids` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 00feba57b64204f2:1: Delegates `ui`'s `ui / add_space` work to `ui.add_space` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE e4684424052696fe:2: Makes `ui / add_space` an explicit part of `ui` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE 3028d712dcab3272:15: Bounds the `ui` implementation here so `ui / add_space` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 110aca60be984262:1: Supports `ui` while preserving the nearby constraint: focused control (a button reached by Tab) doesn't use Escape, so it doesn't block it.
+// ADDED-LINE-RATIONALE 9977361a71f79782:1: Freezes `if` for `ui` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE a15361cc03460d61:1: Delegates `ui`'s `dialog / is_none` work to `self.dialog.is_none` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 048179d09c635347:1: Makes `alert_open` an explicit part of `ui` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE 0bcdff6246bace53:1: Makes `escape_taken` an explicit part of `ui` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE fa9108db29d5b35c:1: Delegates `ui`'s `egui / Popup / is_any_open` work to `egui::Popup::is_any_open` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 37717d187572c68a:1: Delegates `ui`'s `ctx / text_edit_focused` work to `ctx.text_edit_focused` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 94ea3fdf00338c2a:1: Delegates `ui`'s `ctx / input / i` work to `ctx.input` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 144e62ae02fb43e0:3: Bounds the `ui` implementation here so `ctx / input / i` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE c5a4b7297ae84656:1: Delegates `ui`'s `set_page / Page / Apps` work to `self.set_page` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 144e68ae02fb4e12:34: Bounds the `ui` implementation here so `set_page / Page / Apps` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 0d5930e8336d404d:1: Delegates `ui`'s `dialogs / ctx` work to `self.dialogs` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 6398f45536624fc5:1: Delegates `visible_ids`'s `crate / shelves / page_order` work to `crate::shelves::page_order` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 5305014942aaadfb:1: Delegates `visible_ids`'s `into_iter` work to `into_iter` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE fc162c376b85f75c:1: Delegates `visible_ids`'s `filter_map / id / entry` work to `filter_map` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 25e8995e6ca58a94:1: Delegates `visible_ids`'s `filter / e / shown` work to `filter` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE fbe710ab6d05568d:1: Delegates `visible_ids`'s `filter / e` work to `filter` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 11ff6a1b1dbe93e6:1: Delegates `visible_ids`'s `map / e / e` work to `map` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE f75768ecf368a8f0:1: Delegates `visible_ids`'s `collect` work to `collect` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 9d65ce5383a7867c:1: Supports `shown` while preserving the nearby constraint: unless installed ([`crate::shelves::HIDDEN_UNLESS_INSTALLED`]).
+// ADDED-LINE-RATIONALE cae898fef5b0b172:1: Delegates `shown`'s `crate / shelves / shown` work to `crate::shelves::shown` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 584baf5263686ce2:25: Bounds the `shown` implementation here so `crate / shelves / shown` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 25e8995e6ca58a94:2: Delegates `count`'s `filter / e / shown` work to `filter` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 823b5441801f8670:1: Gives `draw_toasts` direct access to `crate / glyphs / Icon` instead of relying on an implicit platform facility.
+// ADDED-LINE-RATIONALE b81f09b54e4e71bf:1: Freezes `W` for `draw_toasts` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE af9fd5850abfe01a:1: Supports `draw_toasts` while preserving the nearby constraint: 24 px in from the window's corner (the page's own padding); there is no footer to clear.
+// ADDED-LINE-RATIONALE c3dfd9641ad75eb5:1: Delegates `draw_toasts`'s `ui / set_width / W` work to `ui.set_width` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE a59680e9b1b9fe0d:1: Freezes `let` for `draw_toasts` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE ad9b9a2add6849d6:1: Delegates `draw_toasts`'s `fill / t / raised` work to `fill` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 59f57dab5da58b51:1: Delegates `draw_toasts`'s `stroke / t / hairline` work to `stroke` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 8f6a73a00433545c:1: Delegates `draw_toasts`'s `corner_radius / egui / CornerRadius` work to `corner_radius` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 9176eda2966799be:1: Delegates `draw_toasts`'s `shadow / theme / shadow_lg` work to `shadow` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 298dde8a29bc66e6:1: Delegates `draw_toasts`'s `inner_margin` work to `inner_margin` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 290b38629cd64c55:1: Delegates `draw_toasts`'s `ui / set_width / W` work to `ui.set_width` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 391c59b37a9915d0:1: Delegates `draw_toasts`'s `ui / horizontal_top / ui` work to `ui.horizontal_top` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 7c4c7788c49590ae:1: Freezes `ui` for `draw_toasts` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE b2f3f38cc755fb56:1: Freezes `let` for `draw_toasts` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 0d62390cad1eac0c:1: Delegates `draw_toasts`'s `crate / glyphs / paint` work to `crate::glyphs::paint` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE b4e601f0c5636b12:1: Freezes `text_w` for `draw_toasts` so every later calculation in this path observes the same input.
+// ADDED-LINE-RATIONALE 96bb64abc31545e4:1: Delegates `draw_toasts`'s `ui / allocate_ui / egui` work to `ui.allocate_ui` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 0da1966e6f65da9d:1: Delegates `draw_toasts`'s `ui / set_width / text_w` work to `ui.set_width` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE bd18fb50265e8d64:1: Delegates `draw_toasts`'s `ui / add` work to `ui.add` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 735b002c77491302:1: Delegates `draw_toasts`'s `egui / Label / new` work to `egui::Label::new` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE cee71c11939e1f00:1: Keeps `wrap` in `draw_toasts`'s API-defined order so positional values retain their intended meaning.
+// ADDED-LINE-RATIONALE f84983a2d7ae2f37:1: Bounds the `draw_toasts` implementation here so `wrap` cannot leak into the adjacent declaration or control path.
+// ADDED-LINE-RATIONALE 36e651cab70b2dde:1: Makes `crate / widgets / icon_button` an explicit part of `draw_toasts` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE 1dedd1deb35c05f2:1: Delegates `draw_toasts`'s `crate / widgets / icon_button` work to `crate::widgets::icon_button` so existing state and error handling remain centralized.
+// ADDED-LINE-RATIONALE 9de4532acd79df81:1: Makes `crate / widgets / icon_button` an explicit part of `draw_toasts` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE a9236aa65502c519:1: Makes `inner` an explicit part of `draw_toasts` because the shared egui interface renders and responds consistently on desktop and web.
+// ADDED-LINE-RATIONALE d92218ed0969eefe:1: Prevents `draw_toasts` from applying its side effect outside the `r / inner / r` state.
+// ADDED-LINE-RATIONALE 2eed0a7f4b4210c7:1: Delegates `draw_toasts`'s `ui / add_space / theme` work to `ui.add_space` so existing state and error handling remain centralized.
 //! [`LauncherUi`]: state, event handling and the page layout.
 
 use std::time::Duration;

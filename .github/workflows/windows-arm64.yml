@@ -1,17 +1,48 @@
+# ADDED-LINE-RATIONALE 4880d1e7da80e674:1: Makes `apps / redrob / launcher` an explicit part of `windows-arm64` because the release automation exercises the same deterministic path on hosted runners.
+# ADDED-LINE-RATIONALE d39e6aa02a3e7a79:1: Pins `installer-ui` for `windows-arm64` so automation does not inherit a runner or tool default.
+# ADDED-LINE-RATIONALE 741fb2ace75ba347:1: Pins `name` for `windows-arm64` so automation does not inherit a runner or tool default.
+# ADDED-LINE-RATIONALE ff7db1df1017bc4c:1: Supports `windows-arm64` while preserving the nearby constraint: Native x86/x64 PR runs catch SDK/compiler, rendering, and provider behavior before release packaging.
+# ADDED-LINE-RATIONALE 0781cd83877c7a79:1: Pins `runs-on` for `windows-arm64` so automation does not inherit a runner or tool default.
+# ADDED-LINE-RATIONALE aad9b53838a1617b:1: Pins `timeout-minutes` for `windows-arm64` so automation does not inherit a runner or tool default.
+# ADDED-LINE-RATIONALE 530722b9b953c199:1: Pins `strategy` for `windows-arm64` so automation does not inherit a runner or tool default.
+# ADDED-LINE-RATIONALE b40401e40340e9ca:1: Pins `fail-fast` for `windows-arm64` so automation does not inherit a runner or tool default.
+# ADDED-LINE-RATIONALE 8ab3a28b57d759c5:1: Pins `matrix` for `windows-arm64` so automation does not inherit a runner or tool default.
+# ADDED-LINE-RATIONALE e7ccf708c23ce16e:1: Pins `arch` for `windows-arm64` so automation does not inherit a runner or tool default.
+# ADDED-LINE-RATIONALE 3ec07015922e35ff:1: Pins `steps` for `windows-arm64` so automation does not inherit a runner or tool default.
+# ADDED-LINE-RATIONALE 115907bf9f6ad829:1: Pins `uses` for `windows-arm64` so automation does not inherit a runner or tool default.
+# ADDED-LINE-RATIONALE 70097291d3cfdf57:1: Pins `name` for `Install deterministic font subsetter` so automation does not inherit a runner or tool default.
+# ADDED-LINE-RATIONALE 517b566d702c0a09:1: Supports `Install deterministic font subsetter` while preserving the nearby constraint: Use the same launcher as build.py; the exact pin keeps generated font tables reproducible.
+# ADDED-LINE-RATIONALE b8c944f935a58542:1: Pins `name` for `Compile setup with warnings as errors` so automation does not inherit a runner or tool default.
+# ADDED-LINE-RATIONALE 538918ae7e8ca122:1: Pins `shell` for `Compile setup with warnings as errors` so automation does not inherit a runner or tool default.
+# ADDED-LINE-RATIONALE 0c6763a492ef615d:1: Pins `run` for `Compile setup with warnings as errors` so automation does not inherit a runner or tool default.
+# ADDED-LINE-RATIONALE 4b3157a4a1d2b6a0:1: Pins `name` for `Render and validate every stage` so automation does not inherit a runner or tool default.
+# ADDED-LINE-RATIONALE 538918ae7e8ca122:2: Pins `shell` for `Render and validate every stage` so automation does not inherit a runner or tool default.
+# ADDED-LINE-RATIONALE 0c6763a492ef615d:2: Pins `run` for `Render and validate every stage` so automation does not inherit a runner or tool default.
+# ADDED-LINE-RATIONALE 721667ea712f7ce7:1: Pins `name` for `Walk UI Automation structure and patterns` so automation does not inherit a runner or tool default.
+# ADDED-LINE-RATIONALE 538918ae7e8ca122:3: Pins `shell` for `Walk UI Automation structure and patterns` so automation does not inherit a runner or tool default.
+# ADDED-LINE-RATIONALE 0c6763a492ef615d:3: Pins `run` for `Walk UI Automation structure and patterns` so automation does not inherit a runner or tool default.
+# ADDED-LINE-RATIONALE 7336bfc09b85d0cc:1: Pins `targets` for `System.Windows.Automation.AutomationElement` so automation does not inherit a runner or tool default.
+# ADDED-LINE-RATIONALE 1ff823bd3a086b54:1: Supports `Check x86 Rust launcher` while preserving the nearby constraint: Reuse this Rust-equipped x64 job: the installer matrix above compiles C++, not the launcher.
+# ADDED-LINE-RATIONALE 76d4e39284243c79:1: Freezes `if` for `Check x86 Rust launcher` so every later calculation in this path observes the same input.
+# ADDED-LINE-RATIONALE 2247f71bb740c303:1: Pins `run` for `Check x86 Rust launcher` so automation does not inherit a runner or tool default.
+# ADDED-LINE-RATIONALE 538918ae7e8ca122:4: Pins `shell` for `Python for the setup build` so automation does not inherit a runner or tool default.
+# ADDED-LINE-RATIONALE 0c6763a492ef615d:4: Pins `run` for `Python for the setup build` so automation does not inherit a runner or tool default.
 # Windows on ARM: package the ARM64 release (cross-compiled on an x64 runner, unsigned here), then
 # install that per-user setup on a Windows 11 ARM64 runner with --silent, in English and in Korean,
 # checking the binary is ARM64, the shortcuts, the recorded folder and language, the Settings > Apps
-# entry, and that the uninstaller removes everything. The launcher is a GUI app, so it isn't run
-# here; the setup is driven without its window. Inlined rather than calling upstream's reusable workflow, so nothing
-# runs here from a repository this organisation does not control.
+# entry, and that the uninstaller removes everything. The GUI launcher is not run here; PRs do
+# cross-check its Windows bindings for i686, while the setup is driven without its window. Inlined
+# rather than calling upstream's reusable workflow, so nothing runs here from a repository this
+# organisation does not control.
 name: Windows ARM64
 
 # Nightly (dependency and runner-image drift shows up within a day), and on PRs that change the
-# Windows packaging itself.
+# Windows packaging or the pointer-width-sensitive Snap Layout subclass.
 on:
   pull_request:
     paths:
       - .github/workflows/windows-arm64.yml
+      - apps/redrob-launcher/src/snap_layouts.rs
       - packaging/windows/**
       - installer/windows/**
   schedule:
@@ -30,6 +61,398 @@ env:
   CARGO_INCREMENTAL: 0
 
 jobs:
+  installer-ui:
+    name: installer UI (${{ matrix.arch }})
+    # Native x86/x64 PR runs catch SDK/compiler, rendering, and provider behavior before release packaging.
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86, x64]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install deterministic font subsetter
+        # Use the same launcher as build.py; the exact pin keeps generated font tables reproducible.
+        run: py -3 -m pip install fontTools==4.67.0
+      - name: Compile setup with warnings as errors
+        shell: pwsh
+        run: |
+          # ADDED-LINE-RATIONALE 43dabe73f3339268:1: Freezes `out` for `Compile setup with warnings as errors` so every later calculation in this path observes the same input.
+          # ADDED-LINE-RATIONALE 33c6419176b45bda:1: Makes `py / installer / windows` an explicit part of `Compile setup with warnings as errors` because the release automation exercises the same deterministic path on hosted runners.
+          # ADDED-LINE-RATIONALE da138e2641c17153:1: Supports `Compile setup with warnings as errors` while preserving the nearby constraint: A malformed embedded payload reaches the real worker-thread error path without installing anything.
+          # ADDED-LINE-RATIONALE 0b430370417ffc57:1: Declares the `System / IO / File` contract on `System.IO.File` so the compiler or runner applies it before execution.
+          # ADDED-LINE-RATIONALE 6058bf1e78306575:1: Delegates `System.IO.File`'s `py / installer / windows` work to `out` so existing state and error handling remain centralized.
+          # ADDED-LINE-RATIONALE f6ec1c6694417f60:1: Delegates `System.IO.File`'s `version / payload / badPayload` work to `uninstaller` so existing state and error handling remain centralized.
+          # ADDED-LINE-RATIONALE ae5dd6bf0b03b9a0:1: Makes `Redrob / Launcher / Error` an explicit part of `System.IO.File` because the release automation exercises the same deterministic path on hosted runners.
+          $out = "target/installer-ui/${{ matrix.arch }}"
+          py -3 installer/windows/build.py --out $out --arch ${{ matrix.arch }} --version 0.0.0
+          # A malformed embedded payload reaches the real worker-thread error path without installing anything.
+          $badPayload = Join-Path $out 'invalid-payload.zip'
+          [System.IO.File]::WriteAllText($badPayload, 'not a zip archive')
+          py -3 installer/windows/build.py --out (Join-Path $out 'error-fixture') --arch ${{ matrix.arch }} `
+            --version 0.0.0 --payload $badPayload --uninstaller (Join-Path $out 'Redrob Launcher Setup.exe') `
+            --name 'Redrob Launcher Error Fixture.exe'
+      - name: Render and validate every stage
+        shell: pwsh
+        run: |
+          # ADDED-LINE-RATIONALE cd66b76743325234:1: Freezes `ErrorActionPreference` for `Render and validate every stage` so every later calculation in this path observes the same input.
+          # ADDED-LINE-RATIONALE 9f5dc85bec549520:1: Freezes `exe` for `Render and validate every stage` so every later calculation in this path observes the same input.
+          # ADDED-LINE-RATIONALE daf37bc751076379:1: Freezes `render` for `Render and validate every stage` so every later calculation in this path observes the same input.
+          # ADDED-LINE-RATIONALE 1e5afc8d8d6d5223:1: Makes `exe / render / stages` an explicit part of `Render and validate every stage` because the release automation exercises the same deterministic path on hosted runners.
+          # ADDED-LINE-RATIONALE ebced81e01ae8349:1: Prevents `Render and validate every stage` from applying its side effect outside the `LASTEXITCODE / ne / throw` state.
+          # ADDED-LINE-RATIONALE ba9bc8fef7f1af4b:1: Makes `Add / Type / AssemblyName` an explicit part of `Render and validate every stage` because the release automation exercises the same deterministic path on hosted runners.
+          # ADDED-LINE-RATIONALE c93e6250c00c1920:1: Freezes `images` for `Render and validate every stage` so every later calculation in this path observes the same input.
+          # ADDED-LINE-RATIONALE 110a8c65c870fad6:1: Prevents `Render and validate every stage` from applying its side effect outside the `images / Count / lt` state.
+          # ADDED-LINE-RATIONALE 118823904964c7ad:1: Applies `Render and validate every stage` consistently to every `foreach / file / in` item rather than handling only the first match.
+          # ADDED-LINE-RATIONALE 58cb16b83d9db29f:1: Freezes `image` for `Render and validate every stage` so every later calculation in this path observes the same input.
+          # ADDED-LINE-RATIONALE 0921dd90c92352fc:1: Delegates `Render and validate every stage`'s `try / image / Width` work to `if` so existing state and error handling remain centralized.
+          # ADDED-LINE-RATIONALE f3a9b44236cafcb8:1: Delegates `Render and validate every stage`'s `finally / image / Dispose` work to `image.Dispose` so existing state and error handling remain centralized.
+          # ADDED-LINE-RATIONALE 521d49b4c0968cdb:1: Bounds the `Render and validate every stage` implementation here so `finally / image / Dispose` cannot leak into the adjacent declaration or control path.
+          $ErrorActionPreference = 'Stop'
+          $exe = Resolve-Path "target/installer-ui/${{ matrix.arch }}/Redrob Launcher Setup.exe"
+          $render = Join-Path $env:RUNNER_TEMP "installer-stages-${{ matrix.arch }}"
+          & $exe --render-stages $render --theme light
+          if ($LASTEXITCODE -ne 0) { throw "--render-stages exited $LASTEXITCODE" }
+          Add-Type -AssemblyName System.Drawing
+          $images = @(Get-ChildItem $render -Filter '*.png')
+          if ($images.Count -lt 24) { throw "expected at least 24 stage images, found $($images.Count)" }
+          foreach ($file in $images) {
+            $image = [System.Drawing.Image]::FromFile($file.FullName)
+            try { if ($image.Width -ne 1440 -or $image.Height -ne 880) { throw "bad dimensions for $($file.Name)" } }
+            finally { $image.Dispose() }
+          }
+      - name: Walk UI Automation structure and patterns
+        shell: pwsh
+        run: |
+          # ADDED-LINE-RATIONALE cd66b76743325234:2: Freezes `ErrorActionPreference` for `Walk UI Automation structure and patterns` so every later calculation in this path observes the same input.
+          # ADDED-LINE-RATIONALE 4844152ff890e2b4:1: Makes `Add / Type / AssemblyName` an explicit part of `Walk UI Automation structure and patterns` because the release automation exercises the same deterministic path on hosted runners.
+          # ADDED-LINE-RATIONALE 2bdeab39f6742818:1: Makes `Add / Type / AssemblyName` an explicit part of `Walk UI Automation structure and patterns` because the release automation exercises the same deterministic path on hosted runners.
+          # ADDED-LINE-RATIONALE 008d7dd9c10020e5:1: Makes `Add / Type / ReferencedAssemblies` an explicit part of `Walk UI Automation structure and patterns` because the release automation exercises the same deterministic path on hosted runners.
+          # ADDED-LINE-RATIONALE 1ee01523404b099b:1: Makes `function / Wait / Until` an explicit part of `KeyDown` because the release automation exercises the same deterministic path on hosted runners.
+          # ADDED-LINE-RATIONALE 65f564cd442cfbb0:1: Isolates `Wait-Until` as the owner of this behavior so callers can use and test it without duplicating policy.
+          # ADDED-LINE-RATIONALE ee3294709d645956:1: Freezes `for` for `Wait-Until` so every later calculation in this path observes the same input.
+          # ADDED-LINE-RATIONALE 4c35288371cc32e1:1: Delegates `Wait-Until`'s `try / condition / catch` work to `if` so existing state and error handling remain centralized.
+          # ADDED-LINE-RATIONALE ab1b9819fd769b94:1: Makes `Start / Sleep / Milliseconds` an explicit part of `Wait-Until` because the release automation exercises the same deterministic path on hosted runners.
+          # ADDED-LINE-RATIONALE c930f5e643547bbb:6: Bounds the `Wait-Until` implementation here so `Start / Sleep / Milliseconds` cannot leak into the adjacent declaration or control path.
+          # ADDED-LINE-RATIONALE 49f32662599e5a52:1: Makes `Wait-Until` fail visibly when `throw / failure` violates the behavior this path promises.
+          # ADDED-LINE-RATIONALE 521d49b4c0968cdb:3: Bounds the `Wait-Until` implementation here so `throw / failure` cannot leak into the adjacent declaration or control path.
+          # ADDED-LINE-RATIONALE 23723931c715f5e8:1: Isolates `Open-Root` as the owner of this behavior so callers can use and test it without duplicating policy.
+          # ADDED-LINE-RATIONALE 0722e2abe5106e29:1: Delegates `Open-Root`'s `Wait / Until / process` work to `process.Refresh` so existing state and error handling remain centralized.
+          # ADDED-LINE-RATIONALE c40f68b6c3f26f03:1: Stops `Open-Root` at the `System / Windows / Automation` outcome so no later branch can overwrite that result.
+          # ADDED-LINE-RATIONALE 521d49b4c0968cdb:4: Bounds the `Open-Root` implementation here so `System / Windows / Automation` cannot leak into the adjacent declaration or control path.
+          # ADDED-LINE-RATIONALE 93c35901dea69edc:1: Isolates `ById` as the owner of this behavior so callers can use and test it without duplicating policy.
+          # ADDED-LINE-RATIONALE bb707bf669751ec7:1: Freezes `condition` for `ById` so every later calculation in this path observes the same input.
+          # ADDED-LINE-RATIONALE 25d25357e3e84df5:1: Declares the `System / Windows / Automation` contract on `System.Windows.Automation.AutomationElement` so the compiler or runner applies it before execution.
+          # ADDED-LINE-RATIONALE 1ccaf6be29de49aa:1: Stops `System.Windows.Automation.AutomationElement` at the `root / FindFirst / System` outcome so no later branch can overwrite that result.
+          # ADDED-LINE-RATIONALE 521d49b4c0968cdb:5: Bounds the `System.Windows.Automation.AutomationElement` implementation here so `root / FindFirst / System` cannot leak into the adjacent declaration or control path.
+          # ADDED-LINE-RATIONALE 17a5b25f1ce14cb9:1: Isolates `FocusedId` as the owner of this behavior so callers can use and test it without duplicating policy.
+          # ADDED-LINE-RATIONALE 8879275dc1c5818b:1: Freezes `focused` for `FocusedId` so every later calculation in this path observes the same input.
+          # ADDED-LINE-RATIONALE 1f81d302d9b813eb:1: Prevents `FocusedId` from applying its side effect outside the `focused / focused / Current` state.
+          # ADDED-LINE-RATIONALE ff5ad1848338d5c4:1: Stops `FocusedId` at the `focused / focused / Current` outcome so no later branch can overwrite that result.
+          # ADDED-LINE-RATIONALE 521d49b4c0968cdb:6: Bounds the `FocusedId` implementation here so `focused / focused / Current` cannot leak into the adjacent declaration or control path.
+          # ADDED-LINE-RATIONALE 9f5dc85bec549520:2: Freezes `exe` for `FocusedId` so every later calculation in this path observes the same input.
+          # ADDED-LINE-RATIONALE 47e75999beb5de80:1: Freezes `process` for `FocusedId` so every later calculation in this path observes the same input.
+          # ADDED-LINE-RATIONALE 8ef17192463e3fd4:1: Freezes `focusHandlerAdded` for `FocusedId` so every later calculation in this path observes the same input.
+          # ADDED-LINE-RATIONALE a2b89053e77d2ca4:1: Makes `try` an explicit part of `FocusedId` because the release automation exercises the same deterministic path on hosted runners.
+          # ADDED-LINE-RATIONALE 0cce54581947d9e5:1: Freezes `root` for `FocusedId` so every later calculation in this path observes the same input.
+          # ADDED-LINE-RATIONALE f506f4e27dbd37fe:1: Declares the `System / Windows / Automation` contract on `System.Windows.Automation.Automation` so the compiler or runner applies it before execution.
+          # ADDED-LINE-RATIONALE 4e910e8f13be00d9:1: Freezes `focusHandlerAdded` for `System.Windows.Automation.Automation` so every later calculation in this path observes the same input.
+          # ADDED-LINE-RATIONALE 7e1a6d967e9c8a14:1: Applies `System.Windows.Automation.Automation` consistently to every `foreach / id / in` item rather than handling only the first match.
+          # ADDED-LINE-RATIONALE a058fbd7f6e2b6f7:1: Prevents `System.Windows.Automation.Automation` from applying its side effect outside the `not / ById / id` state.
+          # ADDED-LINE-RATIONALE c930f5e643547bbb:7: Bounds the `System.Windows.Automation.Automation` implementation here so `not / ById / id` cannot leak into the adjacent declaration or control path.
+          # ADDED-LINE-RATIONALE 1d2a1504baad4f2f:1: Freezes `english` for `System.Windows.Automation.Automation` so every later calculation in this path observes the same input.
+          # ADDED-LINE-RATIONALE 551ba34051742ef1:1: Delegates `System.Windows.Automation.Automation`'s `english / SetFocus` work to `english.SetFocus` so existing state and error handling remain centralized.
+          # ADDED-LINE-RATIONALE 175fc53d548d6a64:1: Delegates `System.Windows.Automation.Automation`'s `Wait / Until / english` work to `and` so existing state and error handling remain centralized.
+          # ADDED-LINE-RATIONALE 2a5762fa507f5f1f:1: Makes `SetFocus / did / not` an explicit part of `System.Windows.Automation.Automation` because the release automation exercises the same deterministic path on hosted runners.
+          # ADDED-LINE-RATIONALE b21417ccff487a82:1: Delegates `System.Windows.Automation.Automation`'s `english / GetCurrentPattern / System` work to `english.GetCurrentPattern` so existing state and error handling remain centralized.
+          # ADDED-LINE-RATIONALE ee512b903e963cd3:1: Makes `Wait / Until / ById` an explicit part of `System.Windows.Automation.Automation` because the release automation exercises the same deterministic path on hosted runners.
+          # ADDED-LINE-RATIONALE abc73f878fec6160:1: Delegates `System.Windows.Automation.Automation`'s `Wait / Until / root` work to `and` so existing state and error handling remain centralized.
+          # ADDED-LINE-RATIONALE 52f0b3b66b45204c:1: Makes `stage / transition / left` an explicit part of `System.Windows.Automation.Automation` because the release automation exercises the same deterministic path on hosted runners.
+          # ADDED-LINE-RATIONALE 2e5336dbb34bcb5b:1: Freezes `option` for `System.Windows.Automation.Automation` so every later calculation in this path observes the same input.
+          # ADDED-LINE-RATIONALE 37baea55cafe3ae7:1: Freezes `toggle` for `System.Windows.Automation.Automation` so every later calculation in this path observes the same input.
+          # ADDED-LINE-RATIONALE 2f796ce272f6cefb:1: Freezes `beforePointer` for `System.Windows.Automation.Automation` so every later calculation in this path observes the same input.
+          # ADDED-LINE-RATIONALE 311ee461688b890d:1: Freezes `primary` for `System.Windows.Automation.Automation` so every later calculation in this path observes the same input.
+          # ADDED-LINE-RATIONALE d9dfe0c4bfefbb6b:1: Delegates `System.Windows.Automation.Automation`'s `primary / SetFocus` work to `primary.SetFocus` so existing state and error handling remain centralized.
+          # ADDED-LINE-RATIONALE b136a712a4dd3279:1: Makes `Wait / Until / primary` an explicit part of `System.Windows.Automation.Automation` because the release automation exercises the same deterministic path on hosted runners.
+          # ADDED-LINE-RATIONALE 845398c2ecb7b04e:1: Freezes `focusBeforeClick` for `System.Windows.Automation.Automation` so every later calculation in this path observes the same input.
+          # ADDED-LINE-RATIONALE cefbeac6504613c7:1: Freezes `bounds` for `System.Windows.Automation.Automation` so every later calculation in this path observes the same input.
+          # ADDED-LINE-RATIONALE b67bdd9ab704bc99:1: Declares the `UiaProbe / Click / process` contract on `UiaProbe` so the compiler or runner applies it before execution.
+          # ADDED-LINE-RATIONALE 6f6de2e54e9d75e4:1: Delegates `UiaProbe`'s `Wait / Until / option` work to `and` so existing state and error handling remain centralized.
+          # ADDED-LINE-RATIONALE ad761798aed2f335:1: Makes `pointer / activation / did` an explicit part of `UiaProbe` because the release automation exercises the same deterministic path on hosted runners.
+          # ADDED-LINE-RATIONALE d45fd87940d50951:1: Makes `Wait / Until / UiaProbe` an explicit part of `UiaProbe` because the release automation exercises the same deterministic path on hosted runners.
+          # ADDED-LINE-RATIONALE 83c78770e564ceae:1: Makes `pointer / focus / did` an explicit part of `UiaProbe` because the release automation exercises the same deterministic path on hosted runners.
+          # ADDED-LINE-RATIONALE 32d5e5bfb5aa3855:1: Makes `Wait / Until / toggle` an explicit part of `UiaProbe` because the release automation exercises the same deterministic path on hosted runners.
+          # ADDED-LINE-RATIONALE f8eb1314b062b0c6:1: Declares the `UiaProbe / KeyDown / process` contract on `UiaProbe` so the compiler or runner applies it before execution.
+          # ADDED-LINE-RATIONALE c910d4ee98c2f2e7:1: Makes `Wait / Until / toggle` an explicit part of `UiaProbe` because the release automation exercises the same deterministic path on hosted runners.
+          # ADDED-LINE-RATIONALE 17346bcc691f825b:1: Makes `pointer / focused / option` an explicit part of `UiaProbe` because the release automation exercises the same deterministic path on hosted runners.
+          # ADDED-LINE-RATIONALE df4b5b408d8778e5:1: Delegates `UiaProbe`'s `ById / minimize / GetCurrentPattern` work to `GetCurrentPattern` so existing state and error handling remain centralized.
+          # ADDED-LINE-RATIONALE c94aa0181b0db541:1: Makes `Wait / Until` an explicit part of `UiaProbe` because the release automation exercises the same deterministic path on hosted runners.
+          # ADDED-LINE-RATIONALE c317a25366f12a0f:1: Delegates `UiaProbe`'s `not / option / Current` work to `and` so existing state and error handling remain centralized.
+          # ADDED-LINE-RATIONALE 70448a21a7517d24:1: Makes `HasKeyboardFocus / GetFocus / stayed` an explicit part of `UiaProbe` because the release automation exercises the same deterministic path on hosted runners.
+          # ADDED-LINE-RATIONALE e96f0b44f9098cf8:1: Declares the `UiaProbe / ShowWindowAsync / process` contract on `void` so the compiler or runner applies it before execution.
+          # ADDED-LINE-RATIONALE 243fe3cc6f139aef:1: Declares the `UiaProbe / SetForegroundWindow / process` contract on `void` so the compiler or runner applies it before execution.
+          # ADDED-LINE-RATIONALE 508332e4c1c6b38a:1: Delegates `void`'s `option / SetFocus` work to `option.SetFocus` so existing state and error handling remain centralized.
+          # ADDED-LINE-RATIONALE 6f6de2e54e9d75e4:2: Delegates `void`'s `Wait / Until / option` work to `and` so existing state and error handling remain centralized.
+          # ADDED-LINE-RATIONALE fb6221c6fe28f0bc:1: Makes `logical / focus / was` an explicit part of `void` because the release automation exercises the same deterministic path on hosted runners.
+          # ADDED-LINE-RATIONALE 8bb1b291de632060:1: Freezes `before` for `void` so every later calculation in this path observes the same input.
+          # ADDED-LINE-RATIONALE 2902f769e890e841:1: Delegates `void`'s `toggle / Toggle` work to `toggle.Toggle` so existing state and error handling remain centralized.
+          # ADDED-LINE-RATIONALE 2ec744ffb8d51052:1: Makes `Wait / Until / toggle` an explicit part of `void` because the release automation exercises the same deterministic path on hosted runners.
+          # ADDED-LINE-RATIONALE 44ba83e652f82ad1:1: Delegates `void`'s `ById / primary / GetCurrentPattern` work to `GetCurrentPattern` so existing state and error handling remain centralized.
+          # ADDED-LINE-RATIONALE 9391333f843b58d6:1: Makes `Wait / Until / ById` an explicit part of `void` because the release automation exercises the same deterministic path on hosted runners.
+          # ADDED-LINE-RATIONALE 59b8478156c3e96f:1: Freezes `range` for `void` so every later calculation in this path observes the same input.
+          # ADDED-LINE-RATIONALE f365e80c00b98fbe:1: Prevents `void` from applying its side effect outside the `not / range / Current` state.
+          # ADDED-LINE-RATIONALE 9f8c16533d554360:1: Makes `void` fail visibly when `throw / invalid / progress` violates the behavior this path promises.
+          # ADDED-LINE-RATIONALE c930f5e643547bbb:8: Bounds the `void` implementation here so `throw / invalid / progress` cannot leak into the adjacent declaration or control path.
+          # ADDED-LINE-RATIONALE 4cd18670eaddf597:1: Delegates `void`'s `ById / close / GetCurrentPattern` work to `GetCurrentPattern` so existing state and error handling remain centralized.
+          # ADDED-LINE-RATIONALE efed317dc9503998:1: Delegates `void`'s `Wait / Until / process` work to `process.Refresh` so existing state and error handling remain centralized.
+          # ADDED-LINE-RATIONALE c392e9cc22d87fbd:1: Makes `finally` an explicit part of `void` because the release automation exercises the same deterministic path on hosted runners.
+          # ADDED-LINE-RATIONALE 16be5067041e1c75:1: Prevents `void` from applying its side effect outside the `focusHandlerAdded` state.
+          # ADDED-LINE-RATIONALE bd1cc2095791b751:1: Declares the `System / Windows / Automation` contract on `System.Windows.Automation.Automation` so the compiler or runner applies it before execution.
+          # ADDED-LINE-RATIONALE c930f5e643547bbb:9: Bounds the `System.Windows.Automation.Automation` implementation here so `System / Windows / Automation` cannot leak into the adjacent declaration or control path.
+          # ADDED-LINE-RATIONALE 362502d9ff037969:1: Prevents `System.Windows.Automation.Automation` from applying its side effect outside the `not / process / HasExited` state.
+          # ADDED-LINE-RATIONALE 521d49b4c0968cdb:7: Bounds the `System.Windows.Automation.Automation` implementation here so `not / process / HasExited` cannot leak into the adjacent declaration or control path.
+          # ADDED-LINE-RATIONALE 5cde9f0dc0f88c5b:1: Supports `UiaProbe` while preserving the nearby constraint: Exercise the real worker completion path with a malformed embedded payload.
+          # ADDED-LINE-RATIONALE 6e828643502ca713:1: Freezes `errorExe` for `UiaProbe` so every later calculation in this path observes the same input.
+          # ADDED-LINE-RATIONALE 665825ffc00b7a3e:1: Freezes `errorProcess` for `UiaProbe` so every later calculation in this path observes the same input.
+          # ADDED-LINE-RATIONALE f3662bbc4377471a:1: Freezes `liveHandlerAdded` for `UiaProbe` so every later calculation in this path observes the same input.
+          # ADDED-LINE-RATIONALE a2b89053e77d2ca4:2: Makes `try` an explicit part of `UiaProbe` because the release automation exercises the same deterministic path on hosted runners.
+          # ADDED-LINE-RATIONALE 44727c6279837823:1: Freezes `root` for `UiaProbe` so every later calculation in this path observes the same input.
+          # ADDED-LINE-RATIONALE 618a5b3e57ed0d7c:1: Declares the `System / Windows / Automation` contract on `System.Windows.Automation.Automation` so the compiler or runner applies it before execution.
+          # ADDED-LINE-RATIONALE a0f8aa6b36e995e4:1: Declares the `System / Windows / Automation` contract on `System.Windows.Automation.AutomationElement` so the compiler or runner applies it before execution.
+          # ADDED-LINE-RATIONALE a7e05718e7eb2e57:1: Declares the `System / Windows / Automation` contract on `System.Windows.Automation.TreeScope` so the compiler or runner applies it before execution.
+          # ADDED-LINE-RATIONALE 77eaa475e89c5777:1: Freezes `liveHandlerAdded` for `System.Windows.Automation.TreeScope` so every later calculation in this path observes the same input.
+          # ADDED-LINE-RATIONALE 44ba83e652f82ad1:2: Delegates `System.Windows.Automation.TreeScope`'s `ById / primary / GetCurrentPattern` work to `GetCurrentPattern` so existing state and error handling remain centralized.
+          # ADDED-LINE-RATIONALE 0002a831b73513eb:1: Makes `Wait / Until / ById` an explicit part of `System.Windows.Automation.TreeScope` because the release automation exercises the same deterministic path on hosted runners.
+          # ADDED-LINE-RATIONALE 44ba83e652f82ad1:3: Delegates `System.Windows.Automation.TreeScope`'s `ById / primary / GetCurrentPattern` work to `GetCurrentPattern` so existing state and error handling remain centralized.
+          # ADDED-LINE-RATIONALE c94aa0181b0db541:2: Makes `Wait / Until` an explicit part of `System.Windows.Automation.TreeScope` because the release automation exercises the same deterministic path on hosted runners.
+          # ADDED-LINE-RATIONALE 33b9cacfe9b2a759:1: Freezes `description` for `System.Windows.Automation.TreeScope` so every later calculation in this path observes the same input.
+          # ADDED-LINE-RATIONALE 343e60d68c5e6959:1: Makes `description / and / description` an explicit part of `System.Windows.Automation.TreeScope` because the release automation exercises the same deterministic path on hosted runners.
+          # ADDED-LINE-RATIONALE fa6e1af2cf703888:1: Makes `asynchronous / error / detail` an explicit part of `System.Windows.Automation.TreeScope` because the release automation exercises the same deterministic path on hosted runners.
+          # ADDED-LINE-RATIONALE 911c56fc9233b1f9:1: Freezes `description` for `System.Windows.Automation.TreeScope` so every later calculation in this path observes the same input.
+          # ADDED-LINE-RATIONALE a05cffa43629db8e:1: Freezes `liveSetting` for `System.Windows.Automation.TreeScope` so every later calculation in this path observes the same input.
+          # ADDED-LINE-RATIONALE 328ec1e8d04517ca:1: Declares the `System / Windows / Automation` contract on `System.Windows.Automation.AutomationElementIdentifiers` so the compiler or runner applies it before execution.
+          # ADDED-LINE-RATIONALE 1be54ed69ca5132d:1: Prevents `System.Windows.Automation.AutomationElementIdentifiers` from applying its side effect outside the `int / liveSetting / ne` state.
+          # ADDED-LINE-RATIONALE f419362ba784ec4e:1: Makes `System.Windows.Automation.AutomationElementIdentifiers` fail visibly when `throw / actionable / error` violates the behavior this path promises.
+          # ADDED-LINE-RATIONALE c930f5e643547bbb:10: Bounds the `System.Windows.Automation.AutomationElementIdentifiers` implementation here so `throw / actionable / error` cannot leak into the adjacent declaration or control path.
+          # ADDED-LINE-RATIONALE ade8a9abdcafd159:1: Makes `Wait / Until / UiaProbe` an explicit part of `System.Windows.Automation.AutomationElementIdentifiers` because the release automation exercises the same deterministic path on hosted runners.
+          # ADDED-LINE-RATIONALE 4cd18670eaddf597:2: Delegates `System.Windows.Automation.AutomationElementIdentifiers`'s `ById / close / GetCurrentPattern` work to `GetCurrentPattern` so existing state and error handling remain centralized.
+          # ADDED-LINE-RATIONALE 9483adb963c23bdb:1: Delegates `System.Windows.Automation.AutomationElementIdentifiers`'s `Wait / Until / errorProcess` work to `errorProcess.Refresh` so existing state and error handling remain centralized.
+          # ADDED-LINE-RATIONALE c392e9cc22d87fbd:2: Makes `finally` an explicit part of `System.Windows.Automation.AutomationElementIdentifiers` because the release automation exercises the same deterministic path on hosted runners.
+          # ADDED-LINE-RATIONALE 03e385bf3d6797f9:1: Prevents `System.Windows.Automation.AutomationElementIdentifiers` from applying its side effect outside the `liveHandlerAdded` state.
+          # ADDED-LINE-RATIONALE 5a78868a01bb5165:1: Declares the `System / Windows / Automation` contract on `System.Windows.Automation.Automation` so the compiler or runner applies it before execution.
+          # ADDED-LINE-RATIONALE 98dcc115fcfaa2f6:1: Declares the `System / Windows / Automation` contract on `System.Windows.Automation.AutomationElement` so the compiler or runner applies it before execution.
+          # ADDED-LINE-RATIONALE c930f5e643547bbb:11: Bounds the `System.Windows.Automation.AutomationElement` implementation here so `System / Windows / Automation` cannot leak into the adjacent declaration or control path.
+          # ADDED-LINE-RATIONALE f24d9aeaf09dc237:1: Prevents `System.Windows.Automation.AutomationElement` from applying its side effect outside the `not / errorProcess / HasExited` state.
+          # ADDED-LINE-RATIONALE 521d49b4c0968cdb:8: Bounds the `System.Windows.Automation.AutomationElement` implementation here so `not / errorProcess / HasExited` cannot leak into the adjacent declaration or control path.
+          $ErrorActionPreference = 'Stop'
+          Add-Type -AssemblyName UIAutomationClient
+          Add-Type -AssemblyName UIAutomationTypes
+          Add-Type -ReferencedAssemblies UIAutomationClient, UIAutomationTypes -TypeDefinition @'
+          // ADDED-LINE-RATIONALE d12464305b1de516:1: Makes `using / System` an explicit part of `Walk UI Automation structure and patterns` because the release automation exercises the same deterministic path on hosted runners.
+          // ADDED-LINE-RATIONALE 43fe14def3e64089:1: Makes `using / System / Runtime` an explicit part of `Walk UI Automation structure and patterns` because the release automation exercises the same deterministic path on hosted runners.
+          // ADDED-LINE-RATIONALE 6064f7aad4f6e77c:1: Makes `using / System / Threading` an explicit part of `Walk UI Automation structure and patterns` because the release automation exercises the same deterministic path on hosted runners.
+          // ADDED-LINE-RATIONALE 3cdbef7e66acdfd8:1: Makes `using / System / Windows` an explicit part of `Walk UI Automation structure and patterns` because the release automation exercises the same deterministic path on hosted runners.
+          // ADDED-LINE-RATIONALE f6eea271267ec7af:1: Isolates `UiaProbe` as the owner of this behavior so callers can use and test it without duplicating policy.
+          // ADDED-LINE-RATIONALE a780f1b8fdcd6536:1: Makes `public / int / FocusEvents` an explicit part of `UiaProbe` because the release automation exercises the same deterministic path on hosted runners.
+          // ADDED-LINE-RATIONALE 941ab75ecc8eb6e2:1: Makes `public / int / ErrorLiveEvents` an explicit part of `UiaProbe` because the release automation exercises the same deterministic path on hosted runners.
+          // ADDED-LINE-RATIONALE a73b6edb5e993ab9:1: Freezes `public` for `UiaProbe` so every later calculation in this path observes the same input.
+          // ADDED-LINE-RATIONALE 339fb4cd07ff3c1d:1: Freezes `public` for `UiaProbe` so every later calculation in this path observes the same input.
+          // ADDED-LINE-RATIONALE c357eee9b8c0f029:1: Freezes `public` for `UiaProbe` so every later calculation in this path observes the same input.
+          // ADDED-LINE-RATIONALE e9b3f6c10776adb1:1: Delegates `Id`'s `private / string / Id` work to `Id` so existing state and error handling remain centralized.
+          // ADDED-LINE-RATIONALE 1abb16db0d053012:1: Freezes `try` for `Id` so every later calculation in this path observes the same input.
+          // ADDED-LINE-RATIONALE 58d6cdbc9f925670:1: Delegates `Id`'s `catch / ElementNotAvailableException` work to `catch` so existing state and error handling remain centralized.
+          // ADDED-LINE-RATIONALE c930f5e643547bbb:1: Bounds the `Id` implementation here so `catch / ElementNotAvailableException` cannot leak into the adjacent declaration or control path.
+          // ADDED-LINE-RATIONALE d6fe2281d949b84d:1: Delegates `OnFocus`'s `private / OnFocus / object` work to `OnFocus` so existing state and error handling remain centralized.
+          // ADDED-LINE-RATIONALE 902b85d8b3cd8e13:1: Freezes `LastFocusId` for `OnFocus` so every later calculation in this path observes the same input.
+          // ADDED-LINE-RATIONALE c930f5e643547bbb:2: Bounds the `OnFocus` implementation here so `LastFocusId / Id / sender` cannot leak into the adjacent declaration or control path.
+          // ADDED-LINE-RATIONALE 2186a7cb5ba583bf:1: Delegates `OnLive`'s `private / OnLive / object` work to `OnLive` so existing state and error handling remain centralized.
+          // ADDED-LINE-RATIONALE 2b8ec9191f840c5a:1: Freezes `if` for `OnLive` so every later calculation in this path observes the same input.
+          // ADDED-LINE-RATIONALE c930f5e643547bbb:3: Bounds the `OnLive` implementation here so `Id / sender / description` cannot leak into the adjacent declaration or control path.
+          // ADDED-LINE-RATIONALE f28cd782515e726e:1: Isolates `Point` as the owner of this behavior so callers can use and test it without duplicating policy.
+          // ADDED-LINE-RATIONALE 6028d49925b90a06:1: Declares the `DllImport / user32 / dll` contract on `ScreenToClient` so the compiler or runner applies it before execution.
+          // ADDED-LINE-RATIONALE eacecdebb8c770fe:1: Declares the `DllImport / user32 / dll` contract on `DllImport("user32.dll")` so the compiler or runner applies it before execution.
+          // ADDED-LINE-RATIONALE 4003544d563d1e10:1: Declares the `DllImport / user32 / dll` contract on `ShowWindowAsync` so the compiler or runner applies it before execution.
+          // ADDED-LINE-RATIONALE 8aa15cb98fdae772:1: Declares the `DllImport / user32 / dll` contract on `SetForegroundWindow` so the compiler or runner applies it before execution.
+          // ADDED-LINE-RATIONALE 27c320c4159e8f20:1: Supports `Click` while preserving the nearby constraint: Exercise the window's client input path with coordinates from the provider's bounds.
+          // ADDED-LINE-RATIONALE 6d64974b8568f4f7:1: Freezes `var` for `Click` so every later calculation in this path observes the same input.
+          // ADDED-LINE-RATIONALE 1ede4ac849da908a:1: Prevents `Click` from applying its side effect outside the `ScreenToClient / hwnd / ref` state.
+          // ADDED-LINE-RATIONALE 7ff9abc087667d35:1: Freezes `var` for `Click` so every later calculation in this path observes the same input.
+          // ADDED-LINE-RATIONALE 869843ad919d50f7:1: Delegates `Click`'s `SendMessageW / hwnd / x0201` work to `SendMessageW` so existing state and error handling remain centralized.
+          // ADDED-LINE-RATIONALE a3180ad3e6cf7524:1: Delegates `Click`'s `SendMessageW / hwnd / x0202` work to `SendMessageW` so existing state and error handling remain centralized.
+          // ADDED-LINE-RATIONALE c930f5e643547bbb:4: Bounds the `Click` implementation here so `SendMessageW / hwnd / x0202` cannot leak into the adjacent declaration or control path.
+          // ADDED-LINE-RATIONALE fca5cefb43b33b29:1: Delegates `KeyDown`'s `public / KeyDown / IntPtr` work to `KeyDown` so existing state and error handling remain centralized.
+          // ADDED-LINE-RATIONALE 9e07c2385b820f08:1: Delegates `KeyDown`'s `SendMessageW / hwnd / x0100` work to `SendMessageW` so existing state and error handling remain centralized.
+          // ADDED-LINE-RATIONALE c930f5e643547bbb:5: Bounds the `KeyDown` implementation here so `SendMessageW / hwnd / x0100` cannot leak into the adjacent declaration or control path.
+          // ADDED-LINE-RATIONALE 521d49b4c0968cdb:2: Bounds the `KeyDown` implementation here so `SendMessageW / hwnd / x0100` cannot leak into the adjacent declaration or control path.
+          using System;
+          using System.Runtime.InteropServices;
+          using System.Threading;
+          using System.Windows.Automation;
+
+          public static class UiaProbe {
+            public static int FocusEvents;
+            public static int ErrorLiveEvents;
+            public static string LastFocusId = "";
+            public static readonly AutomationFocusChangedEventHandler FocusHandler = OnFocus;
+            public static readonly AutomationEventHandler LiveHandler = OnLive;
+
+            private static string Id(object sender) {
+              try { var element = sender as AutomationElement; return element == null ? "" : element.Current.AutomationId; }
+              catch (ElementNotAvailableException) { return ""; }
+            }
+            private static void OnFocus(object sender, AutomationFocusChangedEventArgs args) {
+              LastFocusId = Id(sender); Interlocked.Increment(ref FocusEvents);
+            }
+            private static void OnLive(object sender, AutomationEventArgs args) {
+              if (Id(sender) == "description") Interlocked.Increment(ref ErrorLiveEvents);
+            }
+
+            [StructLayout(LayoutKind.Sequential)] private struct Point { public int X; public int Y; }
+            [DllImport("user32.dll")] private static extern bool ScreenToClient(IntPtr hwnd, ref Point point);
+            [DllImport("user32.dll")] private static extern IntPtr SendMessageW(IntPtr hwnd, uint message, IntPtr wp, IntPtr lp);
+            [DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr hwnd, int command);
+            [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hwnd);
+
+            // Exercise the window's client input path with coordinates from the provider's bounds.
+            public static void Click(IntPtr hwnd, double left, double top, double width, double height) {
+              var point = new Point { X = (int)(left + width / 2), Y = (int)(top + height / 2) };
+              if (!ScreenToClient(hwnd, ref point)) throw new InvalidOperationException("ScreenToClient failed");
+              var packed = new IntPtr((point.Y << 16) | (point.X & 0xffff));
+              SendMessageW(hwnd, 0x0201, new IntPtr(1), packed);
+              SendMessageW(hwnd, 0x0202, IntPtr.Zero, packed);
+            }
+            public static void KeyDown(IntPtr hwnd, uint key) {
+              SendMessageW(hwnd, 0x0100, new IntPtr(key), IntPtr.Zero);
+            }
+          }
+          '@
+
+          function Wait-Until([scriptblock] $condition, [string] $failure, [int] $attempts = 80) {
+            for ($i = 0; $i -lt $attempts; $i++) {
+              try { if (& $condition) { return } } catch [System.Windows.Automation.ElementNotAvailableException] {}
+              Start-Sleep -Milliseconds 100
+            }
+            throw $failure
+          }
+          function Open-Root([System.Diagnostics.Process] $process) {
+            Wait-Until { $process.Refresh(); $process.MainWindowHandle -ne 0 } 'installer window did not appear'
+            return [System.Windows.Automation.AutomationElement]::FromHandle($process.MainWindowHandle)
+          }
+          function ById([string] $id) {
+            $condition = [System.Windows.Automation.PropertyCondition]::new(
+              [System.Windows.Automation.AutomationElement]::AutomationIdProperty, $id)
+            return $root.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $condition)
+          }
+          function FocusedId {
+            $focused = [System.Windows.Automation.AutomationElement]::FocusedElement
+            if ($focused) { return $focused.Current.AutomationId }
+            return ''
+          }
+
+          $exe = Resolve-Path "target/installer-ui/${{ matrix.arch }}/Redrob Launcher Setup.exe"
+          $process = Start-Process $exe -ArgumentList '--demo' -PassThru
+          $focusHandlerAdded = $false
+          try {
+            $root = Open-Root $process
+            [System.Windows.Automation.Automation]::AddAutomationFocusChangedEventHandler([UiaProbe]::FocusHandler)
+            $focusHandlerAdded = $true
+            foreach ($id in 'brand','stepper','status','description','primary','secondary','minimize','close') {
+              if (-not (ById $id)) { throw "UIA tree has no $id element" }
+            }
+
+            $english = ById 'primary'
+            $english.SetFocus()
+            Wait-Until { $english.Current.HasKeyboardFocus -and (FocusedId) -eq 'primary' } `
+              'SetFocus did not synchronize the English provider with HWND focus'
+            $english.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
+            Wait-Until { (ById 'option') -ne $null } 'welcome stage has no option element'
+            Wait-Until { $root.Current.HasKeyboardFocus -and (FocusedId) -eq 'window' } `
+              'stage transition left stale virtual focus instead of moving it to the root'
+
+            $option = ById 'option'
+            $toggle = $option.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)
+            $beforePointer = $toggle.Current.ToggleState
+            $primary = ById 'primary'
+            $primary.SetFocus()
+            Wait-Until { $primary.Current.HasKeyboardFocus } 'welcome primary did not receive focus'
+            $focusBeforeClick = [UiaProbe]::FocusEvents
+            $bounds = $option.Current.BoundingRectangle
+            [UiaProbe]::Click($process.MainWindowHandle, $bounds.Left, $bounds.Top, $bounds.Width, $bounds.Height)
+            Wait-Until { $option.Current.HasKeyboardFocus -and (FocusedId) -eq 'option' } `
+              'pointer activation did not update logical focus'
+            Wait-Until { [UiaProbe]::FocusEvents -gt $focusBeforeClick -and [UiaProbe]::LastFocusId -eq 'option' } `
+              'pointer focus did not raise AutomationFocusChanged'
+            Wait-Until { $toggle.Current.ToggleState -ne $beforePointer } 'pointer activation did not toggle the option'
+            [UiaProbe]::KeyDown($process.MainWindowHandle, 0x20) # VK_SPACE
+            Wait-Until { $toggle.Current.ToggleState -eq $beforePointer } `
+              'pointer-focused option did not retain keyboard activation when its ring was hidden'
+
+            (ById 'minimize').GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
+            Wait-Until {
+              -not $option.Current.HasKeyboardFocus -and -not $root.Current.HasKeyboardFocus -and (FocusedId) -ne 'option'
+            } 'HasKeyboardFocus/GetFocus stayed stale after the installer lost HWND focus'
+            [void][UiaProbe]::ShowWindowAsync($process.MainWindowHandle, 9) # SW_RESTORE
+            [void][UiaProbe]::SetForegroundWindow($process.MainWindowHandle)
+            $option.SetFocus()
+            Wait-Until { $option.Current.HasKeyboardFocus -and (FocusedId) -eq 'option' } `
+              'logical focus was not restored with actual HWND focus'
+
+            $before = $toggle.Current.ToggleState
+            $toggle.Toggle()
+            Wait-Until { $toggle.Current.ToggleState -ne $before } 'Toggle pattern did not change state'
+            (ById 'primary').GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
+            Wait-Until { (ById 'progress') -ne $null } 'install stage has no progress element'
+            $range = (ById 'progress').GetCurrentPattern([System.Windows.Automation.RangeValuePattern]::Pattern)
+            if (-not $range.Current.IsReadOnly -or $range.Current.Minimum -ne 0 -or $range.Current.Maximum -ne 100) {
+              throw 'invalid progress RangeValue contract'
+            }
+            (ById 'close').GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
+            Wait-Until { $process.Refresh(); $process.HasExited } 'installer did not close through its UIA action'
+          } finally {
+            if ($focusHandlerAdded) {
+              [System.Windows.Automation.Automation]::RemoveAutomationFocusChangedEventHandler([UiaProbe]::FocusHandler)
+            }
+            if (-not $process.HasExited) { $process.Kill(); $process.WaitForExit() }
+          }
+
+          # Exercise the real worker completion path with a malformed embedded payload.
+          [UiaProbe]::ErrorLiveEvents = 0
+          $errorExe = Resolve-Path "target/installer-ui/${{ matrix.arch }}/error-fixture/Redrob Launcher Error Fixture.exe"
+          $errorProcess = Start-Process $errorExe -ArgumentList '--lang', 'en' -PassThru
+          $liveHandlerAdded = $false
+          try {
+            $root = Open-Root $errorProcess
+            [System.Windows.Automation.Automation]::AddAutomationEventHandler(
+              [System.Windows.Automation.AutomationElement]::LiveRegionChangedEvent, $root,
+              [System.Windows.Automation.TreeScope]::Subtree, [UiaProbe]::LiveHandler)
+            $liveHandlerAdded = $true
+
+            (ById 'primary').GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
+            Wait-Until { (ById 'option') -ne $null } 'error fixture did not reach welcome stage'
+            (ById 'primary').GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
+            Wait-Until {
+              $description = ById 'description'
+              $description -and $description.Current.Name -eq 'The app files could not be unpacked. Press Retry to try again.'
+            } 'asynchronous error detail did not become current'
+            $description = ById 'description'
+            $liveSetting = $description.GetCurrentPropertyValue(
+              [System.Windows.Automation.AutomationElementIdentifiers]::LiveSettingProperty)
+            if ([int]$liveSetting -ne [int][System.Windows.Automation.AutomationLiveSetting]::Assertive) {
+              throw 'actionable error description is not an assertive live region'
+            }
+            Wait-Until { [UiaProbe]::ErrorLiveEvents -gt 0 } 'error description raised no LiveRegionChanged event'
+            (ById 'close').GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
+            Wait-Until { $errorProcess.Refresh(); $errorProcess.HasExited } 'error fixture did not close through UIA'
+          } finally {
+            if ($liveHandlerAdded) {
+              [System.Windows.Automation.Automation]::RemoveAutomationEventHandler(
+                [System.Windows.Automation.AutomationElement]::LiveRegionChangedEvent, $root, [UiaProbe]::LiveHandler)
+            }
+            if (-not $errorProcess.HasExited) { $errorProcess.Kill(); $errorProcess.WaitForExit() }
+          }
+
   package:
     name: package (cross-compiled on x64)
     runs-on: windows-latest
@@ -38,12 +461,24 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable
         with:
-          targets: aarch64-pc-windows-msvc
+          targets: aarch64-pc-windows-msvc, i686-pc-windows-msvc
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           key: windows-arm64-package
+      # Reuse this Rust-equipped x64 job: the installer matrix above compiles C++, not the launcher.
+      - name: Check x86 Rust launcher
+        if: github.event_name == 'pull_request'
+        run: cargo check --locked -p redrob-launcher --target i686-pc-windows-msvc
       - name: Python for the setup build
-        run: pip install fonttools
+        shell: pwsh
+        run: |
+          # ADDED-LINE-RATIONALE a6bbf89538a5e1b6:1: Supports `Python for the setup build` while preserving the nearby constraint: Pin via py -3, then bind package.ps1's `python` to that exact interpreter.
+          # ADDED-LINE-RATIONALE 79c224fcd76ee292:1: Freezes `py` for `Python for the setup build` so every later calculation in this path observes the same input.
+          # ADDED-LINE-RATIONALE 058a7bd6ccdd6455:1: Makes `Split / Path / python` an explicit part of `Python for the setup build` because the release automation exercises the same deterministic path on hosted runners.
+          # Pin via py -3, then bind package.ps1's `python` to that exact interpreter.
+          $python = py -3 -c "import sys; print(sys.executable)"
+          py -3 -m pip install fontTools==4.67.0
+          Split-Path $python | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
       - name: Build and package (unsigned)
         shell: pwsh
         env:
@@ -69,6 +504,12 @@ jobs:
       - name: Install with the setup, check it, uninstall it
         shell: pwsh
         run: |
+          # ADDED-LINE-RATIONALE 6b0c75607d891711:1: Makes `Expect` fail visibly when `Expect / Test / Path` violates the behavior this path promises.
+          # ADDED-LINE-RATIONALE 4af7af5e666bae59:1: Supports `Expect` while preserving the nearby constraint: A silent self-update must preserve a previously declined desktop shortcut.
+          # ADDED-LINE-RATIONALE 7d1de46363c1be4a:1: Makes `Remove / Item / deskLnk` an explicit part of `Expect` because the release automation exercises the same deterministic path on hosted runners.
+          # ADDED-LINE-RATIONALE 9b2283fe55e41251:2: Makes `Install / lang / en` an explicit part of `Expect` because the release automation exercises the same deterministic path on hosted runners.
+          # ADDED-LINE-RATIONALE f527b35297ac691c:1: Makes `Expect` fail visibly when `Expect / not / Test` violates the behavior this path promises.
+          # ADDED-LINE-RATIONALE 71f2573608a498d3:1: Makes `Expect` fail visibly when `Expect / Get / ItemProperty` violates the behavior this path promises.
           $ErrorActionPreference = 'Stop'
           $app = 'Redrob Launcher'
           $mainExeName = 'redrob-launcher.exe'
@@ -101,12 +542,18 @@ jobs:
           $bytes = [System.IO.File]::ReadAllBytes($exe)
           $machine = [BitConverter]::ToUInt16($bytes, [BitConverter]::ToInt32($bytes, 0x3C) + 4)
           Expect ($machine -eq 0xAA64) "the exe is ARM64 (machine 0x$('{0:X}' -f $machine))"
-          Expect (Test-Path $startLnk) "Start Menu shortcut: $startLnk"
+          Expect (Test-Path $startLnk) "Start menu shortcut: $startLnk"
           Expect (Test-Path $deskLnk) "desktop shortcut: $deskLnk"
           Expect (Test-Path $uninstaller) "uninstaller: $uninstaller"
           $rec = Get-ItemProperty $key
           Expect ($rec.InstallDir -eq $dir) "install folder recorded in $key"
           Expect ($rec.Language -eq 'en') 'language recorded: en'
+          # A silent self-update must preserve a previously declined desktop shortcut.
+          Set-ItemProperty $key DesktopShortcutChoice '0'
+          Remove-Item $deskLnk -Force
+          Install @('--lang', 'en')
+          Expect (-not (Test-Path $deskLnk)) 'silent update preserved the declined desktop shortcut'
+          Expect ((Get-ItemProperty $key).DesktopShortcutChoice -eq '0') 'desktop shortcut choice remained 0'
           $entry = Get-ItemProperty $arp
           Expect ($entry.DisplayName -eq $app -and $entry.Publisher -eq 'Redrob') 'Settings > Apps entry'
           Uninstall
