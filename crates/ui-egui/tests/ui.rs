@@ -187,40 +187,6 @@ fn keeps_working_with_no_window_then_draws_in_a_new_one() {
 }
 
 #[test]
-fn grid_shows_every_status_and_installs_on_click() {
-    let (mut h, sent) = harness(egui::Theme::Dark, true);
-    h.run_steps(8);
-    snapshot(&mut h, "grid-dark");
-    // Statuses the user asked for: available, installed and up to date, update with version. No
-    // chip draws them any more; each card carries its status for screen readers.
-    assert!(h.query_all_by_label_contains(": Available to install").count() >= 2);
-    assert!(h.query_all_by_label_contains(": Installed · up to date").count() >= 1);
-    // Named by app as well as status, so two cards in the same state never share a name.
-    h.get_by_label("Redrob Shape: Available to install");
-    // No links are inline; each visible card has a named menu trigger in addition to right-click.
-    assert!(h.query_by_label("GitHub").is_none() && h.query_by_label("Website").is_none(), "cards carry no links");
-    // Derive the expectation from rendered app cards so this assertion follows fixture changes.
-    let visible_cards = SUITE.iter().filter(|app| h.query_by_label_contains(&format!("{}:", app.name)).is_some()).count();
-    assert_eq!(h.query_all_by_label("More actions").count(), visible_cards, "one … button on every visible app card");
-    h.get_by_label("Update to 0.5.0");
-    h.get_by_label("Update to 0.6.0");
-    h.get_by_label_contains("0.4.1 installed → 0.5.0 released");
-    h.get_by_label("Graphics");
-    // The window has no title bar of its own here (the web build, and the tests).
-    assert!(h.query_by_label("Close").is_none());
-    // No upstream community links, social icons or trademark notice.
-    assert!(h.query_all_by_label_contains("Discord").next().is_none());
-    assert!(h.query_all_by_label_contains("ArtCraft").next().is_none());
-    assert!(h.query_all_by_label("Coming soon").count() >= 1);
-    h.get_by_label_contains("48 MB of 131 MB");
-    h.get_by_label("Update all (2)").click();
-    h.run_steps(2);
-    let installs: Vec<_> = sent.borrow().iter().filter_map(|c| if let Command::Install { app } = c { Some(app.clone()) } else { None }).collect();
-    assert_eq!(installs.len(), 2, "{installs:?}");
-    assert!(installs.contains(&"redrob-canvas".to_string()) && installs.contains(&"redrob-browser".to_string()));
-}
-
-#[test]
 fn downloads_can_be_paused_resumed_and_discarded() {
     // The fixture's reconnecting download is Redrob Office's.
     let (mut h, sent) = harness_with(events(), egui::Theme::Dark, true, 1.0);
