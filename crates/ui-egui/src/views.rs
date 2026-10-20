@@ -65,6 +65,10 @@ const CARD_GAP: f32 = 16.0;
 const CARD_PAD: f32 = 16.0;
 /// The app icon on a tile (48 before #83, then 40).
 const CARD_ICON: f32 = 36.0;
+/// How far a tile's icon rises while the tile is hovered, in points.
+const CARD_ICON_LIFT: f32 = 2.0;
+/// How far a hovered tile's edge moves from `border-subtle` toward `border-strong` (0..1).
+const CARD_HOVER_EDGE: f32 = 0.4;
 /// The icon buttons beside an app's main action (pause, cancel, More actions): DS IconButton sm.
 pub(crate) const ACTION_ICON: f32 = theme::control::SM;
 /// The least width of a tile's main button (Sm), so a short label like Open still reads as a button.
@@ -457,8 +461,9 @@ impl LauncherUi {
         }
     }
 
-    /// One app as a DS ConnectorCard: raised, radius 12, a hairline that strengthens with a
-    /// shadow-md on hover (140 ms); the icon exactly as supplied (no shadow, border or tint) with
+    /// One app as a DS ConnectorCard: raised, radius 12, a hairline that softly strengthens with a
+    /// shadow-md on hover (140 ms), when the icon also rises 2 px inside a violet gradient ring; the
+    /// icon itself exactly as supplied (no shadow or tint) with
     /// the name centred beside it, then the full short description under both; the version; the
     /// actions. No status chip and no links: the
     /// button says what can be done, and every card exposes its menu through both the named …
@@ -495,7 +500,9 @@ impl LauncherUi {
             shadow.color = shadow.color.gamma_multiply(k);
             painter.add(shadow.as_shape(rect, radius));
         }
-        painter.rect(rect, radius, card_fill(&t), Stroke::new(1.0, theme::mix(t.line, t.line_strong, k)), egui::StrokeKind::Inside);
+        // The tile's edge strengthens on hover, but only 40 % of the way to border-strong: a soft
+        // grey, never the near-black of the full role.
+        painter.rect(rect, radius, card_fill(&t), Stroke::new(1.0, theme::mix(t.line, t.line_strong, CARD_HOVER_EDGE * k)), egui::StrokeKind::Inside);
 
         let inner = rect.shrink(CARD_PAD);
         // A detached child: the card's contents never move the next card along.
@@ -508,8 +515,14 @@ impl LauncherUi {
         ui.horizontal_top(|ui| {
             let (slot, icon_response) = ui.allocate_exact_size(vec2(CARD_ICON, CARD_ICON), Sense::hover());
             icon_response.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Image, true, fmt(tl!("{name} icon"), &[("name", app.name)])));
-            if let Some(icon) = crate::icons::app(app.id) {
-                egui::Image::new(icon).paint_at(ui, slot);
+            // On hover the icon rises a little and a violet ring fades in round it. With motion off
+            // the ring still shows (at once) but the icon stays where it is.
+            let motion = theme::motion::duration(ui.ctx(), 1.0) > 0.0;
+            let lift = if motion { CARD_ICON_LIFT * theme::motion::Easing::Standard.apply(k) } else { 0.0 };
+            let icon = slot.translate(vec2(0.0, -lift));
+            crate::icon_ring::paint(ui, icon, card_fill(&t), k);
+            if let Some(image) = crate::icons::app(app.id) {
+                egui::Image::new(image).paint_at(ui, icon);
             }
             ui.add_space(theme::space::S3);
             ui.allocate_ui_with_layout(vec2(text_w, CARD_ICON), egui::Layout::left_to_right(egui::Align::Center), |ui| {

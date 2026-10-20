@@ -811,6 +811,10 @@ fn custom_title_bar_has_window_buttons() {
     // leaves when a filter narrows the page.
     let hero = h.get_by_label("Work, create and build in one suite.").rect();
     assert!(hero.top() > refresh.bottom() && hero.bottom() < h.get_by_label("For your AI engine").rect().top(), "{hero:?}");
+    // A hovered tile rings its icon in violet and lifts it (seen in the snapshot).
+    h.get_by_label("Redrob Code icon").hover();
+    h.run_steps(12);
+    snapshot(&mut h, "grid-card-hover-dark");
     if let Some(l) = h.state_mut().as_mut() {
         l.settings.filter = redrob_launcher_ui_egui::settings::Filter::Updates;
     }

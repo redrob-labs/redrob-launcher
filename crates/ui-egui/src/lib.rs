@@ -28,6 +28,7 @@ mod engine_update;
 pub(crate) mod glyphs;
 mod hero;
 pub mod i18n;
+mod icon_ring;
 pub mod icons;
 pub mod model;
 mod models;
