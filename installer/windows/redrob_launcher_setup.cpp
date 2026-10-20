@@ -362,7 +362,7 @@ std::wstring StatusText(Stage s) {
     case Stage::Welcome:    return Tr(L"Install Redrob Launcher", L"Redrob Launcher 설치");
     case Stage::Preparing:  return Tr(L"Preparing to install", L"설치를 준비하고 있어요");
     case Stage::Installing: return Tr(L"Installing Redrob Launcher", L"Redrob Launcher를 설치하고 있어요");
-    case Stage::Opening:    return Tr(L"Opening Redrob Launcher", L"Redrob Launcher를 여는 중이에요");
+    case Stage::Opening:    return Tr(L"Opening Redrob Launcher", L"Redrob Launcher를 열고 있어요");
     case Stage::Error:      return g_app && g_app->Uninstalling()
                                    ? Tr(L"Redrob Launcher was not removed", L"Redrob Launcher를 제거하지 못했어요")
                                    : Tr(L"Setup did not finish", L"설치를 마치지 못했어요");
@@ -378,7 +378,7 @@ std::wstring BodyText(Stage s, Mode m, bool deleteData, const std::wstring& erro
   switch (s) {
     case Stage::Language:
       return L"Setup, Redrob Launcher and the Redrob apps use this language. You can change it later in Redrob Launcher's settings.\n"
-             L"설치 과정, Redrob Launcher, Redrob 앱이 이 언어를 써요. 나중에 Redrob Launcher 설정에서 바꿀 수 있어요.";
+             L"설치 화면과 Redrob Launcher, Redrob 앱에 이 언어가 적용돼요. 나중에 Redrob Launcher 설정에서 바꿀 수 있어요.";
     case Stage::Welcome:
       return Tr(L"It installs for this Windows account only, so no administrator rights are needed. Redrob Launcher opens when setup is done.",
                 L"이 Windows 계정에만 설치해서 관리자 권한이 필요 없어요. 설치가 끝나면 Redrob Launcher가 열려요.");
@@ -386,7 +386,7 @@ std::wstring BodyText(Stage s, Mode m, bool deleteData, const std::wstring& erro
       return Tr(L"Redrob Launcher opens when it is done.", L"끝나면 Redrob Launcher가 열려요.");
     case Stage::Opening:
       return Tr(L"Redrob Launcher is installed. This window closes by itself.",
-                L"Redrob Launcher를 설치했어요. 이 창은 저절로 닫혀요.");
+                L"Redrob Launcher를 설치했어요. 이 창은 자동으로 닫혀요.");
     case Stage::Confirm:
       return Tr(L"This removes Redrob Launcher from this PC. The apps it installed and your files stay where they are.",
                 L"이 PC에서 Redrob Launcher를 제거해요. 런처로 설치한 앱과 내 파일은 그대로 남아요.");
@@ -394,9 +394,9 @@ std::wstring BodyText(Stage s, Mode m, bool deleteData, const std::wstring& erro
       return Tr(L"The apps it installed and your files stay where they are.", L"런처로 설치한 앱과 내 파일은 그대로 남아요.");
     case Stage::Removed:
       return deleteData ? Tr(L"Its settings and downloads are deleted too. The apps it installed and your files stay where they are.",
-                             L"설정과 내려받은 파일도 삭제했어요. 런처로 설치한 앱과 내 파일은 그대로 남아요.")
+                             L"설정과 다운로드한 파일도 삭제했어요. 런처로 설치한 앱과 내 파일은 그대로 남아요.")
                         : Tr(L"The apps it installed and your files stay where they are. Its settings stay on this PC for a later install.",
-                             L"런처로 설치한 앱과 내 파일은 그대로 남아요. 설정은 다음 설치를 위해 이 PC에 남아 있어요.");
+                             L"런처로 설치한 앱과 내 파일은 그대로 남아요. 설정은 다시 설치할 때 쓸 수 있도록 이 PC에 남겨 뒀어요.");
     case Stage::Error: return error;
     default: (void)m; return L"";
   }
@@ -410,15 +410,15 @@ std::wstring ResultSentence(DWORD code, bool uninstall) {
                      : Tr(L"Redrob Launcher is open. Quit it from its tray icon, then press Retry to update it.",
                           L"Redrob Launcher가 실행 중이에요. 트레이 아이콘에서 종료한 뒤 다시 시도를 눌러 업데이트하세요.");
   if (code == kResultUnpackFailed)
-    return Tr(L"The app files could not be unpacked. Press Retry to try again.", L"앱 파일을 풀지 못했어요. 다시 시도를 눌러 주세요.");
+    return Tr(L"The app files could not be unpacked. Press Retry to try again.", L"앱 파일의 압축을 풀지 못했어요. 다시 시도를 눌러 주세요.");
   if (code == kResultNoExe)
-    return Tr(L"This setup file is damaged. Please download it again.", L"이 설치 파일이 손상됐어요. 다시 내려받아 주세요.");
+    return Tr(L"This setup file is damaged. Please download it again.", L"이 설치 파일이 손상됐어요. 다시 다운로드해 주세요.");
   if (code == ERROR_DISK_FULL || code == ERROR_HANDLE_DISK_FULL)
     return Tr(L"There is not enough free disk space. Free some space, then press Retry.",
               L"디스크 공간이 부족해요. 공간을 비운 뒤 다시 시도를 누르세요.");
   if (code == ERROR_ACCESS_DENIED || code == ERROR_SHARING_VIOLATION)
     return Tr(L"A file is in use. Close Redrob Launcher and anything opened from its folder, then press Retry.",
-              L"파일이 사용 중이에요. Redrob Launcher와 그 폴더에서 연 것을 모두 닫은 뒤 다시 시도를 누르세요.");
+              L"파일이 사용 중이에요. Redrob Launcher와 그 폴더에서 연 파일을 모두 닫은 뒤 다시 시도를 누르세요.");
   const std::wstring n = std::to_wstring(code);
   if (uninstall)
     return g_lang == Lang::Ko ? L"Windows 오류 코드 " + n + L". 다시 시도를 눌러 주세요."
@@ -825,7 +825,7 @@ void SetupApp::RequestClose(bool force) {
   if (installing) {
     int r = MessageBoxW(hwnd_,
         Tr(L"Redrob Launcher is still installing. Stop the installation and quit?",
-           L"Redrob Launcher를 아직 설치하고 있어요. 설치를 멈추고 끝낼까요?"),
+           L"Redrob Launcher를 아직 설치하고 있어요. 설치를 중단하고 닫을까요?"),
         Tr(L"Redrob Launcher Setup", L"Redrob Launcher 설치"), MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON2);
     if (r != IDYES) return;
   }
@@ -1343,7 +1343,7 @@ HRESULT SetupApp::DrawScene() {
     checkRow(y + 20.0f, Tr(L"Create a desktop shortcut", L"바탕 화면에 바로 가기 만들기"), desktopShortcut_);
     twoButtons(Tr(L"Install", L"설치"), Tr(L"Back", L"뒤로"));
   } else if (stage_ == Stage::Confirm) {
-    checkRow(y + 20.0f, Tr(L"Also delete its settings and downloads", L"설정과 내려받은 파일도 삭제"), deleteData_);
+    checkRow(y + 20.0f, Tr(L"Also delete its settings and downloads", L"설정과 다운로드한 파일도 삭제"), deleteData_);
     twoButtons(Tr(L"Uninstall", L"제거"), Tr(L"Cancel", L"취소"));
   } else if (stage_ == Stage::Removed) {
     button(rcRetry_, kRetry, W - kPad, Tr(L"Close", L"닫기"), true);
@@ -1624,7 +1624,7 @@ static bool MakeShortcut(const std::wstring& lnk, const std::wstring& target, co
   link->SetPath(target.c_str());
   link->SetWorkingDirectory(workDir.c_str());
   link->SetIconLocation(target.c_str(), 0);
-  link->SetDescription(Tr(L"Install and update the Redrob apps", L"Redrob 앱을 설치하고 업데이트합니다"));
+  link->SetDescription(Tr(L"Install and update the Redrob apps", L"Redrob 앱 설치 및 업데이트"));
   ComPtr<IPropertyStore> store;
   if (SUCCEEDED(link->QueryInterface(IID_PPV_ARGS(&store)))) {
     PROPVARIANT pv;
