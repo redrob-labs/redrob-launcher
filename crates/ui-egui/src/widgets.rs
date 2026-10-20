@@ -584,8 +584,21 @@ pub fn button(ui: &mut Ui, text: &str, kind: Kind, width: f32) -> Response {
 
 /// A DS button: radius 8, a 600-weight label, `size` tall, at least `width` wide.
 pub fn button_sized(ui: &mut Ui, text: &str, kind: Kind, size: Size, width: f32) -> Response {
+    button_with_height(ui, text, kind, size, size.metrics().0, width)
+}
+
+/// [`button_sized`] at a height other than `size`'s, keeping its padding and label: for a button
+/// that must line up with a neighbouring control (Update all beside the 36 px filter cells).
+///
+/// * `ui` - where the button is added.
+/// * `text` - its label.
+/// * `kind` - its DS variant (fill, edge and ink).
+/// * `size` - the DS size whose padding and label size it takes.
+/// * `height` - how tall it is, in points.
+/// * `width` - the least it is wide; it grows to fit its label.
+pub fn button_with_height(ui: &mut Ui, text: &str, kind: Kind, size: Size, height: f32, width: f32) -> Response {
     let t = Tokens::get(ui.ctx());
-    let (height, pad, label) = size.metrics();
+    let (_, pad, label) = size.metrics();
     let galley = caps(ui, text, label, theme::mono_bold(), theme::BUTTON_SPACING, t.ink);
     let (rect, resp) = ui.allocate_exact_size(vec2((galley.size().x + 2.0 * pad).max(width), height), Sense::click());
     let enabled = ui.is_enabled();
@@ -719,6 +732,10 @@ pub struct Cell<'a> {
     pub count: Option<(usize, Option<Color32>)>,
 }
 
+/// How tall [`cells`] is: its 30 px segments inside the track's 3 px inset. Controls that share
+/// the row (the Apps page's Update all) take this height so their tops and bottoms line up.
+pub const CELLS_H: f32 = 36.0;
+
 /// Mutually exclusive options as the DS segmented control: a sunken pill track (3 px inset)
 /// holding 30 px pill segments, 13 px semibold; the chosen one raised with `shadow-sm`.
 /// Returns whether the choice changed.
@@ -726,7 +743,7 @@ pub fn cells<T: PartialEq + Copy>(ui: &mut Ui, value: &mut T, options: &[(T, Cel
     let t = Tokens::get(ui.ctx());
     let mut changed = false;
     const PAD: f32 = 3.0;
-    const SEG_H: f32 = 30.0;
+    const SEG_H: f32 = CELLS_H - 2.0 * PAD;
     const SEG_PAD: f32 = 14.0;
     // In a right-to-left parent the row fills from the right: keep the options' order.
     let rtl = ui.layout().prefer_right_to_left();

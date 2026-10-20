@@ -795,6 +795,8 @@ fn custom_title_bar_has_window_buttons() {
     assert!(refresh.top() > 48.0 && update.top() > 48.0, "both are under the title bar: {update:?} {refresh:?}");
     assert!(update.right() <= refresh.left() && refresh.left() - update.right() <= 12.0, "{update:?} left of {refresh:?}");
     assert!((update.center().y - refresh.center().y).abs() < 1.0, "same row: {update:?} {refresh:?}");
+    // Update all is exactly as tall as the 36 px filter cells it shares the row with.
+    assert!((update.height() - 36.0).abs() < 0.5, "Update all {update:?} vs the 36 px filter track");
     // A tile's main button is Sm (32 px) at its label's width, right-aligned just left of its … button.
     let main = h.get_by_label("Update to 0.6.0").rect();
     assert!((main.height() - 32.0).abs() < 0.5 && main.width() < 200.0, "{main:?}");

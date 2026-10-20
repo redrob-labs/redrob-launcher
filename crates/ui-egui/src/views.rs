@@ -171,14 +171,14 @@ impl LauncherUi {
         Some((label, sample))
     }
 
-    /// Draws the update button from [`Self::update_all_label`] (Tinted, Size::Sm, 32 px like the
-    /// Refresh icon beside it) and installs every real update when pressed.
+    /// Draws the update button from [`Self::update_all_label`] (Tinted, Size::Sm padding and label,
+    /// as tall as the filter cells, [`widgets::CELLS_H`]) and installs every real update when pressed.
     ///
     /// * `ui` - a right-to-left row; the button lands left of what came before it.
     /// * `label` - the button's text.
     /// * `sample` - how many of the counted updates are debug samples (they install nothing).
     fn update_all_button(&mut self, ui: &mut Ui, label: &str, sample: usize) {
-        let resp = widgets::button_sized(ui, label, Kind::Tinted, widgets::Size::Sm, 0.0);
+        let resp = widgets::button_with_height(ui, label, Kind::Tinted, widgets::Size::Sm, widgets::CELLS_H, 0.0);
         // Debug-only preview text, never shipped, so it is left untranslated.
         let resp = if sample > 0 { resp.on_hover_text(format!("Preview: {sample} sample update(s) from {SAMPLE_UPDATES_ENV}")) } else { resp };
         if resp.clicked() {
