@@ -132,7 +132,10 @@ impl LauncherUi {
         };
         ui.horizontal_centered(|ui| {
             ui.spacing_mut().item_spacing.x = theme::space::S2;
-            // Every page leads back to the apps (Escape does too).
+            // Every page leads back to the apps (Escape does too). The button is pulled left by its
+            // own padding, so the chevron's ink sits on the content edge under it (DS ConnectorCard
+            // pulls its first ghost button the same way); its hover fill spills into the margin.
+            ui.add_space(-theme::space::S2);
             if widgets::icon_button(ui, Icon::ChevronLeft, tl!("Back to apps"), theme::control::SM).clicked() {
                 self.set_page(Page::Apps);
             }
