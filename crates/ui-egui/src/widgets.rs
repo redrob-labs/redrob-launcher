@@ -923,8 +923,9 @@ pub enum NavMeta<'a> {
     Count(usize, Color32),
     /// A 7 px status dot (DS TaskStatus).
     Dot(Color32),
-    /// A status dot in this colour and a short state word after it in ink-faint (12 px), for a
-    /// row whose state is worth reading at a glance. The folded rail keeps only the dot.
+    /// A status dot in this colour at the row's edge and a short state word before it in
+    /// ink-faint (12 px), for a row whose state is worth reading at a glance ("Standby ●"). The
+    /// folded rail keeps only the dot.
     State(&'a str, Color32),
 }
 
@@ -984,12 +985,13 @@ pub fn nav_row(ui: &mut Ui, icon: Icon, label: &str, hint: &str, meta: NavMeta<'
                 right -= 7.0 + pad;
             }
             NavMeta::State(word, c) => {
+                // The dot at the row's edge, where the other rows keep theirs; the word before it.
+                p.circle_filled(egui::pos2(right - 3.5, rect.center().y), 3.5, c);
+                right -= 7.0 + theme::space::S2;
                 let g = caps(ui, word, theme::text::META, egui::FontFamily::Proportional, 0.0, t.faint);
                 let w = g.size().x;
                 paint_left(ui, Rect::from_min_max(egui::pos2(right - w, rect.top()), egui::pos2(right, rect.bottom())), g, t.faint);
-                right -= w + theme::space::S1 + 3.5;
-                ui.painter().circle_filled(egui::pos2(right, rect.center().y), 3.5, c);
-                right -= 3.5 + pad;
+                right -= w + pad;
             }
             _ => {}
         }
