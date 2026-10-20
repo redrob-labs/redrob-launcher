@@ -984,9 +984,17 @@ pub fn theme_switch(ui: &mut Ui, value: &mut theme::ThemeChoice, vertical: bool)
     changed
 }
 
-/// A row of text and badges, wrapping, only as tall as its tallest item. egui's
-/// `horizontal_wrapped` is at least `interact_size.y` tall (40, the DS control height), which
-/// leaves about 13 px of air above and below a 12-14 px line; rows of controls keep it.
+/// A row of text and badges only as tall as its tallest item. egui's `horizontal` is at least
+/// `interact_size.y` tall (40, the DS control height), which leaves about 13 px of air above
+/// and below a 12-14 px line; rows of controls keep using `horizontal`.
+pub fn tight_row<R>(ui: &mut Ui, add: impl FnOnce(&mut Ui) -> R) -> egui::InnerResponse<R> {
+    ui.scope(|ui| {
+        ui.spacing_mut().interact_size.y = 0.0;
+        ui.horizontal(add).inner
+    })
+}
+
+/// [`tight_row`] that wraps onto further lines when it runs out of width.
 pub fn tight_wrapped<R>(ui: &mut Ui, add: impl FnOnce(&mut Ui) -> R) -> egui::InnerResponse<R> {
     ui.scope(|ui| {
         ui.spacing_mut().interact_size.y = 0.0;

@@ -18,6 +18,9 @@ use crate::widgets::{self, Kind};
 /// The page's reading measure: the same column as the Engine, Account and Settings pages.
 const MEASURE: f32 = 720.0;
 
+/// Width of an installing model's progress bar.
+const PROGRESS_W: f32 = 240.0;
+
 /// What one row asks the backend to do.
 enum Ask {
     Download,
@@ -242,6 +245,123 @@ impl LauncherUi {
         widgets::hud(ui, &text, color);
     }
 
+    /// One model on its section's hairline list: what it gives the person, the details small, then
+    /// the verdict for this computer and its state; its actions in one column on the trailing
+    /// edge, centred on the row, the primary last. Returns what a click asked for.
+    fn model_row(ui: &mut egui::Ui, t: &Tokens, cpu: bool, v: &ModelView) -> Option<(Ask, String, String)> {
+        use theme::space;
+        use widgets::Size;
+        let m = &v.model;
+        // The primary goes first: in the right-to-left column it ends up on the trailing edge.
+        let mut actions: Vec<(&str, Kind, Ask)> = Vec::new();
+        match &v.state {
+            ModelState::NotDownloaded => actions.push((tl!("Install"), Kind::Primary, Ask::Download)),
+            ModelState::Partial { .. } | ModelState::Failed(_) => {
+                let label = if matches!(v.state, ModelState::Failed(_)) { tl!("Try again") } else { tl!("Resume") };
+                actions.push((label, Kind::Primary, Ask::Download));
+                actions.push((tl!("Delete"), Kind::Secondary, Ask::Delete));
+            }
+            ModelState::Downloading { .. } => actions.push((tl!("Pause"), Kind::Secondary, Ask::Pause)),
+            ModelState::Installed => {
+                if m.runtime.served() {
+                    match &v.serving {
+                        Serving::Running { .. } | Serving::Starting => actions.push((tl!("Stop"), Kind::Secondary, Ask::Stop)),
+                        Serving::No | Serving::Failed(_) => {
+                            let label = if matches!(v.serving, Serving::Failed(_)) { tl!("Try again") } else { tl!("Start") };
+                            actions.push((label, Kind::Primary, Ask::Start));
+                        }
+                    }
+                }
+                actions.push((tl!("Delete"), Kind::Secondary, Ask::Delete));
+            }
+            ModelState::NoFolder => {}
+        }
+        let gap = ui.spacing().item_spacing.x;
+        let actions_w = actions.iter().map(|(label, _, _)| widgets::button_width(ui, label, Size::Sm)).sum::<f32>()
+            + gap * actions.len().saturating_sub(1) as f32;
+        let mut ask = None;
+        ui.horizontal(|ui| {
+            let room = if actions.is_empty() { 0.0 } else { actions_w + space::S6 };
+            let content_w = (ui.available_width() - room).max(0.0);
+            ui.vertical(|ui| {
+                ui.set_width(content_w);
+                ui.spacing_mut().item_spacing.y = 0.0;
+                let headline = if m.summary.is_empty() { m.name.clone() } else { crate::i18n::t(&m.summary).to_string() };
+                ui.add(egui::Label::new(RichText::new(headline).size(theme::text::CONTROL).family(theme::medium()).color(t.ink_strong)).wrap());
+                ui.add_space(space::S1);
+                // The details, small: the model's name, its size, which app, the licence.
+                widgets::tight_wrapped(ui, |ui| {
+                    widgets::hud(ui, &m.name, t.faint).on_hover_text(crate::i18n::t(&m.description));
+                    widgets::meta_sep(ui);
+                    widgets::hud(ui, &widgets::human_bytes(m.size()), t.faint);
+                    widgets::meta_sep(ui);
+                    widgets::hud(ui, &fmt(tl!("for {app}"), &[("app", &group_name(&m.app))]), t.faint);
+                    widgets::meta_sep(ui);
+                    widgets::hud_link(ui, tl!("Licence and source"), &m.source).on_hover_text(&m.license);
+                });
+                ui.add_space(space::S2);
+                // The verdict for this computer first, so it always starts at the content edge.
+                let (fit_text, tone) = fit_label(v.fit);
+                let need = fmt(
+                    tl!("Needs about {gb} GB of {kind}"),
+                    &[
+                        ("gb", &format!("{:.0}", f64::from(m.requires.memory_mb) / 1024.0)),
+                        ("kind", if cpu { tl!("RAM") } else { tl!("GPU memory") }),
+                    ],
+                );
+                if let ModelState::Downloading { done, total } = &v.state {
+                    // While installing, the bar and its caption say so: no second "Installing" chip.
+                    // Top-aligned, so the chip sits on the caption's line, the bar under them.
+                    let line = egui::vec2(ui.available_width(), theme::control::MD);
+                    ui.allocate_ui_with_layout(line, egui::Layout::left_to_right(egui::Align::Min), |ui| {
+                        widgets::badge_sized(ui, &fit_text, widgets::tone_color(t, tone), Size::Sm).on_hover_text(need);
+                        let fraction = (*total > 0).then(|| *done as f32 / *total as f32);
+                        let caption = fmt(
+                            tl!("Installing {done} of {total}"),
+                            &[("done", &widgets::human_bytes(*done)), ("total", &widgets::human_bytes(*total))],
+                        );
+                        widgets::progress(ui, fraction, &caption, t.accent, PROGRESS_W.min(ui.available_width()));
+                    });
+                } else {
+                    widgets::tight_row(ui, |ui| {
+                        widgets::badge_sized(ui, &fit_text, widgets::tone_color(t, tone), Size::Sm).on_hover_text(need);
+                        let (text, tone): (String, Tone) = match (&v.state, &v.serving) {
+                            (ModelState::Installed, Serving::Running { url }) => (fmt(tl!("Serving at {url}"), &[("url", url)]), Tone::Good),
+                            (ModelState::Installed, Serving::Starting) => (tl!("Starting…").into(), Tone::Info),
+                            (ModelState::Installed, Serving::Failed(e)) => (msg(e), Tone::Warn),
+                            (ModelState::NotDownloaded, _) => (tl!("Not installed").into(), Tone::Neutral),
+                            (ModelState::Partial { done, total }, _) => (
+                                fmt(
+                                    tl!("{done} of {total} installed"),
+                                    &[("done", &widgets::human_bytes(*done)), ("total", &widgets::human_bytes(*total))],
+                                ),
+                                Tone::Warn,
+                            ),
+                            (ModelState::Downloading { .. }, _) => (tl!("Installing").into(), Tone::Info),
+                            (ModelState::Installed, Serving::No) => (tl!("Installed").into(), Tone::Good),
+                            (ModelState::Failed(e), _) => (msg(e), Tone::Warn),
+                            (ModelState::NoFolder, _) => (tl!("Not available on this system").into(), Tone::Faint),
+                        };
+                        let r = widgets::badge_sized(ui, &text, widgets::tone_color(t, tone), Size::Sm);
+                        if let Some(folder) = &v.folder {
+                            r.on_hover_text(folder.as_str());
+                        }
+                    });
+                }
+            });
+            if !actions.is_empty() {
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    for (label, kind, what) in actions {
+                        if widgets::button_sized(ui, label, kind, Size::Sm, 0.0).clicked() {
+                            ask = Some((what, m.app.clone(), m.id.clone()));
+                        }
+                    }
+                });
+            }
+        });
+        ask
+    }
+
     /// The page. Fills the central panel; the header's Apps tab leads back.
     pub(crate) fn models_page(&mut self, ui: &mut egui::Ui) {
         let t = Tokens::get(ui.ctx());
@@ -296,133 +416,35 @@ impl LauncherUi {
                 });
             });
 
-            let mut last_task = "";
-            for v in &views {
-                let m = &v.model;
-                if only_runnable && v.fit == Fit::WontRun {
-                    continue;
+            // One section per purpose: its heading, then its models as rows on hairlines in one
+            // card (DS: N items at once are a list on hairlines, not a grid of identical cards).
+            let shown: Vec<&ModelView> = views.iter().filter(|v| !(only_runnable && v.fit == Fit::WontRun)).collect();
+            let cpu = device.backend() == redrob_launcher_core::models::Backend::Cpu;
+            for group in shown.chunk_by(|a, b| a.model.task == b.model.task) {
+                let task = &group[0].model.task;
+                ui.add_space(space::S6);
+                ui.label(RichText::new(task_label(task)).size(theme::text::BODY).family(theme::semibold()).color(t.ink_strong));
+                if let Some(blurb) = purpose_blurb(task) {
+                    ui.add_space(space::S1);
+                    ui.add(egui::Label::new(RichText::new(blurb).size(theme::text::BODY_SM).color(t.muted)).wrap());
                 }
-                if m.task != last_task {
-                    last_task = &m.task;
-                    ui.add_space(space::S6);
-                    ui.label(RichText::new(task_label(&m.task)).size(theme::text::BODY).family(theme::semibold()).color(t.ink_strong));
-                    if let Some(blurb) = purpose_blurb(&m.task) {
-                        ui.add_space(space::S1);
-                        ui.add(egui::Label::new(RichText::new(blurb).size(theme::text::BODY_SM).color(t.muted)).wrap());
-                    }
-                    ui.add_space(space::S3);
-                }
-                widgets::card_frame(&t).show(ui, |ui| {
+                ui.add_space(space::S3);
+                widgets::card_frame(&t).inner_margin(egui::Margin::symmetric(space::S5 as i8, 0)).show(ui, |ui| {
                     ui.set_width(ui.available_width());
-                    ui.vertical(|ui| {
-                        ui.spacing_mut().item_spacing.y = 4.0;
-                        // What it gives the person, then the verdict for this computer.
-                        ui.horizontal_wrapped(|ui| {
-                            let headline = if m.summary.is_empty() { m.name.clone() } else { crate::i18n::t(&m.summary).to_string() };
-                            ui.label(RichText::new(headline).family(theme::medium()).color(t.ink_strong));
-                            let (fit_text, tone) = fit_label(v.fit);
-                            let need = fmt(
-                                tl!("Needs about {gb} GB of {kind}"),
-                                &[
-                                    ("gb", &format!("{:.0}", f64::from(m.requires.memory_mb) / 1024.0)),
-                                    (
-                                        "kind",
-                                        if device.backend() == redrob_launcher_core::models::Backend::Cpu { tl!("RAM") } else { tl!("GPU memory") },
-                                    ),
-                                ],
-                            );
-                            widgets::badge(ui, &fit_text, widgets::tone_color(&t, tone)).on_hover_text(need);
-                        });
-                        // The details, small: the model's name, its size, which app, the licence.
-                        ui.horizontal_wrapped(|ui| {
-                            widgets::hud(ui, &m.name, t.faint).on_hover_text(crate::i18n::t(&m.description));
-                            ui.add_space(8.0);
-                            widgets::hud(ui, &widgets::human_bytes(m.size()), t.faint);
-                            ui.add_space(8.0);
-                            widgets::hud(ui, &fmt(tl!("for {app}"), &[("app", &group_name(&m.app))]), t.faint);
-                            ui.add_space(8.0);
-                            widgets::hud_link(ui, tl!("Licence and source"), &m.source).on_hover_text(&m.license);
-                        });
-                        ui.add_space(2.0);
-                        ui.horizontal(|ui| {
-                            let (text, tone): (String, Tone) = match (&v.state, &v.serving) {
-                                (ModelState::Installed, Serving::Running { url }) => (fmt(tl!("Serving at {url}"), &[("url", url)]), Tone::Good),
-                                (ModelState::Installed, Serving::Starting) => (tl!("Starting…").into(), Tone::Info),
-                                (ModelState::Installed, Serving::Failed(e)) => (msg(e), Tone::Warn),
-                                (ModelState::NotDownloaded, _) => (tl!("Not installed").into(), Tone::Neutral),
-                                (ModelState::Partial { done, total }, _) => (
-                                    fmt(
-                                        tl!("{done} of {total} installed"),
-                                        &[("done", &widgets::human_bytes(*done)), ("total", &widgets::human_bytes(*total))],
-                                    ),
-                                    Tone::Warn,
-                                ),
-                                (ModelState::Downloading { .. }, _) => (tl!("Installing").into(), Tone::Info),
-                                (ModelState::Installed, Serving::No) => (tl!("Installed").into(), Tone::Good),
-                                (ModelState::Failed(e), _) => (msg(e), Tone::Warn),
-                                (ModelState::NoFolder, _) => (tl!("Not available on this system").into(), Tone::Faint),
-                            };
-                            let r = widgets::badge(ui, &text, widgets::tone_color(&t, tone));
-                            if let Some(folder) = &v.folder {
-                                r.on_hover_text(folder.as_str());
-                            }
-                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                let id = || (m.app.clone(), m.id.clone());
-                                match &v.state {
-                                    ModelState::NotDownloaded => {
-                                        if widgets::button(ui, tl!("Install"), Kind::Primary, 0.0).clicked() {
-                                            ask = Some((Ask::Download, id().0, id().1));
-                                        }
-                                    }
-                                    ModelState::Partial { .. } | ModelState::Failed(_) => {
-                                        if widgets::button(ui, tl!("Delete"), Kind::Secondary, 0.0).clicked() {
-                                            ask = Some((Ask::Delete, id().0, id().1));
-                                        }
-                                        let label = if matches!(v.state, ModelState::Failed(_)) { tl!("Try again") } else { tl!("Resume") };
-                                        if widgets::button(ui, label, Kind::Primary, 0.0).clicked() {
-                                            ask = Some((Ask::Download, id().0, id().1));
-                                        }
-                                    }
-                                    ModelState::Downloading { done, total } => {
-                                        if widgets::button(ui, tl!("Pause"), Kind::Secondary, 0.0).clicked() {
-                                            ask = Some((Ask::Pause, id().0, id().1));
-                                        }
-                                        let fraction = (*total > 0).then(|| *done as f32 / *total as f32);
-                                        let caption = fmt(
-                                            tl!("Installing {done} of {total}"),
-                                            &[("done", &widgets::human_bytes(*done)), ("total", &widgets::human_bytes(*total))],
-                                        );
-                                        widgets::progress(ui, fraction, &caption, t.accent, 240.0);
-                                    }
-                                    ModelState::Installed => {
-                                        if widgets::button(ui, tl!("Delete"), Kind::Secondary, 0.0).clicked() {
-                                            ask = Some((Ask::Delete, id().0, id().1));
-                                        }
-                                        if m.runtime.served() {
-                                            match &v.serving {
-                                                Serving::Running { .. } | Serving::Starting => {
-                                                    if widgets::button(ui, tl!("Stop"), Kind::Secondary, 0.0).clicked() {
-                                                        ask = Some((Ask::Stop, id().0, id().1));
-                                                    }
-                                                }
-                                                Serving::No | Serving::Failed(_) => {
-                                                    let label = if matches!(v.serving, Serving::Failed(_)) { tl!("Try again") } else { tl!("Start") };
-                                                    if widgets::button(ui, label, Kind::Primary, 0.0).clicked() {
-                                                        ask = Some((Ask::Start, id().0, id().1));
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                    ModelState::NoFolder => {}
-                                }
-                            });
-                        });
-                    });
+                    ui.spacing_mut().item_spacing.y = 0.0;
+                    for (i, v) in group.iter().enumerate() {
+                        if i > 0 {
+                            widgets::row_rule(ui, 0.0);
+                        }
+                        ui.add_space(space::S4);
+                        if let Some(a) = Self::model_row(ui, &t, cpu, v) {
+                            ask = Some(a);
+                        }
+                        ui.add_space(space::S4);
+                    }
                 });
-                ui.add_space(space::S2);
             }
-            ui.add_space(space::S4);
+            ui.add_space(space::S6);
             widgets::hud(ui, tl!("Every file is checked against its official copy before an app uses it."), t.faint);
             ui.add_space(space::S8);
         });
