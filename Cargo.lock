@@ -3897,6 +3897,7 @@ dependencies = [
  "plist",
  "redrob-engine-client",
  "redrob-launcher-core",
+ "redrob-login",
  "serde",
  "serde_json",
  "sha2",
