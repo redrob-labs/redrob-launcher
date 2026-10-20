@@ -376,7 +376,7 @@ impl LauncherUi {
             if let Some(title) = title {
                 ui.add_space(4.0);
                 ui.horizontal(|ui| {
-                    widgets::meta_line(ui, title);
+                    widgets::shelf_heading(ui, title);
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         widgets::hud(ui, &tn(list.len() as u64, "{n} app", "{n} apps"), t.faint);
                     });

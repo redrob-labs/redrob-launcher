@@ -489,6 +489,11 @@ pub fn semibold() -> FontFamily {
     FontFamily::Name("semibold".into())
 }
 
+/// Pretendard 700: shelf headings on the Apps page (Redrob Cowork's Trending AI headings).
+pub fn bold() -> FontFamily {
+    FontFamily::Name("bold".into())
+}
+
 /// Headings and app names: Pretendard 600 (the design system's card and dialog title).
 pub fn display() -> FontFamily {
     FontFamily::Name("display".into())
@@ -516,17 +521,19 @@ pub fn install_fonts(ctx: &egui::Context, cjk: bool) {
     const REGULAR: &[u8] = include_bytes!("../../../../assets/fonts/Pretendard-Regular.ttf");
     const MEDIUM: &[u8] = include_bytes!("../../../../assets/fonts/Pretendard-Medium.ttf");
     const SEMIBOLD: &[u8] = include_bytes!("../../../../assets/fonts/Pretendard-SemiBold.ttf");
+    const BOLD: &[u8] = include_bytes!("../../../../assets/fonts/Pretendard-Bold.ttf");
     let mut fonts = FontDefinitions::default();
     // egui's own fonts stay behind ours, for symbols and emoji ours don't have.
     let fallback: Vec<String> = fonts.families.get(&FontFamily::Proportional).cloned().unwrap_or_default();
     fonts
         .font_data
         .insert("WantedSans".to_owned(), Arc::new(FontData::from_static(KOREAN_FONT).tweak(FontTweak { scale: KOREAN_SCALE, ..Default::default() })));
-    let faces: [Face<'_>; 7] = [
+    let faces: [Face<'_>; 8] = [
         ("Pretendard", REGULAR, FontFamily::Proportional),
         ("Pretendard-Medium", MEDIUM, medium()),
         ("Pretendard-SemiBold", SEMIBOLD, semibold()),
         ("Pretendard-SemiBold", SEMIBOLD, display()),
+        ("Pretendard-Bold", BOLD, bold()),
         ("Pretendard", REGULAR, FontFamily::Monospace),
         ("Pretendard-Medium", MEDIUM, mono()),
         ("Pretendard-SemiBold", SEMIBOLD, mono_bold()),

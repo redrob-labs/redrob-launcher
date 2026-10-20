@@ -258,6 +258,7 @@ fn bundled_font_covers_korean_in_every_ui_family() {
         crate::theme::medium(),
         crate::theme::semibold(),
         crate::theme::display(),
+        crate::theme::bold(),
         crate::theme::mono(),
         crate::theme::mono_bold(),
     ] {
