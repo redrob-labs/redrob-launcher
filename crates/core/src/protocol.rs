@@ -26,8 +26,11 @@ pub enum Command {
     Uninstall {
         app: String,
     },
+    /// Start an installed app. `args` come from a `redrob://open` link (`deep_link::OpenArgs`),
+    /// already allowlisted; empty when the person pressed Open.
     Launch {
         app: String,
+        args: Vec<String>,
     },
     /// Show the installed app in the file manager.
     Reveal {

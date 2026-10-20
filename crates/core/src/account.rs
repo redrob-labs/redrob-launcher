@@ -61,7 +61,7 @@ pub enum AppLink {
 ///
 /// `None`: the change is merged (every one on `develop`) but no release carries it yet, so an installed
 /// copy cannot read the file. The source of each is in `docs/app-integration.md`.
-pub const SHARED_READERS: [(&str, Option<&str>); 10] = [
+pub const SHARED_READERS: [(&str, Option<&str>); 8] = [
     ("redrob-cad", Some("0.0.3")),
     ("redrob-film", Some("0.1.0")),
     ("redrob-shape", None),
@@ -69,8 +69,6 @@ pub const SHARED_READERS: [(&str, Option<&str>); 10] = [
     ("redrob-cowork", None),
     ("redrob-office", None),
     ("redrob-design", None),
-    ("redrob-query", None),
-    ("redrob-recall", None),
     ("redrob-canvas", None),
 ];
 

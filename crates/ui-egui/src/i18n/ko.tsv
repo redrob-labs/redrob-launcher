@@ -141,8 +141,6 @@
 	Code editor	코드 편집기
 	Agent workspace	에이전트 작업 공간
 	Office suite	오피스
-	Database client	데이터베이스 클라이언트
-	File search	파일 검색
 	Not checked yet	아직 확인 안 함
 	GitHub's hourly limit was reached; full details return in {min} min	GitHub 시간당 한도에 걸렸어요. {min}분 뒤에 모든 정보가 돌아와요
 	GitHub limit hit; back in {min} min	GitHub 한도 초과, {min}분 뒤 복구
@@ -227,8 +225,6 @@ redrob-browser	A browser whose agent reads, acts on and automates the web	에이
 redrob-code	The AI coding agent for your terminal	터미널에서 쓰는 AI 코딩 에이전트
 redrob-cowork	Work with AI agents on your own files	내 파일로 AI 에이전트와 함께 일해요
 redrob-office	Docs, Sheets, Slides, PDF and Hangul in one window	문서·시트·슬라이드·PDF·한글을 한 창에서
-redrob-query	Query PostgreSQL, MySQL, SQLite and MongoDB with AI	AI로 PostgreSQL·MySQL·SQLite·MongoDB를 조회해요
-redrob-recall	Search your files and ask grounded questions	내 파일을 찾고 근거 있는 답을 물어요
 month	Jan	1월
 month	Feb	2월
 month	Mar	3월
@@ -479,8 +475,8 @@ month	Dec	12월
 	Splits music into vocals, drums, bass and the rest.	음악을 보컬, 드럼, 베이스, 나머지로 나눠요.
 	Finds where people speak in a recording.	녹음에서 사람이 말하는 곳을 찾아요.
 	Turns a photo into a 3D model.	사진 한 장을 3D 모델로 만들어요.
-	Reads the text in images and scans so Redrob Recall can search it.	이미지와 스캔 속 글자를 읽어 Redrob Recall이 검색할 수 있게 해요.
-	Lets Redrob Recall search your files by meaning.	Redrob Recall이 파일을 뜻으로 검색할 수 있게 해요.
+	Reads the text in images and scans.	이미지와 스캔 속 글자를 읽어요.
+	Lets Redrob apps search your files by meaning.	Redrob 앱이 파일을 뜻으로 검색할 수 있게 해요.
 	Fastest subtitles for clear speech	또렷한 말소리에 가장 빠른 자막
 	Subtitles for most videos, a good balance of speed and accuracy	대부분의 영상에 맞는 자막. 속도와 정확도의 균형
 	The most accurate subtitles here, about four times slower	여기서 가장 정확한 자막. 약 4배 느림
@@ -489,7 +485,7 @@ month	Dec	12월
 	A coding assistant that writes and fixes code	코드를 쓰고 고치는 코딩 어시스턴트
 	An assistant that also understands images	이미지도 이해하는 어시스턴트
 	A small, quick assistant that understands images; fits most laptops	이미지를 이해하는 작고 빠른 어시스턴트. 대부분의 노트북에서 돌아감
-	Lets Redrob Recall search your files by meaning, in many languages	Redrob Recall이 여러 언어로 파일을 뜻으로 검색하게 함
+	Lets Redrob apps search your files by meaning, in many languages	Redrob 앱이 여러 언어로 파일을 뜻으로 검색하게 함
 	A full-size assistant squeezed to fit a small GPU (needs the PrismML runtime)	작은 GPU에 맞게 압축한 큰 어시스턴트 (PrismML 런타임 필요)
 	Makes pictures from a text description	글로 설명하면 그림을 만듦
 	Removes objects from photos and fills the gap	사진에서 물체를 지우고 빈자리를 채움
@@ -504,7 +500,6 @@ month	Dec	12월
 	Finds where people speak in a recording	녹음에서 사람이 말하는 곳을 찾음
 	Splits a song into vocals, drums, bass and the rest	노래를 보컬, 드럼, 베이스, 나머지로 나눔
 	Turns one photo into a 3D model	사진 한 장을 3D 모델로 만듦
-	Reads the text in images and scans so Recall can search it	이미지와 스캔 속 글자를 읽어 Recall이 검색하게 함
 @plural	{n} model hidden|{n} models hidden	모델 {n}개 숨김
 # Settings > Channels and Settings > Apps.
 	General	일반

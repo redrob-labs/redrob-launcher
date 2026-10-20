@@ -68,7 +68,7 @@ fn from_manifest(app: &CraftApp, manifest: &Manifest) -> Option<Installed> {
 /// apps name theirs from their packaging config (Redrob Office's `executableName` is `redrob`,
 /// Redrob Cowork keeps the product name, `Redrob Cowork.exe`); Redrob Code's installer puts
 /// `redrob.exe` (and a `redrob-code.exe` copy) in `%LOCALAPPDATA%\Redrob\bin`; Redrob Browser is
-/// Chromium, `chrome.exe`. The product name (`Redrob Recall.exe`) is what older Tauri builds and
+/// Chromium, `chrome.exe`. The product name (`Redrob Design.exe`) is what older Tauri builds and
 /// electron-builder's default produce, so it is always a candidate.
 pub(crate) fn windows_exe_names(app: &CraftApp) -> Vec<String> {
     let own = format!("{}.exe", app.id);
@@ -170,7 +170,7 @@ pub mod windows {
     /// package author (Redrob Office: "Redrob", Redrob Cowork: "Redrob Cowork"); Tauri's NSIS
     /// and WiX write the identifier's second segment, "redrob". Matched by prefix, case aside, so
     /// a spelling change ("McKinley Rice Inc.") doesn't hide an installed app behind an Install
-    /// button again (Film in 0.3.0, Office / Query / Recall / Cowork in 0.4.0).
+    /// button again (Film in 0.3.0, Office / Cowork in 0.4.0).
     fn ours(publisher: &str) -> bool {
         let p = publisher.trim().to_ascii_lowercase();
         p.starts_with("redrob") || p.starts_with("mckinley rice")
@@ -258,7 +258,7 @@ pub mod windows {
 
     /// Folders an app is known to install into besides the recorded one and Program Files:
     /// `%LOCALAPPDATA%\Programs\<name>` (electron-builder's assisted per-user installer: Office,
-    /// Cowork), `%LOCALAPPDATA%\<name>` (Tauri's `currentUser` NSIS: Recall, Query), our own setups'
+    /// Cowork), `%LOCALAPPDATA%\<name>` (Tauri's `currentUser` NSIS), our own setups'
     /// folders (`%LOCALAPPDATA%\Redrob\<product>`), and the launcher's own apps folder.
     fn known_dirs(app: &CraftApp) -> Vec<PathBuf> {
         let local = std::env::var_os("LOCALAPPDATA").map(PathBuf::from);

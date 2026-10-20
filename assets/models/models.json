@@ -376,7 +376,7 @@
       "id": "bge-m3-f16",
       "app": "redrob",
       "name": "BGE-M3 embeddings (F16)",
-      "summary": "Lets Redrob Recall search your files by meaning, in many languages",
+      "summary": "Lets Redrob apps search your files by meaning, in many languages",
       "description": "Multilingual dense embedding model from BAAI in F16 GGUF for llama.cpp embeddings.",
       "license": "MIT (BAAI/bge-m3; GGUF conversion by gpustack)",
       "source": "https://huggingface.co/gpustack/bge-m3-GGUF",
@@ -856,40 +856,6 @@
           "url": "https://huggingface.co/stabilityai/TripoSR/resolve/5b521936b01fbe1890f6f9baed0254ab6351c04a/config.yaml",
           "sha256": "74ca708ce086bf68e97709ea6b3d91f14717921c04691e84043f0eb8fcc68e62",
           "size": 987
-        }
-      ]
-    },
-    {
-      "id": "pp-ocrv5-mobile",
-      "app": "redrob-recall",
-      "name": "PP-OCRv5 mobile (detection + recognition)",
-      "summary": "Reads the text in images and scans so Recall can search it",
-      "description": "PaddleOCR v5 mobile text detection and recognition inference models as two tar archives.",
-      "license": "Apache-2.0",
-      "source": "https://github.com/PaddlePaddle/PaddleOCR",
-      "task": "ocr",
-      "runtime": "files",
-      "requires": {
-        "memory_gb": 3,
-        "backends": [
-          "cuda",
-          "metal",
-          "vulkan",
-          "cpu"
-        ]
-      },
-      "files": [
-        {
-          "name": "PP-OCRv5_mobile_det_infer.tar",
-          "url": "https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0.0/PP-OCRv5_mobile_det_infer.tar",
-          "sha256": "50446e5d01ac2a73d5319c89513281f6578414c888c602f9af13f93feefffc58",
-          "size": 4935680
-        },
-        {
-          "name": "PP-OCRv5_mobile_rec_infer.tar",
-          "url": "https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0.0/PP-OCRv5_mobile_rec_infer.tar",
-          "sha256": "566b9512b34e34a9f0db54d87b51fa5a0b9ed2cf1ab7e49728cc0b8b5a64f414",
-          "size": 16834560
         }
       ]
     },

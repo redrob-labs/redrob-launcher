@@ -331,15 +331,17 @@ fn runs_in_terminal(app: &CraftApp) -> bool {
     app.id == "redrob-code"
 }
 
-/// Starts an installed app.
-pub fn launch(app: &CraftApp, installed: &Installed) -> Result<(), String> {
+/// Starts an installed app with `args` (allowlisted values from a `redrob://open` link, passed as
+/// separate arguments, never through a shell). A terminal app is started without them.
+pub fn launch(app: &CraftApp, installed: &Installed, args: &[String]) -> Result<(), String> {
     let path = Path::new(&installed.location);
+    let args: Vec<&str> = args.iter().map(String::as_str).collect();
     match installed.source {
-        InstallSource::MacApp => process::open(path.as_os_str()),
-        _ if cfg!(target_os = "macos") && path.extension().is_some_and(|e| e == "app") => process::open(path.as_os_str()),
+        InstallSource::MacApp => process::open_app(path.as_os_str(), &args),
+        _ if cfg!(target_os = "macos") && path.extension().is_some_and(|e| e == "app") => process::open_app(path.as_os_str(), &args),
         _ => {
             let exe = launch_path(app, path)?;
-            if runs_in_terminal(app) { process::launch_in_terminal(&exe) } else { process::launch_binary(&exe, &[]) }
+            if runs_in_terminal(app) { process::launch_in_terminal(&exe) } else { process::launch_binary(&exe, &args) }
         }
     }
     .map_err(|e| format!("Couldn't open {}: {e}", app.name))
@@ -674,8 +676,6 @@ pub(crate) mod linux {
             "redrob-code" => include_bytes!("../../../assets/app-icons/redrob-code.png"),
             "redrob-cowork" => include_bytes!("../../../assets/app-icons/redrob-cowork.png"),
             "redrob-office" => include_bytes!("../../../assets/app-icons/redrob-office.png"),
-            "redrob-query" => include_bytes!("../../../assets/app-icons/redrob-query.png"),
-            "redrob-recall" => include_bytes!("../../../assets/app-icons/redrob-recall.png"),
             _ => return None,
         })
     }

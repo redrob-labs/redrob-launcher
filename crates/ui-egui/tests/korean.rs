@@ -75,9 +75,7 @@ fn events() -> Vec<Event> {
         ("redrob-browser", "0.6.0"),
         ("redrob-code", "0.3.0"),
         ("redrob-cowork", "0.3.0"),
-        ("redrob-query", "0.3.0"),
         ("redrob-cad", "0.3.0"),
-        ("redrob-design", "0.4.0"),
     ];
     for (i, (id, v)) in versions.iter().enumerate() {
         ev.push(Event::Latest {
@@ -86,7 +84,7 @@ fn events() -> Vec<Event> {
             from: Origin::RedrobApi,
         });
     }
-    ev.push(Event::Latest { app: "redrob-recall".into(), latest: LatestRelease::None, from: Origin::RedrobApi });
+    ev.push(Event::Latest { app: "redrob-design".into(), latest: LatestRelease::None, from: Origin::RedrobApi });
     let installed = [("redrob-canvas", "0.4.1"), ("redrob-code", "0.3.0"), ("redrob-browser", "0.5.0")];
     for app in &SUITE {
         let inst = installed.iter().find(|(id, _)| *id == app.id).map(|(_, v)| Installed {
@@ -99,7 +97,7 @@ fn events() -> Vec<Event> {
     }
     ev.push(Event::Progress { app: "redrob-film".into(), phase: JobPhase::Downloading { done: 48 << 20, total: 131 << 20 } });
     ev.push(Event::Paused { app: "redrob-cowork".into(), download: Some(PausedDownload { done: 30 << 20, total: 120 << 20 }) });
-    ev.push(Event::Progress { app: "redrob-query".into(), phase: JobPhase::Reconnecting { done: 10 << 20, total: 90 << 20 } });
+    ev.push(Event::Progress { app: "redrob-office".into(), phase: JobPhase::Reconnecting { done: 10 << 20, total: 90 << 20 } });
     ev.push(Event::CheckFinished { at: NOW - 180, source: Source::GitHubApi, rate_limited_until: None });
     ev
 }

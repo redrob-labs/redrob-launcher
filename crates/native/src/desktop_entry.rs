@@ -26,9 +26,7 @@ pub fn meta(app: &CraftApp) -> (&'static str, Option<&'static str>) {
         "redrob-shape" => ("Graphics;2DGraphics;VectorGraphics;", None),
         "redrob-code" => ("Office;WordProcessor;", None),
         "redrob-cowork" => ("Office;Presentation;", None),
-        "redrob-query" => ("Office;Spreadsheet;", None),
         "redrob-cad" => ("Graphics;Engineering;VectorGraphics;", None),
-        "redrob-recall" => ("AudioVideo;Audio;Midi;Mixer;Sequencer;Recorder;", None),
         _ => ("Graphics;", None),
     }
 }
@@ -167,7 +165,7 @@ mod tests {
     #[test]
     fn reads_back_the_program_it_wrote_and_the_apps_own_entries() {
         for p in ["/home/ana/My Apps/p.AppImage", "/a/\"q\" $HOME `x`.AppImage", r"/a\b/100%.AppImage", "/plain.AppImage"] {
-            let text = render(app("redrob-query"), Path::new(p), false).unwrap();
+            let text = render(app("redrob-office"), Path::new(p), false).unwrap();
             assert_eq!(exec_program(&text).map(PathBuf::from), Some(PathBuf::from(p)), "{p}");
         }
         // Redrob Canvas's AppRun writes its own entry, unmarked.

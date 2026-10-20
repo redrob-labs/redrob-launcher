@@ -18,8 +18,6 @@ product id (the console's `DEVICE_PRODUCTS`); those apps are one small change aw
 | Redrob Office | Device flow (`office`) | Merged (redrob-office#154) | No | Release it |
 | Redrob Design | Device flow (`design`) | Merged (redrob-design#92) | No | Release it |
 | Redrob Canvas | `REDROB_API_KEY`, saved `console-key`, device flow | Merged (redrob-canvas#160) | No | Release it |
-| Redrob Query | `REDROB_API_KEY`, OS keyring | Merged (redrob-query#55) | No | Release it |
-| Redrob Recall | OS keyring, pasted key | Merged (redrob-recall#49) | No | Release it |
 
 The launcher's account window reads this table through `SHARED_READERS` in `crates/core/src/account.rs`:
 an app whose installed version is at or past the listed release shows "Uses this sign-in"; a merged but
@@ -49,8 +47,6 @@ The launcher installs an asset only when its name reads `<stem>-<version>-<os>-<
 | Redrob Cowork | v0.3.0 | `redrob-linux-x86_64-0.3.0.AppImage` | No | Version after arch; stem `redrob`; `mac` -> `macos` |
 | Redrob Office | v0.9.0 | `Redrob-0.9.0-arm64.dmg`, `Redrob-0.9.0.AppImage` | No | electron-builder defaults: stem `Redrob`, no OS, arch missing on Linux |
 | Redrob Design | v0.15.0 | `Redrob.Design_0.15.0_aarch64.dmg` | No | Tauri defaults: `Redrob.Design_<ver>_<arch>`; no Linux or Windows asset |
-| Redrob Query | v0.2.0 | `Redrob.Query_0.2.0_amd64.AppImage` | No | Tauri defaults, as Design |
-| Redrob Recall | v0.2.0 | `Redrob.Recall_0.2.0_amd64.AppImage` | No | Tauri defaults, as Design |
 
 Two ways to close the gap: each repo renames its assets in its release workflow (one `mv` step before
 upload, keeping the packagers' own names as extra copies), or the launcher learns the Tauri and

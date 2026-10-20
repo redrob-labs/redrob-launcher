@@ -113,11 +113,12 @@ macro_rules! app {
     };
 }
 
-/// The Redrob apps, in display order: the ones that make things, then the ones for work.
+/// The Redrob apps, in display order: the ones that make things, then the ones for work. Only apps
+/// with a 2026 app icon (`@redrob-labs/ui` `brand/app-icons/`) are listed.
 ///
 /// Mark colours are the design system's `product-*` marks where a product has one (Browser, Code,
 /// Design, Office); the rest carry Redrob Blue until the design system gives them a mark.
-pub const SUITE: [CraftApp; 11] = [
+pub const SUITE: [CraftApp; 9] = [
     app!(
         "redrob-film",
         "Redrob Film",
@@ -159,16 +160,6 @@ pub const SUITE: [CraftApp; 11] = [
         [0xfe, 0x4d, 0x3e],
         "ai.redrob.office"
     ),
-    app!(
-        "redrob-query",
-        "Redrob Query",
-        "Query PostgreSQL, MySQL, SQLite and MongoDB with AI",
-        "Database client",
-        AppGroup::Work,
-        BLUE,
-        "ai.redrob.query"
-    ),
-    app!("redrob-recall", "Redrob Recall", "Search your files and ask grounded questions", "File search", AppGroup::Work, BLUE, "ai.redrob.recall"),
 ];
 
 /// Redrob's website.

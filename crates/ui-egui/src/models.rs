@@ -97,8 +97,8 @@ fn purpose_blurb(task: &str) -> Option<String> {
         "stem-separation" => tl!("Splits music into vocals, drums, bass and the rest.").to_string(),
         "vad" => tl!("Finds where people speak in a recording.").to_string(),
         "image-to-3d" => tl!("Turns a photo into a 3D model.").to_string(),
-        "ocr" => tl!("Reads the text in images and scans so Redrob Recall can search it.").to_string(),
-        "embedding" => tl!("Lets Redrob Recall search your files by meaning.").to_string(),
+        "ocr" => tl!("Reads the text in images and scans.").to_string(),
+        "embedding" => tl!("Lets Redrob apps search your files by meaning.").to_string(),
         _ => return None,
     })
 }
