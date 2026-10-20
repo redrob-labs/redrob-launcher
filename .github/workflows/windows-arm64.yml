@@ -6,14 +6,9 @@
 # runs here from a repository this organisation does not control.
 name: Windows ARM64
 
-# Nightly (dependency and runner-image drift shows up within a day), and on PRs that change the
-# Windows packaging itself.
+# Nightly (dependency and runner-image drift shows up within a day) and on a manual run. Not on
+# PRs: the package + ARM64 install takes 5+ minutes on two Windows runners.
 on:
-  pull_request:
-    paths:
-      - .github/workflows/windows-arm64.yml
-      - packaging/windows/**
-      - installer/windows/**
   schedule:
     - cron: "47 4 * * *"
   workflow_dispatch:

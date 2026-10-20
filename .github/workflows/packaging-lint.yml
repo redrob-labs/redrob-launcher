@@ -4,12 +4,10 @@
 # repository this organisation does not control (UPSTREAM.md).
 name: Packaging lint
 
+# Every PR: `lint` is a required check, so it must always report (a path filter left it missing on
+# PRs that touch no packaging). No push trigger: the merge already passed this on its PR.
 on:
-  push:
-    branches: [develop, main]
-    paths: [".github/workflows/**", "packaging/**", "assets/app-icon/**"]
   pull_request:
-    paths: [".github/workflows/**", "packaging/**", "assets/app-icon/**"]
   workflow_dispatch:
 
 permissions:
