@@ -66,7 +66,7 @@ const CARD_ACTIONS_GAP: f32 = theme::space::S2;
 const CARD_GAP: f32 = 16.0;
 /// DS card padding, dense (space-4).
 const CARD_PAD: f32 = 16.0;
-/// The app icon on a tile (48 before #83, then 40).
+/// The app icon on a tile (36 px; was 48, then 40).
 const CARD_ICON: f32 = 36.0;
 /// How far a tile's icon rises while the tile is hovered, in points.
 const CARD_ICON_LIFT: f32 = 2.0;

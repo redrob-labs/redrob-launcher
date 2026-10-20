@@ -25,8 +25,9 @@ const HERO_ICON_GAP: f32 = 12.0;
 const HERO_ICON_COLS: usize = 3;
 /// Below this banner width the icon grid is left out and the copy takes the whole banner.
 const HERO_ICONS_MIN_W: f32 = 640.0;
-/// The gradient texture's size: a 4:1 strip, matching the banner's usual proportions.
+/// The gradient texture's width: a 4:1 strip, matching the banner's usual proportions.
 const GRADIENT_W: usize = 512;
+/// The gradient texture's height, a quarter of [`GRADIENT_W`] for that 4:1 strip.
 const GRADIENT_H: usize = 128;
 
 /// The gradient's colour stops from the top-right corner (0) to the bottom-left (1), as
@@ -170,6 +171,8 @@ fn gradient_image() -> ColorImage {
 }
 
 /// The colour at `t` (0..1) along [`STOPS`].
+///
+/// * `t` - how far along the stops to sample, 0 (first stop) to 1 (last).
 fn along(t: f32) -> [f32; 3] {
     let t = t.clamp(0.0, 1.0);
     let mut prev = STOPS[0];
@@ -184,16 +187,24 @@ fn along(t: f32) -> [f32; 3] {
 }
 
 /// `a` moved toward `b` by `k` (0..1), per channel.
+///
+/// * `a` - the colour at `k` = 0.
+/// * `b` - the colour at `k` = 1.
+/// * `k` - how far from `a` to `b`, 0 to 1.
 fn mix3(a: [f32; 3], b: [f32; 3], k: f32) -> [f32; 3] {
     [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k]
 }
 
 /// An sRGB triple as 0..1 floats.
+///
+/// * `c` - the three sRGB bytes.
 fn rgb_f(c: [u8; 3]) -> [f32; 3] {
     [c[0] as f32 / 255.0, c[1] as f32 / 255.0, c[2] as f32 / 255.0]
 }
 
 /// A 0..1 channel back to a byte.
+///
+/// * `c` - the channel value, clamped to 0..1.
 fn to_u8(c: f32) -> u8 {
     (c.clamp(0.0, 1.0) * 255.0).round() as u8
 }

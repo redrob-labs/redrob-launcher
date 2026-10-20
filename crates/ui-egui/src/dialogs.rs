@@ -56,6 +56,13 @@ impl LauncherUi {
     /// DS Modal head (padding 20 20 0): an optional 40 px icon, the title in DS title-4 (17 / 600,
     /// the DS's dialog-title size) with a meta line under it, and a close icon button (sm 32) when
     /// `closable`. Returns whether it was pressed.
+    ///
+    /// * `ui` - the modal's Ui.
+    /// * `width` - the modal's width ([`Self::modal_width`]).
+    /// * `icon` - the app's or launcher's icon to lead with, if any ([`MODAL_ICON`] square).
+    /// * `title` - the translated title.
+    /// * `subtitle` - a meta line under the title; empty for none.
+    /// * `closable` - whether the head carries a close button.
     fn modal_head(ui: &mut egui::Ui, width: f32, icon: Option<egui::ImageSource<'static>>, title: &str, subtitle: &str, closable: bool) -> bool {
         let t = Tokens::get(ui.ctx());
         let mut close = false;
