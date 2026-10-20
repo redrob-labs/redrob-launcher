@@ -795,6 +795,16 @@ fn custom_title_bar_has_window_buttons() {
     assert!(refresh.top() > 48.0 && update.top() > 48.0, "both are under the title bar: {update:?} {refresh:?}");
     assert!(update.right() <= refresh.left() && refresh.left() - update.right() <= 12.0, "{update:?} left of {refresh:?}");
     assert!((update.center().y - refresh.center().y).abs() < 1.0, "same row: {update:?} {refresh:?}");
+    // A tile's main button is Sm (32 px) at its label's width, right-aligned just left of its … button.
+    let main = h.get_by_label("Update to 0.6.0").rect();
+    assert!((main.height() - 32.0).abs() < 0.5 && main.width() < 200.0, "{main:?}");
+    assert!(
+        h.query_all_by_label("More actions").any(|m| {
+            let m = m.rect();
+            m.left() >= main.right() && m.left() - main.right() <= 12.0 && (m.center().y - main.center().y).abs() < 1.0
+        }),
+        "… directly right of {main:?}"
+    );
     assert!(h.get_all_by_label("All apps").all(|n| n.rect().top() >= 48.0), "the sidebar and page start under the title bar");
     // Restored, the top 5 px of the caption buttons and close's right 5 px stay the resize band.
     // (The harness insets the bar: its top is minimize's minus that band.)

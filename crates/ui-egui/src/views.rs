@@ -67,6 +67,8 @@ const CARD_PAD: f32 = 16.0;
 const CARD_ICON: f32 = 36.0;
 /// The icon buttons beside an app's main action (pause, cancel, More actions): DS IconButton sm.
 pub(crate) const ACTION_ICON: f32 = theme::control::SM;
+/// The least width of a tile's main button (Sm), so a short label like Open still reads as a button.
+const ACTION_MIN_W: f32 = 80.0;
 /// Room macOS's traffic lights take at the left of the header.
 const TRAFFIC_LIGHTS_W: f32 = 72.0;
 /// Where the group logo leads (Redrob Cowork's title bar does the same).
@@ -539,7 +541,6 @@ impl LauncherUi {
         let gap = ui.spacing().item_spacing.x;
         // The named menu is always reachable by keyboard, including while an install job replaces
         // the primary action; right-click remains a pointer shortcut to the same commands.
-        let main_w = (width - ACTION_ICON - gap).max(120.0);
         if let Some(phase) = entry.job {
             let downloading = matches!(phase, JobPhase::Downloading { .. } | JobPhase::Reconnecting { .. });
             // Reserve the exact number of trailing controls so the progress caption yields space
@@ -614,24 +615,44 @@ impl LauncherUi {
                 w if w < 220.0 => format!("{}{pct}", tl!("Resume")),
                 _ => format!("{}{pct}", tl!("Resume download")),
             };
-            let resp = widgets::button(ui, &label, Kind::Primary, resume_w);
             let tip = if p.total > 0 {
                 fmt(tl!("{done} of {total} downloaded"), &[("done", &widgets::human_bytes(p.done)), ("total", &widgets::human_bytes(p.total))])
             } else {
                 fmt(tl!("{done} downloaded"), &[("done", &widgets::human_bytes(p.done))])
             };
-            if resp.on_hover_text(tip).clicked() {
-                self.send(Command::Install { app: id.clone() });
-            }
-            if widgets::icon_button(ui, crate::glyphs::Icon::Close, tl!("Discard download"), ACTION_ICON).clicked() {
-                self.send(Command::Cancel { app: id.clone() });
-            }
-            self.menu(ui, entry, status);
+            // Right to left like the main button: …, Discard, then Resume (Sm, its label's width).
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                self.menu(ui, entry, status);
+                if widgets::icon_button(ui, crate::glyphs::Icon::Close, tl!("Discard download"), ACTION_ICON).clicked() {
+                    self.send(Command::Cancel { app: id.clone() });
+                }
+                let resp = widgets::button_sized(ui, &label, Kind::Primary, widgets::Size::Sm, ACTION_MIN_W);
+                if resp.on_hover_text(tip).clicked() {
+                    self.send(Command::Install { app: id.clone() });
+                }
+            });
             return;
         }
+        // Right to left: the … menu at the tile's right edge, the main button just left of it.
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            self.menu(ui, entry, status);
+            self.primary_button(ui, entry, status);
+        });
+    }
+
+    /// The tile's main button (Install, Open, Update to …, Retry, Download, or a disabled state):
+    /// DS Size::Sm (32 px, like the … button), as wide as its label but at least
+    /// [`ACTION_MIN_W`].
+    ///
+    /// * `ui` - the actions row's right-to-left layout, so the button lands left of the … menu.
+    /// * `entry` - the app the button acts on.
+    /// * `status` - its current status, which picks the button (see [`Self::primary_action`]).
+    fn primary_button(&mut self, ui: &mut Ui, entry: &AppEntry, status: &AppStatus) {
+        let id = entry.app.id.to_string();
+        let button = |ui: &mut Ui, label: &str, kind: Kind| widgets::button_sized(ui, label, kind, widgets::Size::Sm, ACTION_MIN_W);
         match self.primary_action(entry, status) {
             Primary::Install => {
-                let resp = widgets::button(ui, tl!("Install"), Kind::Primary, main_w);
+                let resp = button(ui, tl!("Install"), Kind::Primary);
                 // Opened by a `redrob://open` link for an app that isn't installed yet.
                 if self.focus_install == Some(entry.app.id) {
                     self.focus_install = None;
@@ -639,23 +660,23 @@ impl LauncherUi {
                     resp.scroll_to_me(None);
                 }
                 if resp.clicked() {
-                    self.send(Command::Install { app: id.clone() });
+                    self.send(Command::Install { app: id });
                 }
             }
             Primary::Retry(label) => {
                 let tip = tl!("The download is still here. It's checked again, then installed.");
-                if widgets::button(ui, &label, Kind::Primary, main_w).on_hover_text(tip).clicked() {
-                    self.send(Command::Install { app: id.clone() });
+                if button(ui, &label, Kind::Primary).on_hover_text(tip).clicked() {
+                    self.send(Command::Install { app: id });
                 }
             }
             Primary::Update(v) => {
-                if widgets::button(ui, &fmt(tl!("Update to {v}"), &[("v", &v)]), Kind::Primary, main_w).clicked() {
-                    self.send(Command::Install { app: id.clone() });
+                if button(ui, &fmt(tl!("Update to {v}"), &[("v", &v)]), Kind::Primary).clicked() {
+                    self.send(Command::Install { app: id });
                 }
             }
             Primary::Open => {
-                if widgets::button(ui, tl!("Open"), Kind::Secondary, main_w).clicked() {
-                    self.send(Command::Launch { app: id.clone(), args: Vec::new() });
+                if button(ui, tl!("Open"), Kind::Secondary).clicked() {
+                    self.send(Command::Launch { app: id, args: Vec::new() });
                 }
             }
             Primary::Download(url) => {
@@ -663,15 +684,14 @@ impl LauncherUi {
                     Some(p) => fmt(tl!("Download for {os}"), &[("os", p.os.label())]),
                     None => tl!("Download").into(),
                 };
-                if widgets::button(ui, &label, Kind::Primary, main_w).clicked() {
+                if button(ui, &label, Kind::Primary).clicked() {
                     ui.ctx().open_url(egui::OpenUrl::new_tab(url));
                 }
             }
             Primary::Unavailable(label) => {
-                ui.add_enabled_ui(false, |ui| widgets::button(ui, label, Kind::Secondary, main_w));
+                ui.add_enabled_ui(false, |ui| button(ui, label, Kind::Secondary));
             }
         }
-        self.menu(ui, entry, status);
     }
 
     /// The … button and its menu.
