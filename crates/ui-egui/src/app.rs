@@ -685,8 +685,11 @@ impl LauncherUi {
         // The right margin is only the scroll bar's gap from the window's edge: the page's own
         // 24 px is inside its scroll area, so the bar hugs the edge like Cowork's.
         let edge = crate::widgets::PAGE_SCROLL_EDGE as i8;
+        // The Apps page keeps no fixed strip above its scroll: its top gap is inside the scroll
+        // (see below), so the cards scroll right up to the title bar's hairline.
+        let top = if self.page == Page::Apps { 0 } else { 20 };
         egui::CentralPanel::default()
-            .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin { left: 24, right: edge, top: 20, bottom: 0 }))
+            .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin { left: 24, right: edge, top, bottom: 0 }))
             .show(ui, |ui| match self.page {
                 Page::Models => self.models_page(ui),
                 Page::Engine | Page::Account | Page::Settings => {
@@ -705,6 +708,9 @@ impl LauncherUi {
                 Page::Apps => {
                     let ids = self.visible_ids();
                     crate::widgets::page_scroll(ui, "apps", |ui| {
+                        // The page's first row starts level with the sidebar card's top edge (the
+                        // card's own 8 px inset), and this gap scrolls away with the page.
+                        ui.add_space(crate::shell::INSET);
                         // The filter row scrolls with the cards rather than staying pinned over them.
                         self.toolbar(ui);
                         ui.add_space(16.0);
