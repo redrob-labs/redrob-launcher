@@ -63,8 +63,8 @@ const CARD_ACTION_H: f32 = theme::control::MD;
 const CARD_GAP: f32 = 16.0;
 /// DS card padding, dense (space-4).
 const CARD_PAD: f32 = 16.0;
-/// The app icon on a tile (was 48).
-const CARD_ICON: f32 = 40.0;
+/// The app icon on a tile (48 before #83, then 40).
+const CARD_ICON: f32 = 36.0;
 /// The icon buttons beside an app's main action (pause, cancel, More actions): DS IconButton sm.
 pub(crate) const ACTION_ICON: f32 = theme::control::SM;
 /// Room macOS's traffic lights take at the left of the header.
@@ -467,7 +467,7 @@ impl LauncherUi {
             shadow.color = shadow.color.gamma_multiply(k);
             painter.add(shadow.as_shape(rect, radius));
         }
-        painter.rect(rect, radius, t.raised(), Stroke::new(1.0, theme::mix(t.line, t.line_strong, k)), egui::StrokeKind::Inside);
+        painter.rect(rect, radius, card_fill(&t), Stroke::new(1.0, theme::mix(t.line, t.line_strong, k)), egui::StrokeKind::Inside);
 
         let inner = rect.shrink(CARD_PAD);
         // A detached child: the card's contents never move the next card along.
@@ -801,6 +801,15 @@ fn card_height(ui: &Ui, ids: &[&'static str], card_w: f32) -> f32 {
         .fold(line(&desc), f32::max);
     let block = (line(&name) + CARD_LINE_GAP + desc_h).max(CARD_ICON);
     (2.0 * CARD_PAD + block + theme::space::S3 + line(&meta) + theme::space::S4 + CARD_ACTION_H).ceil()
+}
+
+/// A tile's fill: white (`surface-base`, #ffffff) in light, where the hairline and the hover shadow
+/// separate it from the page; in dark the raised surface stays, since a white tile would break
+/// the dark appearance.
+///
+/// * `t` - the current appearance's tokens.
+fn card_fill(t: &Tokens) -> Color32 {
+    if t.dark { t.raised() } else { t.bg }
 }
 
 /// A tile's three type roles: (app name in the display face, description, version line).
