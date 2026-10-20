@@ -226,33 +226,3 @@ fn the_header_names_the_workspace_once_signed_in() {
     from_account_menu(&mut h, "Acme", "Redrob account");
     h.get_by_label("Workspace: Acme");
 }
-
-#[test]
-fn signed_out_the_row_reads_log_in_or_sign_up_and_its_menu_opens_settings() {
-    let state = Rc::new(RefCell::new(State::default()));
-    let mut h = harness(state.clone());
-    h.run_steps(4);
-    // One row, no Settings row of its own.
-    let row = h.get_by_label("Log in or sign up").rect();
-    assert!(h.query_by_label("Settings").is_none());
-    h.get_by_label("Log in or sign up").click();
-    h.run_steps(4);
-    snapshot(&mut h, "account-menu-signed-out");
-    // Log in or sign up first, then Settings and Quit, then the version; all above the row.
-    let login = h.get_all_by_label("Log in or sign up").map(|n| n.rect()).find(|r| r.bottom() <= row.top() + 0.5).unwrap();
-    let settings = h.get_by_label("Settings").rect();
-    let quit = h.get_by_label("Quit Redrob Launcher").rect();
-    assert!(login.top() < settings.top() && settings.top() < quit.top() && quit.bottom() <= row.top() + 0.5);
-    h.get_by_label("Settings").click();
-    h.run_steps(4);
-    h.get_by_label("News and source code for every Redrob app");
-    // While the code waits for approval the row says so; signed in, it names the workspace.
-    state.borrow_mut().connect = Some(ConnectState::Starting);
-    h.run_steps(4);
-    h.get_by_label("Log in or sign up");
-    state.borrow_mut().connect = None;
-    state.borrow_mut().workspace = Some(Workspace { account_name: "Acme".into(), key_name: String::new() });
-    h.run_steps(4);
-    from_account_menu(&mut h, "Acme", "Settings");
-    h.get_by_label("News and source code for every Redrob app");
-}

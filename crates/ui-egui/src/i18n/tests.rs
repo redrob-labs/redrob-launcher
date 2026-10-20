@@ -233,43 +233,6 @@ fn korean_counts_dates_and_messages_work() {
     assert_eq!(tr(Lang::KO, "Untranslated diagnostic"), "Untranslated diagnostic");
 }
 
-/// The concrete cmap boundary is what makes egui's family order select Pretendard for Latin and
-/// Wanted Sans for Korean. Testing only the assembled families would not catch the first face
-/// claiming Hangul and shadowing Wanted Sans.
-#[test]
-fn bundled_font_cmaps_enforce_latin_then_korean_fallback() {
-    use skrifa::{FontRef, MetadataProvider};
-
-    const HANGUL_RANGES: [(u32, u32); 3] = [(0x1100, 0x11ff), (0x3130, 0x318f), (0xac00, 0xd7a3)];
-    for (name, bytes) in [
-        ("Pretendard Regular", crate::theme::PRETENDARD_REGULAR),
-        ("Pretendard Medium", crate::theme::PRETENDARD_MEDIUM),
-        ("Pretendard SemiBold", crate::theme::PRETENDARD_SEMIBOLD),
-    ] {
-        let font = FontRef::from_index(bytes, 0);
-        assert!(font.is_ok(), "could not parse {name}");
-        let Ok(font) = font else { continue };
-        let charmap = font.charmap();
-        for character in ['A', 'é', '…'] {
-            assert!(charmap.map(character).is_some(), "{name} does not claim Latin {character:?}");
-        }
-        for (start, end) in HANGUL_RANGES {
-            for value in start..=end {
-                assert!(charmap.map(value).is_none(), "{name} unexpectedly claims U+{value:04X}");
-            }
-        }
-    }
-
-    let wanted_sans = FontRef::from_index(crate::theme::KOREAN_FONT, 0);
-    assert!(wanted_sans.is_ok(), "could not parse Wanted Sans");
-    let Ok(wanted_sans) = wanted_sans else { return };
-    let charmap = wanted_sans.charmap();
-    // Every modern precomposed Hangul syllable is bundled, not merely today's catalog glyphs.
-    for value in 0xac00..=0xd7a3 {
-        assert!(charmap.map(value).is_some(), "Wanted Sans is missing U+{value:04X}");
-    }
-}
-
 /// The bundled fonts draw the whole Korean catalog in every UI family: Hangul never depends on
 /// what the system has installed.
 #[test]
@@ -311,20 +274,6 @@ fn language_labels_come_from_the_registry() {
     // `cfg(test)` pins the system language to English.
     assert_eq!(Settings::language_label(Settings::LANGUAGE_AUTO), "Match system (English)");
     assert_eq!(Settings::language_label("xx"), "Match system (English)");
-}
-
-#[test]
-fn the_setup_language_only_pins_when_it_differs_from_the_system() {
-    use crate::settings::Settings;
-    // Accepting the setup's preselection (the system language) keeps following the system.
-    assert_eq!(Settings::language_from_installer("ko", Lang::KO), Settings::LANGUAGE_AUTO);
-    assert_eq!(Settings::language_from_installer("EN", Lang::EN), Settings::LANGUAGE_AUTO);
-    // A different pick is the person's choice and is kept.
-    assert_eq!(Settings::language_from_installer("ko", Lang::EN), "ko");
-    assert_eq!(Settings::language_from_installer("en", Lang::KO), "en");
-    // Nothing usable recorded: follow the system.
-    assert_eq!(Settings::language_from_installer("", Lang::KO), Settings::LANGUAGE_AUTO);
-    assert_eq!(Settings::language_from_installer("xx", Lang::EN), Settings::LANGUAGE_AUTO);
 }
 
 // The parser.

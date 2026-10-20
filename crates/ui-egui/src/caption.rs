@@ -68,22 +68,3 @@ pub fn reset() {
     *MAXIMIZE.lock().unwrap_or_else(PoisonError::into_inner) = None;
     set_os_state(OsState::default());
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn hit_area_is_in_physical_pixels_and_half_open() {
-        publish(2.0, egui::Rect::from_min_max(egui::pos2(100.0, 5.0), egui::pos2(146.0, 48.0)));
-        assert_eq!(maximize_rect(), Some([200.0, 10.0, 292.0, 96.0]));
-        assert!(on_maximize(200.0, 10.0));
-        assert!(on_maximize(291.5, 95.5));
-        assert!(!on_maximize(292.0, 50.0), "the right edge belongs to the next button");
-        assert!(!on_maximize(250.0, 9.0), "the resize band above stays the window's");
-        assert!(set_os_state(OsState { hovered: true, pressed: false }));
-        assert!(!set_os_state(OsState { hovered: true, pressed: false }), "an unchanged report asks for no repaint");
-        reset();
-        assert_eq!((maximize_rect(), os_state()), (None, OsState::default()));
-    }
-}

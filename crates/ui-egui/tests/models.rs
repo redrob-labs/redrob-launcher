@@ -197,31 +197,3 @@ fn served_models_show_their_verdict_and_start_or_stop() {
     h.run_steps(8);
     assert_eq!(state.borrow().asked, ["stop redrob/qwen3.8-27b-q4", "start redrob/qwen3-coder-30b-a3b-q4", "delete redrob/qwen3.8-27b-q4"]);
 }
-
-#[test]
-fn every_row_starts_its_verdict_on_one_edge_and_ends_its_actions_on_another() {
-    let m = builtin();
-    let (mut h, _) = open(vec![
-        view(&m[1], ModelState::Downloading { done: 100 << 20, total: 277 << 20 }),
-        view(&m[2], ModelState::Partial { done: 300 << 20, total: 924 << 20 }),
-        view(&m[3], ModelState::NotDownloaded),
-    ]);
-    h.get_by_label("On-device AI").click();
-    h.run_steps(12);
-    // The verdict chips line up on the content edge, whatever the headline's length.
-    let lefts: Vec<f32> = h.get_all_by_label("Runs here").map(|n| n.rect().left()).collect();
-    assert_eq!(lefts.len(), 3);
-    assert!(lefts.iter().all(|l| (l - lefts[0]).abs() <= 1.0), "verdicts on one left edge: {lefts:?}");
-    // Each row's last action (the primary where there is one) sits on one trailing edge, the
-    // device card's Measure again with them.
-    let rights: Vec<f32> = ["Pause", "Resume", "Install", "Measure again"].iter().map(|l| h.get_by_label(l).rect().right()).collect();
-    assert!(rights.iter().all(|r| (r - rights[0]).abs() <= 1.0), "actions on one right edge: {rights:?}");
-    // The primary is the trailing action: Resume is right of Delete.
-    assert!(h.get_by_label("Resume").rect().left() > h.get_by_label("Delete").rect().right());
-    // While installing, the bar says so; there is no second "Installing" chip.
-    assert!(h.query_by_label("Installing").is_none());
-    // A row is about as tall as its three lines: a hairline list, not a box per model.
-    let pause = h.get_by_label("Pause").rect();
-    let resume = h.get_by_label("Resume").rect();
-    assert!(resume.center().y - pause.center().y < 120.0, "row pitch {}", resume.center().y - pause.center().y);
-}

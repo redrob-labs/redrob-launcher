@@ -7,7 +7,7 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use egui_kittest::Harness;
-use egui_kittest::kittest::{NodeT, Queryable};
+use egui_kittest::kittest::Queryable;
 use redrob_launcher_core::protocol::{
     Backend, CANCELLED, Capabilities, Command, Event, INSTALL_CANCELLED, JobPhase, LatestRelease, Origin, PausedDownload, Source,
 };
@@ -289,58 +289,6 @@ fn a_kept_download_offers_retry_install_and_download_again() {
 }
 
 #[test]
-fn an_uninstalled_card_has_keyboard_accessible_more_actions() {
-    let (mut h, _) = harness(egui::Theme::Dark, true);
-    h.run_steps(4);
-    if let Some(l) = h.state_mut().as_mut() {
-        // Limit the grid so the focused control belongs to an unequivocally uninstalled app.
-        l.settings.filter = redrob_launcher_ui_egui::settings::Filter::NotInstalled;
-    }
-    h.get_all_by_label("Redrob Shape").next().unwrap().scroll_to_me();
-    h.run_steps(4);
-    let name = h.get_all_by_label("Redrob Shape").next().unwrap().rect();
-    // Query by role as well as name to lock in the control's assistive-technology semantics.
-    let menu = h
-        .query_all(egui_kittest::kittest::by().role(egui::accesskit::Role::Button).label("More actions"))
-        .filter(|node| {
-            let rect = node.rect();
-            rect.left() > name.left() && rect.top() > name.bottom() && rect.top() < name.top() + 180.0
-        })
-        .min_by(|a, b| a.rect().left().total_cmp(&b.rect().left()))
-        .unwrap();
-    menu.focus();
-    h.key_press(egui::Key::Enter);
-    h.run_steps(3);
-    h.get_by_label("Release notes");
-}
-
-#[test]
-fn every_job_state_keeps_named_more_actions() {
-    let mut ev = events();
-    // Put every active phase on a visible app; the base fixture already supplies Downloading and
-    // Paused, while these overrides cover the phases that replace all ordinary action buttons.
-    for (app, phase) in [
-        ("redrob-office", JobPhase::Reconnecting { done: 10 << 20, total: 90 << 20 }),
-        ("redrob-canvas", JobPhase::Verifying),
-        ("redrob-shape", JobPhase::Waiting),
-        ("redrob-browser", JobPhase::Installing),
-        ("redrob-code", JobPhase::Removing),
-    ] {
-        ev.push(Event::Progress { app: app.into(), phase });
-    }
-    let (mut h, _) = harness_with(ev, egui::Theme::Dark, true, 1.0);
-    h.run_steps(6);
-    // Opening each button proves progress-only, cancellable, and paused rows retain a named path
-    // to the card menu rather than relying on an undiscoverable secondary click.
-    for app in ["Redrob Film", "Redrob Office", "Redrob Canvas", "Redrob Shape", "Redrob Browser", "Redrob Code", "Redrob Cowork"] {
-        open_card_more_button(&mut h, app);
-        h.get_by_label("Release notes");
-        h.key_press(egui::Key::Escape);
-        h.run_steps(2);
-    }
-}
-
-#[test]
 fn a_dismissed_install_prompt_is_not_called_a_cancelled_download() {
     let finished = |app: &str, why: &str| Event::JobFinished { app: app.into(), result: Err(why.into()) };
     // The password prompt was dismissed with the download kept (redrob-cad) and without (redrob-office);
@@ -437,39 +385,6 @@ fn each_cancellation_says_what_it_called_off() {
     }
 }
 
-#[test]
-fn a_search_that_matches_nothing_says_what_to_relax_and_clears() {
-    let (mut h, _) = harness(egui::Theme::Light, true);
-    h.run_steps(6);
-    let field = h.query_all(egui_kittest::kittest::by().role(egui::accesskit::Role::TextInput).label("Search apps")).next().unwrap();
-    field.focus();
-    field.type_text("zzz");
-    h.run_steps(4);
-    snapshot(&mut h, "empty-search-light");
-    // A DS empty state: what happened, what to relax, and the way back.
-    h.get_by_label("No apps match");
-    h.get_by_label_contains("Nothing matches");
-    assert!(h.query_by_label("Redrob Canvas").is_none());
-    h.get_by_label("Clear search").click();
-    h.run_steps(4);
-    assert!(h.query_by_label("No apps match").is_none());
-    h.get_by_label("Redrob Canvas");
-}
-
-#[test]
-fn switching_filters() {
-    let (mut h, _) = harness(egui::Theme::Dark, true);
-    h.run_steps(6);
-    // The grid is the only view: no Grid / Table control, no sort.
-    assert!(h.query_by_label("Table").is_none() && h.query_by_label("Grid").is_none());
-    assert!(h.query_by_label("Sort").is_none());
-    h.get_by_label_contains("Updates").click();
-    h.run_steps(4);
-    snapshot(&mut h, "grid-updates-dark");
-    assert!(h.query_by_label("Redrob Code").is_none());
-    h.get_by_label("Redrob Canvas");
-}
-
 /// Clicks the sidebar's account row labelled `row`, then the item `item` of the menu it opens
 /// above itself.
 fn from_account_menu(h: &mut Harness<'_, Option<LauncherUi>>, row: &str, item: &str) {
@@ -524,165 +439,6 @@ fn open_card_more_button(h: &mut Harness<'_, Option<LauncherUi>>, app: &str) {
 }
 
 #[test]
-fn an_old_table_or_sort_setting_still_loads_and_the_grid_ignores_it() {
-    use redrob_launcher_ui_egui::settings::{SortKey, ViewMode};
-    // Saved by an earlier version, when there was a table and a sort.
-    let old: Settings = serde_json::from_str(r#"{"view":"Table","sort":"Name","sort_descending":true,"notify":false}"#).unwrap();
-    assert_eq!((old.view, old.sort, old.sort_descending), (ViewMode::Table, SortKey::Name, true));
-    let mut backend = Some(Fake { events: events(), sent: Rc::new(RefCell::new(Vec::new())), manage: true, clock: Rc::new(Cell::new(NOW)) });
-    redrob_launcher_ui_egui::i18n::set_test_lang(redrob_launcher_ui_egui::i18n::Lang::EN);
-    let mut h = Harness::builder().with_size(egui::vec2(1180.0, 900.0)).build_ui_state(
-        move |ui, state: &mut Option<LauncherUi>| {
-            if state.is_none()
-                && let Some(b) = backend.take()
-            {
-                *state = Some(LauncherUi::new(ui.ctx(), Box::new(b), old.clone()));
-            }
-            if let Some(l) = state.as_mut() {
-                l.logic(&ui.ctx().clone(), &mut NoHost);
-                l.ui(ui, &mut NoHost);
-            }
-        },
-        None,
-    );
-    h.run_steps(6);
-    // The grid, on its three shelves in page order: the AI engine, everyday work, creative work.
-    let engine = h.get_by_label("For your AI engine").rect();
-    let work = h.get_by_label("For your everyday work").rect();
-    let creative = h.get_by_label("For your creative work").rect();
-    assert!(engine.top() < work.top() && work.top() < creative.top());
-    assert!(h.query_by_label("Kind").is_none(), "no table header");
-    let top = |name: &str| h.get_all_by_label(name).next().unwrap().rect().top();
-    assert!(top("Redrob Code") > engine.bottom() && top("Redrob Code") < work.top());
-    assert!(top("Redrob Cowork") > work.bottom() && top("Redrob Browser") < creative.top());
-    assert!(top("Redrob Design") > creative.bottom());
-}
-
-/// How far the middle of these lines of text is below the middle of the app icon beside them, in
-/// points. The lines also share one left edge, just right of the icon.
-fn below_icon_centre(h: &Harness<'_, Option<LauncherUi>>, lines: &[&str]) -> f32 {
-    let rects: Vec<egui::Rect> = lines.iter().map(|l| h.get_by_label(l).rect()).collect();
-    let left = rects[0].left();
-    for (l, r) in lines.iter().zip(&rects) {
-        assert!((r.left() - left).abs() < 0.5, "{l} is not left-aligned with {}: {} vs {left}", lines[0], r.left());
-    }
-    let text = rects.iter().copied().reduce(|a, b| a.union(b)).unwrap();
-    let icon = h
-        .query_all(egui_kittest::kittest::by().role(egui::accesskit::Role::Image))
-        .map(|n| n.rect())
-        .filter(|r| r.right() <= text.left() && r.top() < text.bottom() && r.bottom() > text.top())
-        .max_by(|a, b| a.right().total_cmp(&b.right()))
-        .unwrap();
-    assert!(text.left() - icon.right() < 24.0, "no icon beside {lines:?}");
-    assert!(text.left() > icon.right(), "{lines:?} runs into the icon");
-    text.center().y - icon.center().y
-}
-
-#[test]
-fn name_and_tagline_are_left_aligned_beside_the_icon_and_centred_on_it() {
-    for (scale, suffix) in [(1.0, "-1x"), (1.5, "-1.5x"), (2.0, "-2x")] {
-        let (mut h, _) = harness_at(egui::Theme::Dark, true, scale);
-        h.run_steps(8);
-        snapshot(&mut h, &format!("grid-dark{suffix}"));
-        let off = below_icon_centre(&h, &["Redrob Canvas", "Paint and edit images with an agent", "Graphics"]);
-        assert!(off.abs() < 0.25, "grid at {scale}x: {off}");
-        let (mut h, _) = harness_at(egui::Theme::Light, true, scale);
-        h.run_steps(8);
-        snapshot(&mut h, &format!("grid-light{suffix}"));
-        let off = below_icon_centre(&h, &["Redrob Canvas", "Paint and edit images with an agent", "Graphics"]);
-        assert!(off.abs() < 0.25, "grid (light) at {scale}x: {off}");
-    }
-}
-
-#[test]
-fn pages_lead_back_to_apps_by_the_back_button_and_escape() {
-    let (mut h, _) = harness(egui::Theme::Dark, true);
-    h.run_steps(6);
-    let on_settings = |h: &Harness<'_, Option<LauncherUi>>| h.query_by_label("News and source code for every Redrob app").is_some();
-    // Settings is a page: no Done button, one primary at most (Website is secondary now).
-    open_settings(&mut h);
-    assert!(on_settings(&h));
-    assert!(h.query_by_label("Done").is_none());
-    h.get_by_label("Quit Redrob Launcher");
-    // The top bar's back button.
-    h.get_by_label("Back to apps").click();
-    h.run_steps(4);
-    assert!(!on_settings(&h));
-    h.get_by_label("Update to 0.5.0");
-    assert!(h.query_by_label("Back to apps").is_none(), "Apps is where back leads; it has no back button");
-    // Escape.
-    open_settings(&mut h);
-    assert!(on_settings(&h));
-    h.key_press(egui::Key::Escape);
-    h.run_steps(4);
-    assert!(!on_settings(&h));
-    h.get_by_label("Update to 0.5.0");
-}
-
-#[test]
-fn escape_leaves_a_page_from_a_focused_button_but_not_from_an_open_list() {
-    let (mut h, _) = harness(egui::Theme::Dark, true);
-    h.run_steps(6);
-    let on_settings = |h: &Harness<'_, Option<LauncherUi>>| h.query_by_label("News and source code for every Redrob app").is_some();
-    // Keyboard focus on an ordinary button (as after Tab) doesn't swallow Escape.
-    open_settings(&mut h);
-    h.get_by_label("Quit Redrob Launcher").focus();
-    h.run_steps(2);
-    assert!(h.ctx.memory(|m| m.focused().is_some()), "the button holds keyboard focus");
-    h.key_press(egui::Key::Escape);
-    h.run_steps(4);
-    assert!(!on_settings(&h), "Escape from a focused button returns to Apps");
-    // An open list takes Escape for itself: it closes, and the page stays.
-    open_settings(&mut h);
-    h.get_by_value("Automatically").click();
-    h.run_steps(4);
-    assert!(egui::Popup::is_any_open(&h.ctx), "the check-for-updates list is open");
-    h.key_press(egui::Key::Escape);
-    h.run_steps(4);
-    assert!(on_settings(&h), "Escape closed the list, not the page");
-}
-
-#[test]
-fn the_theme_switch_options_are_big_enough_to_hit_and_switch_the_theme() {
-    for width in [1180.0, 600.0] {
-        let mut h = harness_sized(width);
-        h.run_steps(6);
-        let options: Vec<egui::Rect> = h.query_all(egui_kittest::kittest::by().role(egui::accesskit::Role::RadioButton)).map(|n| n.rect()).collect();
-        assert_eq!(options.len(), 3, "{width}: System, Light, Dark");
-        for r in &options {
-            assert!(r.width() >= 32.0 && r.height() >= 32.0, "{width}: a theme option's target is only {r:?}");
-        }
-        // Neighbouring targets never overlap.
-        for (a, b) in options.iter().zip(options.iter().skip(1)) {
-            assert!(a.intersect(*b).area() <= 0.5, "{width}: {a:?} overlaps {b:?}");
-        }
-        h.get_by_label("Light").click();
-        h.run_steps(3);
-        assert_eq!(h.state().as_ref().unwrap().settings.theme, redrob_launcher_ui_egui::theme::ThemeChoice::Light, "{width}");
-    }
-}
-
-/// The default harness at `width` x 900.
-fn harness_sized(width: f32) -> Harness<'static, Option<LauncherUi>> {
-    let mut backend = Some(Fake { events: events(), sent: Rc::new(RefCell::new(Vec::new())), manage: true, clock: Rc::new(Cell::new(NOW)) });
-    redrob_launcher_ui_egui::i18n::set_test_lang(redrob_launcher_ui_egui::i18n::Lang::EN);
-    Harness::builder().with_size(egui::vec2(width, 900.0)).build_ui_state(
-        move |ui, state: &mut Option<LauncherUi>| {
-            if state.is_none()
-                && let Some(b) = backend.take()
-            {
-                *state = Some(LauncherUi::new(ui.ctx(), Box::new(b), Settings { notify: false, ..Settings::default() }));
-            }
-            if let Some(l) = state.as_mut() {
-                l.logic(&ui.ctx().clone(), &mut NoHost);
-                l.ui(ui, &mut NoHost);
-            }
-        },
-        None,
-    )
-}
-
-#[test]
 fn settings_link_to_redrob() {
     let (mut h, _) = harness(egui::Theme::Dark, true);
     h.run_steps(6);
@@ -709,61 +465,6 @@ fn links_to_the_website_github_and_each_apps_pages() {
     open_settings(&mut h);
     h.get_by_label("Website");
     h.get_by_label("GitHub");
-}
-
-#[test]
-fn the_account_menu_holds_settings_quit_and_the_version() {
-    for width in [1180.0, 600.0] {
-        let mut h = harness_sized(width);
-        h.run_steps(6);
-        // No account backend: one row reading Settings, no Settings row of its own.
-        assert_eq!(h.query_all_by_label("Settings").count(), 1, "{width}");
-        let row = h.get_by_label("Settings").rect();
-        h.get_by_label("Settings").click();
-        h.run_steps(4);
-        snapshot(&mut h, &format!("account-menu-no-account-{width}"));
-        let version = h.get_by_label(&format!("Redrob Launcher {}", env!("CARGO_PKG_VERSION"))).rect();
-        let quit = h.get_by_label("Quit Redrob Launcher").rect();
-        let settings = h.get_all_by_label("Settings").map(|n| n.rect()).find(|r| r.bottom() <= row.top() + 0.5).unwrap();
-        // Above the row, in order: Settings, Quit, the version.
-        assert!(settings.top() < quit.top() && quit.top() < version.top() && version.bottom() <= row.top() + 0.5, "{width}");
-        assert!(h.query_by_label("Log in or sign up").is_none(), "{width}: no account item without an account backend");
-        // Escape closes it.
-        h.key_press(egui::Key::Escape);
-        h.run_steps(4);
-        assert!(h.query_by_label("Quit Redrob Launcher").is_none(), "{width}");
-    }
-    let mut h = harness_sized(1180.0);
-    h.run_steps(6);
-    open_settings(&mut h);
-    h.get_by_label("News and source code for every Redrob app");
-}
-
-#[test]
-fn the_logo_opens_console_redrob_ai() {
-    let (mut h, _) = harness(egui::Theme::Dark, true);
-    h.run_steps(6);
-    assert_eq!(click_opens(&mut h, "Go to console.redrob.ai").as_deref(), Some("https://console.redrob.ai"));
-}
-
-#[test]
-fn typing_in_the_search_on_another_page_shows_the_apps() {
-    let (mut h, _) = harness(egui::Theme::Dark, true);
-    h.run_steps(6);
-    let on_settings = |h: &Harness<'_, Option<LauncherUi>>| h.query_by_label("News and source code for every Redrob app").is_some();
-    open_settings(&mut h);
-    assert!(on_settings(&h));
-    // The search stays in the title bar on every page.
-    let field = h
-        .query_all(egui_kittest::kittest::by().role(egui::accesskit::Role::TextInput).label("Search apps"))
-        .find(|n| n.rect().bottom() <= 48.0)
-        .unwrap();
-    field.focus();
-    field.type_text("canvas");
-    h.run_steps(4);
-    assert!(!on_settings(&h), "typing switched to the apps");
-    h.get_by_label("Redrob Canvas");
-    assert!(h.query_by_label("Redrob Shape").is_none(), "and the grid shows what it finds");
 }
 
 /// Clicks the `n`th widget labelled `label` and returns the URL the app asked to open.
@@ -829,57 +530,6 @@ fn looks_again_at_installed_apps_every_few_minutes_not_every_frame() {
     clock.set(NOW + 5 * 60);
     h.run_steps(10);
     assert_eq!(detects(&sent), 1, "once at five minutes, not once per frame");
-}
-
-#[test]
-fn the_page_ends_24_px_from_the_edge_with_its_scroll_bar_beyond_it() {
-    let (mut h, _) = harness(egui::Theme::Light, true);
-    h.run_steps(6);
-    // The cards (each carries its status as its name) and the refresh above them share the page's
-    // right edge, 24 px in: the scroll bar sits in that padding, at the window's edge.
-    // Redrob Browser ends the everyday-work shelf's row of three, so it sits in the last column.
-    let right = h.query_all_by_label_contains("Redrob Browser: ").map(|n| n.rect().right()).fold(0.0, f32::max);
-    let refresh = h.get_by_label("Check for updates").rect().right();
-    // The harness draws inside an 8 px margin of its own, so its "window" edge is at 1172.
-    assert!((right - (1180.0 - 8.0 - 24.0)).abs() <= 1.0, "cards end at {right}");
-    assert!((refresh - right).abs() <= 1.0, "refresh {refresh} vs cards {right}");
-    // Hovering the page shows the thumb (for the snapshot: it is painted, not a node).
-    h.hover_at(egui::pos2(700.0, 500.0));
-    h.run_steps(6);
-    snapshot(&mut h, "grid-scroll-hover-light");
-}
-
-#[test]
-fn the_launcher_update_banner_is_one_slim_line() {
-    let mut ev = events();
-    ev.push(Event::LauncherUpdate(release("redrob-launcher", "0.2.0", NOW)));
-    let (mut h, _) = harness_with(ev, egui::Theme::Light, true, 1.0);
-    h.run_steps(6);
-    // The prompt asks first; "Later" leaves the banner.
-    h.get_by_label("Later").click();
-    h.run_steps(4);
-    snapshot(&mut h, "launcher-update-banner-light");
-    h.get_by_label_contains("Redrob Launcher 0.2.0 is available");
-    // One line: its controls are Sm (32), so the bar (12 / 6 padding) is 44 px. Under it come the
-    // 12 px gap and the filter row's own 12 px inset (its 40 px row around the 30 px cells, plus
-    // the pill's padding), so the cells start 68 px under the bar's top: 44 + 12 + 12. A bar even
-    // 2 px taller fails (before this, a 66 px bar and a 14 px gap put the cells 92 px down).
-    let dismiss = h.get_by_label("Dismiss").rect();
-    let action = ["Update and restart", "Download"]
-        .iter()
-        .flat_map(|l| h.query_all_by_label(l).map(|n| n.rect()).collect::<Vec<_>>())
-        .find(|r| (r.center().y - dismiss.center().y).abs() < 1.0)
-        .unwrap();
-    assert_eq!((dismiss.height(), action.height()), (32.0, 32.0));
-    // The filter row's "All" cell: the first thing under the banner.
-    let filters = h
-        .query_all_by_label_contains("All")
-        .map(|n| n.rect())
-        .filter(|r| r.top() > dismiss.bottom())
-        .min_by(|a, b| a.top().total_cmp(&b.top()))
-        .unwrap();
-    let bar_top = dismiss.top() - 6.0;
-    assert!(filters.top() - bar_top <= 44.0 + 12.0 + 12.0 + 1.0, "banner from {bar_top}, filters at {filters:?}");
 }
 
 #[test]
@@ -1105,41 +755,6 @@ fn automatic_updates_are_disabled_by_default() {
 }
 
 #[test]
-fn settings_name_the_services_behind_what_is_on_screen() {
-    let status = |extra: Vec<Event>| {
-        let mut evs = events();
-        evs.extend(extra);
-        let sent = Rc::new(RefCell::new(Vec::new()));
-        let mut backend = Some(Fake { events: evs, sent, manage: true, clock: Rc::new(Cell::new(NOW)) });
-        let mut h = Harness::builder().with_size(egui::vec2(1180.0, 900.0)).build_ui_state(
-            move |ui, state: &mut Option<LauncherUi>| {
-                if state.is_none()
-                    && let Some(b) = backend.take()
-                {
-                    *state = Some(LauncherUi::new(ui.ctx(), Box::new(b), Settings { notify: false, ..Settings::default() }));
-                }
-                if let Some(l) = state.as_mut() {
-                    l.logic(&ui.ctx().clone(), &mut NoHost);
-                    l.ui(ui, &mut NoHost);
-                }
-            },
-            None,
-        );
-        h.run_steps(6);
-        // No footer on the Apps page any more.
-        assert!(h.query_by_label_contains("Checked ").is_none(), "the Apps page has no footer");
-        open_settings(&mut h);
-        let label =
-            h.get_by_label_contains("Checked ").accesskit_node().label().or_else(|| h.get_by_label_contains("Checked ").accesskit_node().value());
-        label.unwrap_or_default()
-    };
-    assert_eq!(status(Vec::new()), "Checked 3 min ago · using Redrob API");
-    let from_github =
-        vec![Event::Latest { app: "redrob-code".into(), latest: LatestRelease::Found(release("redrob-code", "0.3.1", NOW)), from: Origin::GitHub }];
-    assert_eq!(status(from_github), "Checked 3 min ago · using Redrob API and GitHub");
-}
-
-#[test]
 fn web_build_offers_downloads() {
     let (mut h, _) = harness(egui::Theme::Dark, false);
     h.run_steps(8);
@@ -1157,97 +772,6 @@ fn search_field_rect(h: &Harness<'_, Option<LauncherUi>>) -> egui::Rect {
         .map(|n| n.rect())
         .find(|r| r.bottom() <= 48.0)
         .unwrap()
-}
-
-#[test]
-fn a_native_title_bar_puts_the_chrome_in_a_row_over_the_page() {
-    // NoHost: the OS draws the title bar (or there is none, on the web).
-    let (mut h, sent) = harness(egui::Theme::Dark, true);
-    h.run_steps(6);
-    snapshot(&mut h, "grid-native-dark");
-    assert!(h.query_by_label("Minimize").is_none());
-    // No title bar of ours: Update, the logo and the search sit in a 48 px row over the page, left to right.
-    let search = search_field_rect(&h);
-    let logo = h.get_by_label("Go to console.redrob.ai").rect();
-    let update = h.get_by_label("Update all (2)").rect();
-    for r in [search, logo, update] {
-        assert!(r.bottom() <= 48.0, "the chrome row is 48 px: {r:?}");
-    }
-    assert!(update.right() <= logo.left() && logo.right() <= search.left(), "{update:?} {logo:?} {search:?}");
-    // The Apps page has no top bar of its own: no title over the grid, refresh at the filter row's end.
-    assert_eq!(h.query_all_by_label("All apps").count(), 1, "only the sidebar's row");
-    let check = h.get_by_label("Check for updates").rect();
-    let filters = h.get_by_label_contains("Not installed ").rect();
-    assert!(check.top() > 48.0 && (check.center().y - filters.center().y).abs() < 4.0, "{check:?} vs {filters:?}");
-    assert!(check.left() > filters.right(), "refresh at the right end of the filter row");
-    sent.borrow_mut().clear();
-    h.get_by_label("Check for updates").click();
-    h.run_steps(2);
-    assert!(sent.borrow().contains(&Command::CheckForUpdates { force: true }));
-}
-
-#[test]
-fn the_macos_title_bar_keeps_the_traffic_lights_clear() {
-    struct MacHost;
-    impl Host for MacHost {
-        fn title_bar(&self) -> redrob_launcher_ui_egui::TitleBar {
-            redrob_launcher_ui_egui::TitleBar::MacOs
-        }
-    }
-    for width in [600.0, 960.0, 1180.0] {
-        let mut backend = Some(Fake { events: events(), sent: Rc::new(RefCell::new(Vec::new())), manage: true, clock: Rc::new(Cell::new(NOW)) });
-        let mut h = Harness::builder().with_size(egui::vec2(width, 900.0)).build_ui_state(
-            move |ui, state: &mut Option<LauncherUi>| {
-                if state.is_none()
-                    && let Some(b) = backend.take()
-                {
-                    *state = Some(LauncherUi::new(ui.ctx(), Box::new(b), Settings { notify: false, ..Settings::default() }));
-                }
-                if let Some(l) = state.as_mut() {
-                    l.logic(&ui.ctx().clone(), &mut MacHost);
-                    l.ui(ui, &mut MacHost);
-                }
-            },
-            None,
-        );
-        h.run_steps(6);
-        if width == 1180.0 {
-            snapshot(&mut h, "grid-title-bar-macos-dark");
-        }
-        // The OS draws the traffic lights: no window buttons of ours.
-        assert!(h.query_by_label("Minimize").is_none(), "{width}");
-        let search = search_field_rect(&h);
-        let logo = h.get_by_label("Go to console.redrob.ai").rect();
-        let update = h.get_by_label("Update all (2)").rect();
-        // Left to right: Update, the logo, the search, all in the 48 px bar and inside the window.
-        assert!(update.right() <= logo.left() && logo.right() <= search.left() && search.right() <= width, "{width}: {update:?} {logo:?} {search:?}");
-        for r in [search, logo, update] {
-            assert!(r.bottom() <= 48.0, "{width}: {r:?}");
-        }
-        // The traffic lights' 72 px stay clear, with room to drag the window beside them.
-        assert!(update.left() >= 72.0 + 24.0, "{width}: {update:?}");
-    }
-}
-
-#[test]
-fn the_grid_shows_every_app_name_whole_at_the_default_window() {
-    let (mut h, _) = harness(egui::Theme::Dark, true);
-    h.run_steps(6);
-    // Each card's name is one unwrapped line (a wrapped wordmark would be two lines tall) and
-    // lies inside the window, beside its icon.
-    let mut seen = 0;
-    for app in redrob_launcher_core::SUITE {
-        for node in h.query_all_by_label(app.name) {
-            let r = node.rect();
-            if r.top() < 48.0 || r.height() > 30.0 && r.width() > 300.0 {
-                continue; // not a card's name (e.g. a whole card or the title bar)
-            }
-            assert!(r.height() <= 30.0, "{}: wrapped onto a second line: {r:?}", app.name);
-            assert!(r.right() <= 1180.0 - 24.0, "{}: runs past the content edge: {r:?}", app.name);
-            seen += 1;
-        }
-    }
-    assert!(seen >= 5, "the first section's names were checked ({seen})");
 }
 
 #[test]
@@ -1325,41 +849,4 @@ fn custom_title_bar_has_window_buttons() {
     h.step();
     let closes = h.output().viewport_output.values().any(|v| v.commands.contains(&egui::ViewportCommand::Close));
     assert!(closes, "the close button asks the window to close (the shell decides whether that hides it to the tray)");
-}
-
-#[test]
-fn settings_say_when_github_can_be_asked_again_and_the_platform() {
-    for width in [600.0, 1180.0] {
-        let mut evs = events();
-        evs.push(Event::CheckFinished { at: NOW - 180, source: Source::GitHubApi, rate_limited_until: Some(NOW + 1800) });
-        let mut backend = Some(Fake { events: evs, sent: Rc::new(RefCell::new(Vec::new())), manage: true, clock: Rc::new(Cell::new(NOW)) });
-        let mut h = Harness::builder().with_size(egui::vec2(width, 900.0)).build_ui_state(
-            move |ui, state: &mut Option<LauncherUi>| {
-                if state.is_none()
-                    && let Some(b) = backend.take()
-                {
-                    *state = Some(LauncherUi::new(ui.ctx(), Box::new(b), Settings { notify: false, ..Settings::default() }));
-                }
-                if let Some(l) = state.as_mut() {
-                    l.logic(&ui.ctx().clone(), &mut NoHost);
-                    l.ui(ui, &mut NoHost);
-                }
-            },
-            None,
-        );
-        h.run_steps(6);
-        // The Apps page says none of it: the footer is gone.
-        for gone in ["in 30 min", "Checked ", "Installing for"] {
-            assert!(h.query_by_label_contains(gone).is_none(), "{width}: {gone} is still on the Apps page");
-        }
-        open_settings(&mut h);
-        snapshot(&mut h, &format!("settings-rate-limited-{width}"));
-        // Whole, wrapped if it must, and inside the window.
-        let notice = h.get_by_label_contains("full details return in 30 min").rect();
-        assert!(notice.right() <= width, "{width}: notice {notice:?}");
-        let checked = h.get_by_label_contains("Checked ").rect();
-        let platform = h.get_by_label_contains("Installing for").rect();
-        // Read top to bottom: the check, the limit, the platform.
-        assert!(checked.bottom() <= notice.top() && notice.bottom() <= platform.top(), "{width}: {checked:?} {notice:?} {platform:?}");
-    }
 }

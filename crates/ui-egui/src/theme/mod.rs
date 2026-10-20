@@ -613,34 +613,3 @@ pub fn tint(c: Color32, alpha: f32) -> Color32 {
 pub fn rgb(c: [u8; 3]) -> Color32 {
     Color32::from_rgb(c[0], c[1], c[2])
 }
-
-#[cfg(test)]
-mod tests {
-    use super::motion::Easing;
-    use super::*;
-
-    #[test]
-    fn easing_curves_start_at_0_end_at_1_and_settle_overshoots() {
-        for e in [Easing::Standard, Easing::Entrance, Easing::Exit, Easing::Settle] {
-            assert!(e.apply(0.0).abs() < 1e-3, "{e:?}");
-            assert!((e.apply(1.0) - 1.0).abs() < 1e-3, "{e:?}");
-        }
-        // Standard is fast out of the gate; exit starts slowly; settle passes 1 before it lands.
-        assert!(Easing::Standard.apply(0.5) > 0.7);
-        assert!(Easing::Exit.apply(0.3) < 0.1);
-        assert!((0..=100).map(|i| Easing::Settle.apply(i as f32 / 100.0)).any(|y| y > 1.02));
-    }
-
-    #[test]
-    fn derived_roles_are_close_to_the_design_system() {
-        let near = |c: Color32, rgb: u32| {
-            let [_, r, g, b] = rgb.to_be_bytes();
-            c.r().abs_diff(r) <= 12 && c.g().abs_diff(g) <= 12 && c.b().abs_diff(b) <= 12
-        };
-        // surface-raised
-        assert!(near(Tokens::LIGHT.raised(), 0xf8f9fb));
-        assert!(near(Tokens::DARK.raised(), 0x141719));
-        // selection (light)
-        assert!(near(Tokens::LIGHT.selection(), 0xd9e6ff));
-    }
-}

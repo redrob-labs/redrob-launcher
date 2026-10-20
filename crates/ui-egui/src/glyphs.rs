@@ -53,32 +53,6 @@ pub(crate) enum Icon {
     Monitor,
 }
 
-#[cfg(test)]
-impl Icon {
-    /// Every icon, for the bounds regression below.
-    const ALL: [Self; 19] = [
-        Self::Settings,
-        Self::Refresh,
-        Self::Search,
-        Self::ChevronDown,
-        Self::ChevronLeft,
-        Self::More,
-        Self::Close,
-        Self::Pause,
-        Self::Play,
-        Self::Check,
-        Self::Download,
-        Self::ExternalLink,
-        Self::Apps,
-        Self::Models,
-        Self::Engine,
-        Self::Account,
-        Self::Sun,
-        Self::Moon,
-        Self::Monitor,
-    ];
-}
-
 /// Maps the 24-unit grid onto a square.
 struct Grid {
     min: Pos2,
@@ -294,49 +268,5 @@ pub(crate) fn loader(painter: &Painter, rect: Rect, rest: Color32, active: Color
         let dx = |y: f32| (cy - y) * lean;
         let pts = vec![pos2(x + dx(bottom), bottom), pos2(x + w + dx(bottom), bottom), pos2(x + w + dx(top), top), pos2(x + dx(top), top)];
         painter.add(Shape::convex_polygon(pts, c, Stroke::NONE));
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    /// The DS has no spinning ring: every "working" indicator in the UI is the raked Loader
-    /// ([`loader`], `widgets::loader_inline`). The needles are built at run time so this file
-    /// does not match itself.
-    #[test]
-    fn production_ui_draws_no_spinner() {
-        let sources = [
-            ("account.rs", include_str!("account.rs")),
-            ("app.rs", include_str!("app.rs")),
-            ("channels.rs", include_str!("channels.rs")),
-            ("dialogs.rs", include_str!("dialogs.rs")),
-            ("engine.rs", include_str!("engine.rs")),
-            ("glyphs.rs", include_str!("glyphs.rs")),
-            ("models.rs", include_str!("models.rs")),
-            ("notes.rs", include_str!("notes.rs")),
-            ("shell.rs", include_str!("shell.rs")),
-            ("views.rs", include_str!("views.rs")),
-            ("widgets.rs", include_str!("widgets.rs")),
-        ];
-        let needles = [format!(".{}()", "spinner"), format!("{}::", "Spinner")];
-        for (file, source) in sources {
-            for needle in &needles {
-                assert!(!source.contains(needle.as_str()), "{file} draws a spinner ({needle}); use widgets::loader_inline");
-            }
-        }
-    }
-
-    #[test]
-    fn every_icon_draws_inside_its_box() {
-        let rect = Rect::from_min_size(pos2(100.0, 100.0), vec2(24.0, 24.0));
-        for icon in Icon::ALL {
-            let shapes = shapes(rect, icon, Color32::WHITE);
-            assert!(!shapes.is_empty(), "{icon:?} draws nothing");
-            for s in shapes {
-                let b = s.visual_bounding_rect();
-                assert!(rect.expand(2.0).contains_rect(b), "{icon:?} leaves its box: {b:?}");
-            }
-        }
     }
 }

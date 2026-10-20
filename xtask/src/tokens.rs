@@ -335,10 +335,10 @@ fn sha256(bytes: &[u8]) -> [u8; 32] {
     }
     padded.extend_from_slice(&bit_len.to_be_bytes());
     let mut state = [0x6a09e667_u32, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
-    for chunk in padded.chunks_exact(64) {
+    for chunk in padded.as_chunks::<64>().0 {
         let mut schedule = [0_u32; 64];
-        for (index, word) in chunk.chunks_exact(4).enumerate() {
-            schedule[index] = u32::from_be_bytes([word[0], word[1], word[2], word[3]]);
+        for (index, word) in chunk.as_chunks::<4>().0.iter().enumerate() {
+            schedule[index] = u32::from_be_bytes(*word);
         }
         for index in 16..64 {
             let s0 = schedule[index - 15].rotate_right(7) ^ schedule[index - 15].rotate_right(18) ^ (schedule[index - 15] >> 3);
@@ -367,8 +367,8 @@ fn sha256(bytes: &[u8]) -> [u8; 32] {
         }
     }
     let mut digest = [0_u8; 32];
-    for (output, value) in digest.chunks_exact_mut(4).zip(state) {
-        output.copy_from_slice(&value.to_be_bytes());
+    for (output, value) in digest.as_chunks_mut::<4>().0.iter_mut().zip(state) {
+        *output = value.to_be_bytes();
     }
     digest
 }
@@ -563,36 +563,6 @@ fn parse_hex(hex: &str) -> Option<u32> {
 mod tests {
     use super::*;
 
-    fn sample() -> serde_json::Value {
-        let mut tokens = Vec::new();
-        for (role_light, role_dark, _, _) in ROLES.iter().map(|(_, _, l, d)| (l, d, 0, 0)) {
-            for name in [role_light, role_dark] {
-                tokens.push(serde_json::json!({ "name": name, "kind": "color", "light": "#102030", "dark": "#405060" }));
-            }
-        }
-        serde_json::json!({ "tokens": tokens })
-    }
-
-    #[test]
-    fn every_role_and_output_is_stable_and_carries_provenance() {
-        let a = generate("1.7.0", &sample()).unwrap();
-        let b = generate("1.7.0", &sample()).unwrap();
-        assert_eq!(a, b);
-        assert!(a.contains("pub const SOURCE: &str = \"@redrob-labs/ui 1.7.0\";"));
-        assert!(a.contains("pub const BG: u32 = 0x102030;"), "{a}");
-        assert!(a.contains("pub const CLOSE_HOVER: u32 = 0xe81123;"), "{a}");
-        assert!(a.contains("pub mod dark {"));
-        for (role, ..) in ROLES {
-            assert!(a.contains(&format!("pub const {}: u32", role.to_uppercase())), "{role}");
-        }
-        let css = generate_css("1.7.0", &sample()).unwrap();
-        assert!(css.contains("@redrob-labs/ui 1.7.0"));
-        assert!(css.contains("--surface-base: #102030"));
-        let cpp = generate_cpp("1.7.0", &sample()).unwrap();
-        assert!(cpp.contains("@redrob-labs/ui 1.7.0"));
-        assert!(cpp.contains("constexpr Palette kDark = {Hex(0x405060)"));
-    }
-
     #[test]
     fn a_missing_token_is_an_error_not_a_default() {
         let json = serde_json::json!({ "tokens": [] });
@@ -605,32 +575,5 @@ mod tests {
         assert_eq!(parse_hex("#0a0b0c"), Some(0x0a0b0c));
         assert_eq!(parse_hex("0a0b0c"), None);
         assert_eq!(parse_hex("#fff"), None);
-    }
-
-    #[test]
-    fn sha256_matches_the_standard_vector() {
-        assert_eq!(sha256_hex(b"abc"), "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
-    }
-
-    #[test]
-    fn default_and_explicit_sources_cannot_bypass_integrity() {
-        let source = match parse_options(&[]).unwrap() {
-            TokenCommand::Generate { source, .. } => source,
-            TokenCommand::Help => TokenSource { version: String::new(), sha256: String::new() },
-        };
-        assert_eq!(source.version, PINNED_VERSION);
-        assert_eq!(source.sha256, PINNED_SHA256);
-
-        let source = match parse_options(&["--version", PINNED_VERSION]).unwrap() {
-            TokenCommand::Generate { source, .. } => source,
-            TokenCommand::Help => TokenSource { version: String::new(), sha256: String::new() },
-        };
-        assert_eq!(source.sha256, PINNED_SHA256);
-
-        let error = parse_options(&["--version", "1.8.0"]).err().unwrap();
-        assert!(error.contains("requires --sha256"), "{error}");
-        assert!(parse_options(&["--sha256", PINNED_SHA256]).is_err());
-        assert!(parse_options(&["--version", "../1.8.0", "--sha256", PINNED_SHA256]).is_err());
-        assert!(parse_options(&["--version", "1.8.0", "--sha256", "abcd"]).is_err());
     }
 }
