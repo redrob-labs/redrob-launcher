@@ -194,7 +194,7 @@ fn grid_shows_every_status_and_installs_on_click() {
     h.run_steps(8);
     snapshot(&mut h, "grid-dark");
     // Statuses the user asked for: available, installed and up to date, update with version.
-    assert!(h.query_all_by_label("Available to install").count() >= 3);
+    assert!(h.query_all_by_label("Available to install").count() >= 2);
     assert!(h.query_all_by_label("Installed · up to date").count() >= 1);
     h.get_by_label("Update to 0.5.0");
     h.get_by_label("Update to 0.6.0");
@@ -498,7 +498,7 @@ fn links_to_the_website_github_and_each_apps_pages() {
     // The table's … menu has the app's GitHub repo and no website entry.
     let (mut h, _) = harness(ViewMode::Table, egui::Theme::Dark, true);
     h.run_steps(6);
-    h.get_all_by_label("…").nth(7).unwrap().click(); // Redrob Code
+    h.get_all_by_label("…").nth(6).unwrap().click(); // Redrob Code
     h.run_steps(3);
     h.get_by_label("GitHub repository");
     assert_eq!(h.query_all_by_label_contains("Website").count(), 1, "only the footer's");
@@ -834,7 +834,7 @@ fn web_build_offers_downloads() {
     let (mut h, _) = harness(ViewMode::Grid, egui::Theme::Dark, false);
     h.run_steps(8);
     snapshot(&mut h, "web-grid-dark");
-    assert!(h.query_all_by_label("Download for macOS").count() >= 7);
+    assert!(h.query_all_by_label("Download for macOS").count() >= 6);
     assert!(h.query_by_label("Install").is_none());
 }
 

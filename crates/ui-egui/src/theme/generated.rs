@@ -2,7 +2,7 @@
 // the values are the design system's, the role -> token mapping is xtask/src/tokens.rs.
 
 /// The design-system package these colours came from.
-pub const SOURCE: &str = "@redrob-labs/ui 1.7.0";
+pub const SOURCE: &str = "@redrob-labs/ui 1.8.0";
 
 /// The light appearance's colour roles, as 0xRRGGBB.
 pub mod light {
