@@ -28,8 +28,6 @@ const APPS: &[(&str, &str)] = &[
     ("redrob-code", "Redrob Code"),
     ("redrob-cowork", "Redrob Cowork"),
     ("redrob-office", "Redrob Office"),
-    ("redrob-query", "Redrob Query"),
-    ("redrob-recall", "Redrob Recall"),
 ];
 
 const DEFAULT_PORT: u16 = 8787;

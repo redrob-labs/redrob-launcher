@@ -32,7 +32,7 @@ run here**, or **Not measured**. The verdict never blocks a download.
 | `app` | Folder |
 | --- | --- |
 | `redrob-film` | Redrob Film's own models folder (`<data dir>/models`), as before |
-| `redrob`, `redrob-canvas`, `redrob-shape`, `redrob-recall`, `redrob-code` | `~/.redrob/models/<id>/` (`REDROB_MODELS_DIR` overrides the folder) |
+| `redrob`, `redrob-canvas`, `redrob-shape`, `redrob-code` | `~/.redrob/models/<id>/` (`REDROB_MODELS_DIR` overrides the folder) |
 
 A file is in place only once its SHA-256 matched; a half-downloaded file has a `.part` suffix
 and is never something an app should open.

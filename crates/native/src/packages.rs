@@ -87,7 +87,7 @@ mod tests {
             parse_dpkg("redrob-canvas|installed|0.5.0-1\nredrob-canvas:amd64|installed|0.6.0-1\nredrob-code|config-files|0.3.0-1\n"),
             [("redrob-canvas".into(), "0.5.0-1".into()), ("redrob-canvas".into(), "0.6.0-1".into())]
         );
-        assert_eq!(parse_rpm("redrob-query|0.3.0\n"), [("redrob-query".into(), "0.3.0".into())]);
+        assert_eq!(parse_rpm("redrob-office|0.3.0\n"), [("redrob-office".into(), "0.3.0".into())]);
         assert_eq!(parse_pacman("redrob-canvas-bin 0.5.0-1\nlinux 6.11.1.arch1-1\n").len(), 2);
     }
 

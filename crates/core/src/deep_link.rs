@@ -187,7 +187,7 @@ mod tests {
         assert_eq!(parse("redrob://open/cad"), Some(open("redrob-cad")));
         assert_eq!(parse("redrob://open/redrob-cad"), Some(open("redrob-cad")));
         assert_eq!(parse("redrob://install/cowork"), Some(DeepLink::Install(app("redrob-cowork"))));
-        assert_eq!(parse("redrob://install/redrob-query/"), Some(DeepLink::Install(app("redrob-query"))));
+        assert_eq!(parse("redrob://install/redrob-office/"), Some(DeepLink::Install(app("redrob-office"))));
         for a in &SUITE {
             let short = a.id.strip_prefix("redrob-").unwrap();
             assert_eq!(parse(&format!("redrob://open/{short}")), Some(DeepLink::Open(a, OpenArgs::default())), "{}", a.id);

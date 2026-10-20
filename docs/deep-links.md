@@ -8,7 +8,7 @@ Web pages (Redrob Chat, the website) open Redrob Launcher on one app with a `red
 | `redrob://install/<app>` | Shows the app and starts its install (or its update). An app that is up to date is just shown. |
 
 `<app>` is the catalog id (`crates/core/src/catalog.rs`) with or without its `redrob-` prefix:
-`cad`, `redrob-cad`, `cowork`, `office`, `query`, `canvas`, `recall`, `shape`, `design`, `film`,
+`cad`, `redrob-cad`, `cowork`, `office`, `canvas`, `shape`, `design`, `film`,
 `browser`, `code`. Case doesn't matter, a trailing `/` is allowed, and a query string or fragment is
 ignored. Anything else (an unknown app, another action, a second path segment, `%`-escapes, a link
 longer than 256 characters) opens the launcher's home and does nothing more. The parser is

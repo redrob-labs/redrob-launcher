@@ -8,7 +8,7 @@
 | `redrob://install/<app>` | 앱을 보여 주고 설치(또는 업데이트)를 시작합니다. 최신 버전이 설치돼 있으면 보여 주기만 합니다. |
 
 `<app>`은 카탈로그 ID(`crates/core/src/catalog.rs`)이며 `redrob-` 접두사는 있어도 없어도 됩니다:
-`cad`, `redrob-cad`, `cowork`, `office`, `query`, `canvas`, `recall`, `shape`, `design`, `film`,
+`cad`, `redrob-cad`, `cowork`, `office`, `canvas`, `shape`, `design`, `film`,
 `browser`, `code`. 대소문자는 가리지 않고, 끝의 `/`는 허용되며, 쿼리 문자열과 프래그먼트는 무시합니다.
 그 밖의 것(모르는 앱, 다른 동작, 두 번째 경로 조각, `%` 이스케이프, 256자를 넘는 링크)은 런처 홈만
 열고 아무것도 하지 않습니다. 파서는 `crates/core/src/deep_link.rs`이고 그 테스트가 명세입니다.

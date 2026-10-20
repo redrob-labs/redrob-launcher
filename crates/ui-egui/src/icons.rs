@@ -57,8 +57,6 @@ pub fn app(id: &str) -> Option<ImageSource<'static>> {
         "redrob-code" => egui::include_image!("../../../assets/app-icons/redrob-code.png"),
         "redrob-cowork" => egui::include_image!("../../../assets/app-icons/redrob-cowork.png"),
         "redrob-office" => egui::include_image!("../../../assets/app-icons/redrob-office.png"),
-        "redrob-query" => egui::include_image!("../../../assets/app-icons/redrob-query.png"),
-        "redrob-recall" => egui::include_image!("../../../assets/app-icons/redrob-recall.png"),
         _ => return None,
     })
 }
@@ -76,7 +74,7 @@ pub fn redrob_logo(dark_background: bool) -> ImageSource<'static> {
 /// The lockup's width / height (both variants are 320 × 64).
 pub const REDROB_LOGO_ASPECT: f32 = 320.0 / 64.0;
 
-/// The Redrob tile as supplied: the launcher's app icon.
+/// The Redrob group icon (2026) as supplied: the launcher's app icon.
 pub fn redrob_mark() -> ImageSource<'static> {
     egui::include_image!("../../../assets/app-icon/hicolor/128x128/apps/ai.redrob.launcher.png")
 }

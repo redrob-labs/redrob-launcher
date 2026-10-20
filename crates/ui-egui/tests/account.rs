@@ -120,7 +120,7 @@ fn signing_in_shows_the_code_then_the_workspace_and_connects_apps() {
             ("redrob-film", AppLink::Connected { same_key: true, key_name: "Redrob Launcher".into() }),
             ("redrob-shape", AppLink::Shared),
             ("redrob-office", AppLink::SharedSoon),
-            ("redrob-query", AppLink::SharedAfterUpdate),
+            ("redrob-design", AppLink::SharedAfterUpdate),
         ],
         ..State::default()
     }));
