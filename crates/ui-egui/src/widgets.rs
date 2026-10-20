@@ -198,8 +198,9 @@ pub fn window_buttons(ui: &mut Ui, height: f32) {
 }
 
 /// One caption button, drawn like Redrob Cowork's (Windows' native ones over its 48 px bar): a
-/// 10 px glyph, idle in ink-secondary; hover fills 8% of ink and the glyph takes ink; close's hover
-/// is status-danger with white (was a hard-coded #c42b1c).
+/// 10 px glyph, idle in ink-faint (Cowork's caption symbols are Gray 5, a step lighter than the
+/// secondary ink); hover fills 8% of ink and the glyph takes ink; close's hover is status-danger
+/// with white (was a hard-coded #c42b1c).
 fn window_button(ui: &mut Ui, button: WindowButton, height: f32) -> Response {
     let t = Tokens::get(ui.ctx());
     let (rect, _) = ui.allocate_exact_size(vec2(CAPTION_W, height), Sense::hover());
@@ -210,8 +211,8 @@ fn window_button(ui: &mut Ui, button: WindowButton, height: f32) -> Response {
     let hovered = resp.hovered() || resp.is_pointer_button_down_on();
     let k = ui.ctx().animate_bool_with_time(resp.id.with("hover"), hovered, theme::motion::duration(ui.ctx(), theme::motion::FAST));
     let (fill, ink) = match button {
-        WindowButton::Close => (t.bad.gamma_multiply(k), theme::mix(t.muted, t.on_brand(), k)),
-        _ => (tint(t.ink, 0.08 * k), theme::mix(t.muted, t.ink, k)),
+        WindowButton::Close => (t.bad.gamma_multiply(k), theme::mix(t.faint, t.on_brand(), k)),
+        _ => (tint(t.ink, 0.08 * k), theme::mix(t.faint, t.ink, k)),
     };
     let p = ui.painter();
     if k > 0.0 {
@@ -321,6 +322,9 @@ pub enum Kind {
     Danger,
     /// No fill, `ink-brand` text; `surface-brand-subtle` on hover.
     Ghost,
+    /// `surface-brand-subtle` with `ink-brand` text, a touch more blue on hover: a quiet action
+    /// that still reads as one, for chrome (Cowork's title bar carries no filled button).
+    Tinted,
 }
 
 /// The design system's control sizes.
@@ -403,6 +407,7 @@ pub fn button_sized(ui: &mut Ui, text: &str, kind: Kind, size: Size, width: f32)
         Kind::Danger => (t.bad, t.bad_hover(), Stroke::NONE, t.on_brand()),
         Kind::Secondary => (t.bg, t.sunken, Stroke::new(1.0, t.line_strong), t.ink),
         Kind::Ghost => (Color32::TRANSPARENT, t.brand_subtle(), Stroke::NONE, t.accent_ink),
+        Kind::Tinted => (t.brand_subtle(), theme::mix(t.brand_subtle(), t.accent, 0.14), Stroke::NONE, t.accent_ink),
     };
     // The fill changes over the DS's 140 ms standard state change.
     let k = ui.ctx().animate_bool_with_time(resp.id.with("hover"), hovered, theme::motion::duration(ui.ctx(), theme::motion::FAST));

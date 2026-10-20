@@ -69,9 +69,10 @@ pub(crate) const ACTION_ICON: f32 = theme::control::SM;
 const TRAFFIC_LIGHTS_W: f32 = 72.0;
 /// Where the group logo leads (Redrob Cowork's title bar does the same).
 const CONSOLE_URL: &str = "https://console.redrob.ai";
-/// The search field's width: Cowork's clamp, and the least it shrinks to in a narrow window.
+/// The search field's width: Cowork's `clamp(260px, 29vw, 416px)`, and the least it shrinks to in a
+/// narrow window.
 const SEARCH_MIN_W: f32 = 160.0;
-const SEARCH_W: std::ops::RangeInclusive<f32> = 220.0..=360.0;
+const SEARCH_W: std::ops::RangeInclusive<f32> = 260.0..=416.0;
 /// Empty title bar left of the controls, so the window can always be dragged.
 const DRAG_MIN_W: f32 = 24.0;
 
@@ -139,7 +140,8 @@ impl LauncherUi {
         }
         if let Some(label) = update {
             ui.add_space(gap);
-            if widgets::button_sized(ui, &label, Kind::Primary, widgets::Size::Sm, 0.0).clicked() {
+            // Tinted, not filled: the chrome stays quiet (Cowork's title bar has no filled button).
+            if widgets::button_sized(ui, &label, Kind::Tinted, widgets::Size::Sm, 0.0).clicked() {
                 self.update_all();
             }
         }
