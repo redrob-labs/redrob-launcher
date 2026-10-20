@@ -155,6 +155,9 @@ pub const PAGE_SCROLL_EDGE: f32 = 6.0;
 /// The page's own right padding inside its scroll area, so the content still ends 24 px from the
 /// window's edge (DS page padding) with the bar over that padding, not over the content.
 pub const PAGE_SCROLL_PAD: f32 = theme::space::S6 - PAGE_SCROLL_EDGE;
+/// How far a page's scroll track stays from the top and bottom of the page area: the sidebar
+/// card's own inset, so the thumb's travel lines up with the card.
+pub const SCROLL_TRACK_INSET: f32 = 8.0;
 
 /// A page's vertical scroll, like Redrob Cowork's (Base UI ScrollArea): the bar floats over the
 /// page's right padding at the window's edge, a round 8 px thumb in border-strong with no track,
@@ -191,9 +194,14 @@ pub fn page_scroll<R>(ui: &mut Ui, id_salt: &str, add: impl FnOnce(&mut Ui) -> R
             w.fg_stroke.color = ink;
             w.corner_radius = CornerRadius::same(theme::radius::PILL);
         }
+        // The bar's track stops short of the title bar's hairline and the window's foot by the
+        // sidebar card's 8 px inset, so the thumb never runs into either edge.
+        let page = ui.available_rect_before_wrap();
+        let track = Rect::from_min_max(page.min + vec2(0.0, SCROLL_TRACK_INSET), page.max - vec2(0.0, SCROLL_TRACK_INSET));
         egui::ScrollArea::vertical()
             .id_salt(id_salt)
             .auto_shrink(false)
+            .scroll_bar_rect(track)
             .content_margin(egui::Margin { right: PAGE_SCROLL_PAD as i8, ..egui::Margin::ZERO })
             .show(ui, |ui| {
                 ui.set_style(page_style);
