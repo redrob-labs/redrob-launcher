@@ -75,6 +75,23 @@ const SEARCH_MIN_W: f32 = 160.0;
 const SEARCH_W: std::ops::RangeInclusive<f32> = 260.0..=416.0;
 /// Empty title bar left of the controls, so the window can always be dragged.
 const DRAG_MIN_W: f32 = 24.0;
+/// Debug builds only: set to a number (`REDROB_LAUNCHER_SAMPLE_UPDATES=2`) to preview the filter
+/// row's Update all button with that many sample updates, even when nothing needs updating.
+const SAMPLE_UPDATES_ENV: &str = "REDROB_LAUNCHER_SAMPLE_UPDATES";
+
+/// How many sample updates [`SAMPLE_UPDATES_ENV`] asks for, read once. Always 0 in release builds,
+/// so the preview can never ship.
+fn sample_updates() -> usize {
+    #[cfg(debug_assertions)]
+    {
+        static SAMPLE: std::sync::OnceLock<usize> = std::sync::OnceLock::new();
+        *SAMPLE.get_or_init(|| std::env::var(SAMPLE_UPDATES_ENV).ok().and_then(|v| v.trim().parse().ok()).unwrap_or(0))
+    }
+    #[cfg(not(debug_assertions))]
+    {
+        0
+    }
+}
 
 /// The update-check status lines Settings shows (see [`LauncherUi::update_status`]).
 pub(crate) struct UpdateStatus {
@@ -92,7 +109,7 @@ type Section = (Option<&'static str>, Vec<&'static str>);
 impl LauncherUi {
     /// The title bar (Redrob Cowork's): with a custom or macOS title bar the whole bar drags the
     /// window outside its controls. At its right end, right to left: the window buttons (custom
-    /// bar), the search, the Redrob group logo (console.redrob.ai) and, with updates, Update. With
+    /// bar), the search and the Redrob group logo (console.redrob.ai). With
     /// `TitleBar::Native` (the OS's bar, or the web) the same cluster is a 48 px row over the page.
     pub(crate) fn header(&mut self, ui: &mut Ui, bar: TitleBar) {
         let h = HEADER_H;
@@ -119,16 +136,12 @@ impl LauncherUi {
         });
     }
 
-    /// Search, the group logo and Update all, right to left. The search shrinks first in a narrow
-    /// window (never under [`SEARCH_MIN_W`]), leaving the bar room to drag.
+    /// Search and the group logo, right to left. The search shrinks first in a narrow window (never
+    /// under [`SEARCH_MIN_W`]), leaving the bar room to drag. Update all lives in the filter row
+    /// ([`Self::toolbar`]), so the chrome carries no action button.
     fn chrome_cluster(&mut self, ui: &mut Ui, bar_w: f32) {
         let gap = theme::space::S2;
-        let updates = if self.caps.manage_apps { self.count(Filter::Updates) } else { 0 };
-        let update = (updates > 0).then(|| {
-            if updates == 1 { tl!("Update 1 app").to_string() } else { fmt(tl!("Update all ({count})"), &[("count", &updates.to_string())]) }
-        });
-        let update_w = update.as_ref().map_or(0.0, |l| widgets::button_width(ui, l, widgets::Size::Sm) + gap);
-        let room = ui.available_width() - theme::control::SM - gap - update_w - DRAG_MIN_W;
+        let room = ui.available_width() - theme::control::SM - gap - DRAG_MIN_W;
         let search_w = (bar_w * 0.29).clamp(*SEARCH_W.start(), *SEARCH_W.end()).min(room).max(SEARCH_MIN_W);
         // Typing here from another page shows the apps it finds.
         if widgets::search_field(ui, &mut self.search, tl!("Search apps"), search_w, "apps").changed() && self.page != Page::Apps {
@@ -138,12 +151,29 @@ impl LauncherUi {
         if widgets::logo_button(ui, crate::icons::redrob_mark(), tl!("Go to console.redrob.ai")).clicked() {
             ui.ctx().open_url(egui::OpenUrl::new_tab(CONSOLE_URL));
         }
-        if let Some(label) = update {
-            ui.add_space(gap);
-            // Tinted, not filled: the chrome stays quiet (Cowork's title bar has no filled button).
-            if widgets::button_sized(ui, &label, Kind::Tinted, widgets::Size::Sm, 0.0).clicked() {
-                self.update_all();
-            }
+    }
+
+    /// The filter row's update button, drawn just left of Check for updates: "Update 1 app" or
+    /// "Update all (N)", only when something can be updated. Debug builds add
+    /// [`sample_updates`] to the count so the button can be previewed with nothing to update.
+    ///
+    /// * `ui` - the filter row's right-to-left layout; the button lands left of what came before.
+    fn update_all_button(&mut self, ui: &mut Ui) {
+        let real = if self.caps.manage_apps { self.count(Filter::Updates) } else { 0 };
+        let sample = sample_updates();
+        let updates = real + sample;
+        if updates == 0 {
+            return;
+        }
+        let label = if updates == 1 { tl!("Update 1 app").to_string() } else { fmt(tl!("Update all ({count})"), &[("count", &updates.to_string())]) };
+        // The row's own 8 px item spacing separates it from Refresh.
+        // Tinted, not filled: a quiet action beside the Refresh icon, the same 32 px tall.
+        let resp = widgets::button_sized(ui, &label, Kind::Tinted, widgets::Size::Sm, 0.0);
+        // Debug-only preview text, never shipped, so it is left untranslated.
+        let resp = if sample > 0 { resp.on_hover_text(format!("Preview: {sample} sample update(s) from {SAMPLE_UPDATES_ENV}")) } else { resp };
+        if resp.clicked() {
+            // Sample updates have no app behind them: only real ones are installed.
+            self.update_all();
         }
     }
 
@@ -242,11 +272,12 @@ impl LauncherUi {
             .map(|(f, label, tip, highlight)| (f, Cell { label, tip, count: Some((self.count(f), highlight)) }))
             .collect();
             widgets::cells(ui, &mut self.settings.filter, &filters);
-            // Check for updates at the row's right end (where the sort was).
+            // Check for updates at the row's right end (where the sort was), Update all left of it.
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if widgets::icon_button_busy(ui, Icon::Refresh, tl!("Check for updates"), theme::control::SM, self.checking).clicked() {
                     self.check_now();
                 }
+                self.update_all_button(ui);
             });
         });
     }

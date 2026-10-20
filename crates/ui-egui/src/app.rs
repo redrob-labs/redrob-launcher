@@ -651,7 +651,7 @@ impl LauncherUi {
         // only, on the same base ground as the card's gap. There is no footer: what it said (the
         // last check, GitHub's limit, the platform) is in Settings > Updates.
         // A window the OS decorates (and the web build) has no title bar of ours: the title bar's
-        // search, logo and Update sit in a 48 px row over the main area instead.
+        // search and logo sit in a 48 px row over the main area instead.
         let bar = host.title_bar();
         if bar != TitleBar::Native {
             egui::Panel::top("header")
@@ -674,7 +674,7 @@ impl LauncherUi {
                 .resizable(false)
                 .show(ui, |ui| self.header(ui, bar));
         }
-        // The Apps page has no top bar: its actions are in the chrome and its filter row.
+        // The Apps page has no top bar: its actions (Update all, Check for updates) are in its filter row.
         if self.page != Page::Apps {
             egui::Panel::top("page-top")
                 .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin::symmetric(24, 0)))

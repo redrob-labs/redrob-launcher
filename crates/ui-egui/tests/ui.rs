@@ -766,32 +766,35 @@ fn custom_title_bar_has_window_buttons() {
         )
     };
     // Narrow windows shrink the search first, never under the caption buttons, and leave the bar
-    // room to drag left of Update.
+    // room to drag left of the logo.
     for width in [600.0, 960.0] {
         let mut h = frameless(width);
         h.run_steps(6);
         snapshot(&mut h, &format!("grid-title-bar-dark-{width}"));
         let minimize = h.get_by_label("Minimize").rect();
         let search = search_field_rect(&h);
-        let update = h.get_by_label("Update all (2)").rect();
+        let logo = h.get_by_label("Go to console.redrob.ai").rect();
         assert!(search.right() <= minimize.left() && search.width() >= 159.5, "{width}: {search:?}");
-        assert!(update.left() >= 24.0, "{width}: {update:?}");
+        assert!(logo.left() >= 24.0, "{width}: {logo:?}");
     }
     let mut h = frameless(1180.0);
     h.run_steps(6);
     snapshot(&mut h, "grid-title-bar-dark");
-    // The custom bar, right to left: window buttons, search, the group logo, Update.
+    // The custom bar, right to left: window buttons, search, the group logo. No action button.
     let minimize = h.get_by_label("Minimize").rect();
     let search = search_field_rect(&h);
     let logo = h.get_by_label("Go to console.redrob.ai").rect();
-    let update = h.get_by_label("Update all (2)").rect();
-    assert!(update.right() <= logo.left() && logo.right() <= search.left() && search.right() <= minimize.left());
+    assert!(logo.right() <= search.left() && search.right() <= minimize.left());
     // One row, inside the caption buttons' band (whose target starts under the 5 px resize edge).
-    for r in [search, logo, update] {
+    for r in [search, logo] {
         assert!(r.top() >= minimize.top() - 5.0 && r.bottom() <= minimize.bottom(), "{r:?} vs {minimize:?}");
     }
-    // Check for updates moved down to the filter row.
-    assert!(h.get_by_label("Check for updates").rect().top() > 48.0);
+    // Check for updates is in the filter row, with Update all directly left of it on the same row.
+    let refresh = h.get_by_label("Check for updates").rect();
+    let update = h.get_by_label("Update all (2)").rect();
+    assert!(refresh.top() > 48.0 && update.top() > 48.0, "both are under the title bar: {update:?} {refresh:?}");
+    assert!(update.right() <= refresh.left() && refresh.left() - update.right() <= 12.0, "{update:?} left of {refresh:?}");
+    assert!((update.center().y - refresh.center().y).abs() < 1.0, "same row: {update:?} {refresh:?}");
     assert!(h.get_all_by_label("All apps").all(|n| n.rect().top() >= 48.0), "the sidebar and page start under the title bar");
     // Restored, the top 5 px of the caption buttons and close's right 5 px stay the resize band.
     // (The harness insets the bar: its top is minimize's minus that band.)
