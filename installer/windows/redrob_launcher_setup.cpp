@@ -934,13 +934,14 @@ void SetupApp::LayoutText() {
     if (lineHeight > 0) out->SetLineSpacing(DWRITE_LINE_SPACING_METHOD_UNIFORM, lineHeight, lineHeight * 0.78f);
   };
   const auto leading = DWRITE_TEXT_ALIGNMENT_LEADING, center = DWRITE_TEXT_ALIGNMENT_CENTER;
-  const auto near = DWRITE_PARAGRAPH_ALIGNMENT_NEAR, middle = DWRITE_PARAGRAPH_ALIGNMENT_CENTER;
-  make(fmtTitle_, fontFamily_, DWRITE_FONT_WEIGHT_SEMI_BOLD, 21.0f, 28.0f, leading, near);
-  make(fmtBody_, bodyFamily_, DWRITE_FONT_WEIGHT_REGULAR, 14.0f, 22.0f, leading, near);
+  // `near` is a <windows.h> macro (minwindef.h), so the paragraph alignments use other names.
+  const auto top = DWRITE_PARAGRAPH_ALIGNMENT_NEAR, middle = DWRITE_PARAGRAPH_ALIGNMENT_CENTER;
+  make(fmtTitle_, fontFamily_, DWRITE_FONT_WEIGHT_SEMI_BOLD, 21.0f, 28.0f, leading, top);
+  make(fmtBody_, bodyFamily_, DWRITE_FONT_WEIGHT_REGULAR, 14.0f, 22.0f, leading, top);
   make(fmtButton_, fontFamily_, DWRITE_FONT_WEIGHT_SEMI_BOLD, 14.0f, 0.0f, center, middle);
   make(fmtLabel_, bodyFamily_, DWRITE_FONT_WEIGHT_REGULAR, 14.0f, 20.0f, leading, middle);
   make(fmtStep_, fontFamily_, DWRITE_FONT_WEIGHT_SEMI_BOLD, 12.0f, 0.0f, leading, middle);
-  make(fmtBrand_, fontFamily_, DWRITE_FONT_WEIGHT_SEMI_BOLD, 15.0f, 20.0f, leading, near);
+  make(fmtBrand_, fontFamily_, DWRITE_FONT_WEIGHT_SEMI_BOLD, 15.0f, 20.0f, leading, top);
   // Production readiness includes format creation, not merely finding three resource blobs.
   bundledFontsReady_ = bundledFontsReady_ && fmtTitle_ && fmtBody_ && fmtButton_ && fmtLabel_ && fmtStep_ && fmtBrand_;
 }
