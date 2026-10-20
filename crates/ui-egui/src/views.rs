@@ -1,4 +1,4 @@
-//! The header, toolbar, footer and the grid of cards, laid out like the apps page on
+//! The header, toolbar and the grid of cards, laid out like the apps page on
 //! the Redrob design system: hairline cells, quiet labels and square controls.
 
 use egui::{Color32, CornerRadius, FontId, Rect, RichText, Sense, Stroke, Ui, vec2};
@@ -51,10 +51,6 @@ enum Primary {
 
 /// Height of the header bar (the site's nav).
 pub(crate) const HEADER_H: f32 = 48.0;
-/// Height of the footer bar.
-pub(crate) const FOOTER_H: f32 = 34.0;
-/// The footer drops its platform label rather than leave the status less room than this.
-const FOOTER_MIN_STATUS_W: f32 = 300.0;
 
 /// Three tiles across the main area beside the sidebar at the default 1180 px window.
 const CARD_MIN_W: f32 = 272.0;
@@ -74,6 +70,16 @@ const SEARCH_MIN_W: f32 = 160.0;
 const SEARCH_W: std::ops::RangeInclusive<f32> = 220.0..=360.0;
 /// Empty title bar left of the controls, so the window can always be dragged.
 const DRAG_MIN_W: f32 = 24.0;
+
+/// The update-check status lines Settings shows (see [`LauncherUi::update_status`]).
+pub(crate) struct UpdateStatus {
+    /// "Checked 3 min ago · using Redrob API", "Checking for updates…" or "Not checked yet".
+    pub checked: String,
+    /// GitHub's rate-limit notice, only while the limit applies.
+    pub rate_limit: Option<String>,
+    /// "Installing for Windows x64" and friends.
+    pub platform: String,
+}
 
 /// A run of cards, under an optional meta-line title.
 type Section = (Option<&'static str>, Vec<&'static str>);
@@ -299,10 +305,12 @@ impl LauncherUi {
         }
     }
 
-    pub(crate) fn footer(&mut self, ui: &mut Ui) {
-        let t = Tokens::get(ui.ctx());
+    /// What the footer used to say, now shown in Settings > Updates: when the catalog was last
+    /// checked and from where, GitHub's rate-limit notice while it applies, and the platform apps
+    /// are installed (or downloaded) for.
+    pub(crate) fn update_status(&self) -> UpdateStatus {
         let now = self.backend.now();
-        let status = if self.checking {
+        let checked = if self.checking {
             tl!("Checking for updates…").to_string()
         } else if let Some(at) = self.settings.last_check {
             let ago = ago_text(at, now);
@@ -313,66 +321,16 @@ impl LauncherUi {
         } else {
             tl!("Not checked yet").to_string()
         };
-        // The full notice, and a short one for a narrow window.
-        let notice = self.rate_limited_until.filter(|u| *u > now).map(|until| {
+        let rate_limit = self.rate_limited_until.filter(|u| *u > now).map(|until| {
             let min = ((until - now) / 60).max(1).to_string();
-            let full = fmt(tl!("GitHub's hourly limit was reached; full details return in {min} min"), &[("min", &min)]);
-            let short = fmt(tl!("GitHub limit hit; back in {min} min"), &[("min", &min)]);
-            (format!("· {full}"), format!("· {short}"))
+            fmt(tl!("GitHub's hourly limit was reached; full details return in {min} min"), &[("min", &min)])
         });
         let platform = match self.platform {
             Some(p) if self.caps.manage_apps => fmt(tl!("Installing for {platform}"), &[("platform", &p.label())]),
             Some(p) => fmt(tl!("Downloads for {platform}"), &[("platform", &p.label())]),
             None => tl!("No downloads for this system").into(),
         };
-        use redrob_launcher_core::catalog::{GITHUB_URL, WEBSITE_URL};
-        let links = [(tl!("GitHub"), GITHUB_URL), (tl!("Website"), WEBSITE_URL)];
-        let link_gap = 16.0;
-        // The links and icons on the right keep their size; the status on the left gets what is
-        // left and is cut short with "…", never drawn under them. A narrow window drops the
-        // platform label first, so the status keeps room to be read.
-        let spacing = ui.spacing().item_spacing.x;
-        let links_w: f32 =
-            links.iter().map(|(text, _)| widgets::hud_galley(ui, &format!("{text} ↗"), t.muted).size().x + link_gap).sum::<f32>() - link_gap;
-        let platform_w = widgets::hud_galley(ui, &platform, t.faint).size().x + 16.0 + spacing;
-        let left_w = ui.available_width() - links_w - 16.0 - 3.0 * spacing;
-        let show_platform = left_w - platform_w >= FOOTER_MIN_STATUS_W;
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            if show_platform {
-                widgets::hud(ui, &platform, t.faint);
-                ui.add_space(16.0);
-            }
-            // Right to left, so this reads: Website · GitHub.
-            ui.scope(|ui| {
-                ui.spacing_mut().item_spacing.x = link_gap;
-                for (text, url) in links {
-                    widgets::hud_link(ui, text, url);
-                }
-            });
-            ui.add_space(16.0);
-            ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
-                // While GitHub is rate limited, saying so matters more than when we last checked.
-                let avail = ui.available_width();
-                let text = |s: &str| RichText::new(s).size(12.0).color(t.warn);
-                let width = |ui: &Ui, s: &str| {
-                    egui::WidgetText::from(text(s)).into_galley(ui, Some(egui::TextWrapMode::Extend), f32::INFINITY, egui::TextStyle::Body).size().x
-                        + spacing
-                };
-                // The short notice once the full one would leave the status under a third.
-                let notice = notice.map(|(full, short)| {
-                    let w = width(ui, &full);
-                    if w <= avail * 0.7 { (full, None, w) } else { (short.clone(), Some(full), width(ui, &short)) }
-                });
-                let notice_w = notice.as_ref().map_or(0.0, |(_, _, w)| *w);
-                widgets::hud_elided(ui, &status, t.faint, (avail - notice_w).max(avail * 0.3));
-                if let Some((shown, full, _)) = notice {
-                    let resp = ui.add(egui::Label::new(text(&shown)).truncate());
-                    if let Some(full) = full {
-                        resp.on_hover_text(full);
-                    }
-                }
-            });
-        });
+        UpdateStatus { checked, rate_limit, platform }
     }
 
     // ---- grid ----------------------------------------------------------------------------

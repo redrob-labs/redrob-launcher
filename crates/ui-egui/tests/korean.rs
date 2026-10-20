@@ -155,6 +155,8 @@ fn korean_switches_persists_and_keeps_install_actions() {
     h.run_steps(3);
     h.get_by_value("한국어");
     h.get_by_label("설치된 앱에 업데이트가 있으면 알림");
+    // The last check is in Settings (the Apps page has no footer).
+    h.get_by_label_contains("3분 전 확인함 · Redrob API 사용");
     snapshot(&mut h, "settings-ko-dark");
     let settings = h.state().as_ref().unwrap().settings.clone();
     assert_eq!(settings.language, "ko");
@@ -165,7 +167,6 @@ fn korean_switches_persists_and_keeps_install_actions() {
     h.run_steps(3);
     h.get_by_label("에이전트와 함께 그림을 그리고 이미지를 편집해요");
     h.get_by_label("그래픽");
-    h.get_by_label_contains("3분 전 확인함 · Redrob API 사용");
     h.get_by_label("0.5.0(으)로 업데이트");
     // The account row's menu, in Korean.
     let row = h.get_by_label("설정").rect();

@@ -590,8 +590,9 @@ impl LauncherUi {
         }
 
         // The title bar across the top (Redrob Cowork's 48 px bar on the sunken ground, its hairline
-        // under it), then the sidebar card down the left; the footer and each page's top bar span
-        // the main area only, on the same base ground as the card's gap.
+        // under it), then the sidebar card down the left; each page's top bar spans the main area
+        // only, on the same base ground as the card's gap. There is no footer: what it said (the
+        // last check, GitHub's limit, the platform) is in Settings > Updates.
         // A window the OS decorates (and the web build) has no title bar of ours: the title bar's
         // search, logo and Update sit in a 48 px row over the main area instead.
         let bar = host.title_bar();
@@ -609,11 +610,6 @@ impl LauncherUi {
             .resizable(false)
             .show_separator_line(false)
             .show(ui, |ui| self.sidebar(ui, host));
-        egui::Panel::bottom("footer")
-            .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin::symmetric(24, 0)))
-            .exact_size(crate::views::FOOTER_H)
-            .resizable(false)
-            .show(ui, |ui| self.footer(ui));
         if bar == TitleBar::Native {
             egui::Panel::top("chrome")
                 .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin::symmetric(24, 0)))
@@ -642,7 +638,7 @@ impl LauncherUi {
                             Page::Account => self.account_page(ui),
                             _ => self.settings_page(ui, host),
                         }
-                        // Room under the last control, so nothing ends against the footer.
+                        // Room under the last control, so nothing ends against the window's edge.
                         ui.add_space(32.0);
                     });
                 }
@@ -753,7 +749,8 @@ impl LauncherUi {
         ctx.request_repaint_after(Duration::from_millis(250));
         let t = Tokens::get(ctx);
         const W: f32 = 360.0;
-        let anchor = egui::vec2(-24.0, -(crate::views::FOOTER_H + 16.0));
+        // 24 px in from the window's corner (the page's own padding); there is no footer to clear.
+        let anchor = egui::vec2(-24.0, -24.0);
         egui::Area::new(egui::Id::new("toasts")).anchor(egui::Align2::RIGHT_BOTTOM, anchor).order(egui::Order::Foreground).show(ctx, |ui| {
             ui.set_width(W);
             let mut dismiss = None;

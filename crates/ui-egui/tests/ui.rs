@@ -610,19 +610,15 @@ fn settings_link_to_redrob() {
 fn links_to_the_website_github_and_each_apps_pages() {
     let (mut h, _) = harness(egui::Theme::Dark, true);
     h.run_steps(6);
-    // Footer: website and GitHub.
-    for label in ["Website", "GitHub"] {
-        assert!(h.query_all_by_label(label).count() >= 1, "{label}");
-    }
-    // Cards: every app links to its repo; no app has a web page of its own yet (only the footer's).
-    let shown_cards = h.query_all_by_label("GitHub").count() - 1;
-    let shown_sites = h.query_all_by_label("Website").count() - 1;
+    // Cards: every app links to its repo; no app has a web page of its own yet.
+    let shown_cards = h.query_all_by_label("GitHub").count();
+    let shown_sites = h.query_all_by_label("Website").count();
     assert!(shown_cards >= 7, "{shown_cards}");
     assert_eq!(shown_sites, 0, "no app has a website page yet");
     // A card's … menu has the app's GitHub repo and no website entry.
     open_card_menu(&mut h, "Redrob Code");
     h.get_by_label("GitHub repository");
-    assert_eq!(h.query_all_by_label_contains("Website").count(), 1, "only the footer's");
+    assert_eq!(h.query_all_by_label_contains("Website").count(), 0, "no app has a website page yet");
 }
 
 #[test]
@@ -710,11 +706,9 @@ fn all_opened(h: &mut Harness<'_, Option<LauncherUi>>, label: &str) -> Vec<Strin
 fn links_open_the_right_pages() {
     let (mut h, _) = harness(egui::Theme::Dark, true);
     h.run_steps(6);
-    // The footer's Redrob links and each card's own pages.
+    // Each card's own pages.
     let github = all_opened(&mut h, "GitHub");
-    assert!(github.contains(&"https://github.com/redrob-labs".to_string()), "{github:?}");
     assert!(github.contains(&"https://github.com/redrob-labs/redrob-canvas".to_string()), "{github:?}");
-    assert_eq!(all_opened(&mut h, "Website"), ["https://redrob.ai"]);
     // The … menu.
     h.get_all_by_label("More actions").next().unwrap().click();
     h.run_steps(3);
@@ -974,8 +968,8 @@ fn automatic_updates_are_disabled_by_default() {
 }
 
 #[test]
-fn the_footer_names_the_services_behind_what_is_on_screen() {
-    let footer = |extra: Vec<Event>| {
+fn settings_name_the_services_behind_what_is_on_screen() {
+    let status = |extra: Vec<Event>| {
         let mut evs = events();
         evs.extend(extra);
         let sent = Rc::new(RefCell::new(Vec::new()));
@@ -995,14 +989,17 @@ fn the_footer_names_the_services_behind_what_is_on_screen() {
             None,
         );
         h.run_steps(6);
+        // No footer on the Apps page any more.
+        assert!(h.query_by_label_contains("Checked ").is_none(), "the Apps page has no footer");
+        open_settings(&mut h);
         let label =
             h.get_by_label_contains("Checked ").accesskit_node().label().or_else(|| h.get_by_label_contains("Checked ").accesskit_node().value());
         label.unwrap_or_default()
     };
-    assert_eq!(footer(Vec::new()), "Checked 3 min ago · using Redrob API");
+    assert_eq!(status(Vec::new()), "Checked 3 min ago · using Redrob API");
     let from_github =
         vec![Event::Latest { app: "redrob-code".into(), latest: LatestRelease::Found(release("redrob-code", "0.3.1", NOW)), from: Origin::GitHub }];
-    assert_eq!(footer(from_github), "Checked 3 min ago · using Redrob API and GitHub");
+    assert_eq!(status(from_github), "Checked 3 min ago · using Redrob API and GitHub");
 }
 
 #[test]
@@ -1175,8 +1172,8 @@ fn custom_title_bar_has_window_buttons() {
 }
 
 #[test]
-fn the_rate_limit_notice_never_runs_under_the_footer_links() {
-    for width in [600.0, 960.0, 1180.0] {
+fn settings_say_when_github_can_be_asked_again_and_the_platform() {
+    for width in [600.0, 1180.0] {
         let mut evs = events();
         evs.push(Event::CheckFinished { at: NOW - 180, source: Source::GitHubApi, rate_limited_until: Some(NOW + 1800) });
         let mut backend = Some(Fake { events: evs, sent: Rc::new(RefCell::new(Vec::new())), manage: true, clock: Rc::new(Cell::new(NOW)) });
@@ -1195,28 +1192,18 @@ fn the_rate_limit_notice_never_runs_under_the_footer_links() {
             None,
         );
         h.run_steps(6);
-        snapshot(&mut h, &format!("footer-rate-limited-{width}"));
-        // Full or short, the notice says when GitHub can be asked again.
-        let notice = h.get_by_label_contains("in 30 min").rect();
+        // The Apps page says none of it: the footer is gone.
+        for gone in ["in 30 min", "Checked ", "Installing for"] {
+            assert!(h.query_by_label_contains(gone).is_none(), "{width}: {gone} is still on the Apps page");
+        }
+        open_settings(&mut h);
+        snapshot(&mut h, &format!("settings-rate-limited-{width}"));
+        // Whole, wrapped if it must, and inside the window.
+        let notice = h.get_by_label_contains("full details return in 30 min").rect();
+        assert!(notice.right() <= width, "{width}: notice {notice:?}");
         let checked = h.get_by_label_contains("Checked ").rect();
-        // Cut short in a narrow window, but enough of it left to read.
-        assert!(notice.width() >= 120.0 && notice.right() <= width, "{width}: notice {notice:?}");
-        // Everything on the footer's right: the two links and (when there's room) the platform.
-        // Only the footer's own row: a card's links can scroll under the footer, a few px off it.
-        let footer_top = 900.0 - 34.0;
-        let mut right = Vec::new();
-        for label in ["Website", "GitHub"] {
-            right.extend(
-                h.query_all_by_label(label).map(|n| n.rect()).filter(|r| (r.center().y - notice.center().y).abs() < 1.5 && r.top() >= footer_top),
-            );
-        }
-        assert_eq!(right.len(), 2, "{width}: {right:?}");
-        let platform = h.query_by_label_contains("Installing for").map(|n| n.rect());
-        assert_eq!(platform.is_some(), width > 600.0, "{width}: the platform label shows unless the window is narrow");
-        right.extend(platform);
-        for r in right {
-            assert!(!r.intersects(notice), "{width}: notice {notice:?} overlaps {r:?}");
-            assert!(!r.intersects(checked), "{width}: check time {checked:?} overlaps {r:?}");
-        }
+        let platform = h.get_by_label_contains("Installing for").rect();
+        // Read top to bottom: the check, the limit, the platform.
+        assert!(checked.bottom() <= notice.top() && notice.bottom() <= platform.top(), "{width}: {checked:?} {notice:?} {platform:?}");
     }
 }

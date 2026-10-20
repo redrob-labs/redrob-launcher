@@ -323,6 +323,15 @@ impl LauncherUi {
             });
         });
         self.settings.check_every = every;
+        // What the Apps page's footer used to say: the last check (and from where), GitHub's
+        // limit while it applies, and the platform apps are for.
+        let status = self.update_status();
+        ui.add(egui::Label::new(RichText::new(&status.checked).size(theme::text::META).color(t.muted)).wrap());
+        if let Some(limit) = &status.rate_limit {
+            ui.add(egui::Label::new(RichText::new(limit).size(theme::text::META).color(t.warn)).wrap());
+        }
+        ui.add(egui::Label::new(RichText::new(&status.platform).size(theme::text::META).color(t.faint)).wrap());
+        ui.add_space(4.0);
         if self.caps.manage_apps
             && widgets::switch(ui, &mut self.settings.auto_update, tl!("Automatically download and install updates")).changed()
             && self.settings.auto_update
