@@ -71,126 +71,150 @@ impl LauncherUi {
         let error = engine.last_error();
         let mut ask: Option<Ask> = None;
 
+        use theme::space;
+        // What the footer offers in this state: (label, kind, request), the trailing one first.
+        let actions: Vec<(&str, Kind, Ask)> = match &state {
+            EngineState::NotInstalled => vec![(tl!("Install Redrob Code"), Kind::Primary, Ask::Install)],
+            EngineState::Stopped => vec![(tl!("Start"), Kind::Primary, Ask::Start)],
+            EngineState::Busy => Vec::new(),
+            EngineState::Running(_) => vec![(tl!("Restart"), Kind::Secondary, Ask::Restart), (tl!("Stop"), Kind::Secondary, Ask::Stop)],
+        };
+        // A DS Card: head (state and version), body (what that means, the apps using it), and a
+        // footer on a full-width hairline with the actions on the trailing edge.
         widgets::card_frame(&t).show(ui, |ui| {
             ui.set_width(ui.available_width());
+            ui.spacing_mut().item_spacing.y = 0.0;
+            let body = |ui: &mut egui::Ui, text: &str| {
+                ui.add(egui::Label::new(RichText::new(text).size(theme::text::BODY_SM).color(t.muted)).wrap());
+            };
             match &state {
                 EngineState::NotInstalled => {
                     widgets::badge(ui, tl!("Not installed"), widgets::tone_color(&t, Tone::Warn));
-                    ui.add_space(6.0);
-                    ui.add(egui::Label::new(RichText::new(tl!("Redrob Code is the engine Cowork, Office, Design, Browser, Film and CAD run their AI through. Install it once and they share it.")).size(12.5).color(t.muted)).wrap());
-                    ui.add_space(8.0);
-                    if widgets::button(ui, tl!("Install Redrob Code"), Kind::Primary, 0.0).clicked() {
-                        ask = Some(Ask::Install);
-                    }
+                    ui.add_space(space::S3);
+                    body(ui, tl!("Redrob Code is the engine Cowork, Office, Design, Browser, Film and CAD run their AI through. Install it once and they share it."));
                 }
                 EngineState::Stopped => {
                     widgets::badge(ui, tl!("Not running"), widgets::tone_color(&t, Tone::Neutral));
-                    ui.add_space(6.0);
-                    ui.add(egui::Label::new(RichText::new(tl!("The first app that needs the engine starts it, and it stops on its own when no app has used it for a while. You can also start it here.")).size(12.5).color(t.muted)).wrap());
-                    ui.add_space(8.0);
-                    if widgets::button(ui, tl!("Start"), Kind::Primary, 0.0).clicked() {
-                        ask = Some(Ask::Start);
-                    }
+                    ui.add_space(space::S3);
+                    body(ui, tl!("The first app that needs the engine starts it, and it stops on its own when no app has used it for a while. You can also start it here."));
                 }
                 EngineState::Busy => {
-                    ui.horizontal(|ui| {
-                        widgets::loader_inline(ui, 16.0, Tokens::get(ui.ctx()).accent);
-                        ui.label(RichText::new(tl!("Working…")).color(t.muted));
+                    widgets::tight_row(ui, |ui| {
+                        widgets::loader_inline(ui, 16.0, t.accent);
+                        ui.label(RichText::new(tl!("Working…")).size(theme::text::BODY_SM).color(t.muted));
                     });
                     ui.ctx().request_repaint_after(std::time::Duration::from_millis(250));
                 }
                 EngineState::Running(r) => {
-                    ui.horizontal(|ui| {
+                    widgets::tight_row(ui, |ui| {
                         widgets::badge(ui, tl!("Running"), widgets::tone_color(&t, Tone::Good));
-                        ui.add_space(8.0);
                         widgets::hud(ui, &fmt(tl!("version {v}"), &[("v", &r.version)]), t.faint);
-                        ui.add_space(8.0);
+                        widgets::meta_sep(ui);
                         widgets::hud(ui, &r.url, t.faint);
                     });
-                    ui.add_space(8.0);
+                    ui.add_space(space::S3);
                     if r.attached.is_empty() {
                         let text = match r.exits_in_secs() {
                             Some(s) => fmt(tl!("No app is using it. It stops on its own in about {m} min."), &[("m", &minutes(s))]),
                             None => tl!("No app is using it.").to_string(),
                         };
-                        ui.label(RichText::new(text).size(12.5).color(t.muted));
+                        body(ui, &text);
                     } else {
                         widgets::hud(ui, tl!("Apps using it"), t.muted);
-                        // The attached apps on hairlines.
+                        ui.add_space(space::S2);
+                        // The attached apps on hairlines, their pid in a trailing column.
                         for a in &r.attached {
-                            widgets::row_rule(ui, 6.0);
-                            ui.horizontal(|ui| {
+                            widgets::row_rule(ui, 0.0);
+                            ui.add_space(space::S2);
+                            widgets::tight_row(ui, |ui| {
                                 let id = if a.app.starts_with("redrob-") { a.app.clone() } else { format!("redrob-{}", a.app) };
                                 if let Some(icon) = crate::icons::app(&id) {
                                     ui.add(egui::Image::new(icon).fit_to_exact_size(vec2(16.0, 16.0)));
                                 }
                                 ui.label(RichText::new(app_display_name(&a.app)).family(theme::medium()).color(t.ink_strong));
                                 if let Some(pid) = a.pid {
-                                    widgets::hud(ui, &fmt(tl!("pid {pid}"), &[("pid", &pid.to_string())]), t.faint);
+                                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                        widgets::hud(ui, &fmt(tl!("pid {pid}"), &[("pid", &pid.to_string())]), t.faint);
+                                    });
                                 }
                             });
+                            ui.add_space(space::S2);
                         }
-                        widgets::row_rule(ui, 6.0);
                     }
-                    ui.add_space(10.0);
-                    ui.horizontal(|ui| {
-                        if widgets::button(ui, tl!("Stop"), Kind::Secondary, 0.0).clicked() {
-                            ask = Some(Ask::Stop);
-                        }
-                        if widgets::button(ui, tl!("Restart"), Kind::Secondary, 0.0).clicked() {
-                            ask = Some(Ask::Restart);
-                        }
-                        if !r.attached.is_empty() {
-                            widgets::hud(ui, tl!("Apps reconnect on their own after a stop or restart."), t.faint);
-                        }
-                    });
                 }
             }
             if let Some(e) = &error {
-                ui.add_space(8.0);
-                ui.add(egui::Label::new(RichText::new(msg(e)).size(12.5).color(widgets::tone_color(&t, Tone::Warn))).wrap());
+                ui.add_space(space::S2);
+                ui.add(egui::Label::new(RichText::new(msg(e)).size(theme::text::BODY_SM).color(widgets::tone_color(&t, Tone::Warn))).wrap());
             }
-            if let Some((installed, latest)) = &newer {
-                ui.add_space(10.0);
-                ui.separator();
-                ui.add_space(6.0);
-                ui.horizontal(|ui| {
-                    widgets::badge(ui, tl!("Update available"), widgets::tone_color(&t, Tone::Info));
-                    ui.add_space(8.0);
-                    widgets::hud(ui, &fmt(tl!("{installed} → {latest}"), &[("installed", installed), ("latest", latest)]), t.faint);
-                });
-                ui.add_space(6.0);
-                if updating {
-                    ui.horizontal(|ui| {
-                        widgets::loader_inline(ui, 16.0, Tokens::get(ui.ctx()).accent);
-                        ui.label(RichText::new(tl!("Updating the engine…")).size(12.5).color(t.muted));
-                    });
-                    ui.ctx().request_repaint_after(std::time::Duration::from_millis(250));
-                } else if !waiting_on.is_empty() {
-                    ui.add(
-                        egui::Label::new(
-                            RichText::new(fmt(
-                                tl!("Waiting until no app is using it. Using it now: {apps}. Update now stops the engine; apps reconnect on their own."),
-                                &[("apps", &waiting_on.join(", "))],
-                            ))
-                            .size(12.5)
-                            .color(t.muted),
-                        )
-                        .wrap(),
-                    );
-                    ui.add_space(6.0);
-                    if widgets::button(ui, tl!("Update now"), Kind::Primary, 0.0).clicked() {
-                        ask = Some(Ask::UpdateNow);
-                    }
-                } else {
-                    ui.add(egui::Label::new(RichText::new(tl!("It updates on its own when no app is using it. You can also update it now.")).size(12.5).color(t.muted)).wrap());
-                    ui.add_space(6.0);
-                    if widgets::button(ui, tl!("Update now"), Kind::Primary, 0.0).clicked() {
-                        ask = Some(Ask::UpdateNow);
-                    }
+            if !actions.is_empty() {
+                let attached = matches!(&state, EngineState::Running(r) if !r.attached.is_empty());
+                // A list ends on its own last row; anything else gets the footer's breathing room.
+                if !attached {
+                    ui.add_space(space::S4);
                 }
+                // The footer's hairline runs to the card's edges, through its padding.
+                let (rule, _) = ui.allocate_exact_size(vec2(ui.available_width(), 1.0), egui::Sense::hover());
+                ui.painter().hline(rule.left() - space::S5..=rule.right() + space::S5, rule.center().y, t.hairline());
+                ui.add_space(space::S4);
+                ui.horizontal(|ui| {
+                    if attached {
+                        widgets::hud(ui, tl!("Apps reconnect on their own after a stop or restart."), t.faint);
+                    }
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        for (label, kind, what) in actions {
+                            if widgets::button(ui, label, kind, 0.0).clicked() {
+                                ask = Some(what);
+                            }
+                        }
+                    });
+                });
             }
         });
+
+        // A newer engine: a DS Alert under the card, until it is installed.
+        if let Some((installed, latest)) = &newer {
+            ui.add_space(space::S4);
+            widgets::alert_frame(&t).show(ui, |ui| {
+                ui.set_width(ui.available_width());
+                ui.spacing_mut().item_spacing.y = 0.0;
+                widgets::tight_row(ui, |ui| {
+                    widgets::badge(ui, tl!("Update available"), widgets::tone_color(&t, Tone::Info));
+                    widgets::hud(ui, &fmt(tl!("{installed} → {latest}"), &[("installed", installed), ("latest", latest)]), t.faint);
+                });
+                ui.add_space(space::S2);
+                if updating {
+                    widgets::tight_row(ui, |ui| {
+                        widgets::loader_inline(ui, 16.0, t.accent);
+                        ui.label(RichText::new(tl!("Updating the engine…")).size(theme::text::BODY_SM).color(t.muted));
+                    });
+                    ui.ctx().request_repaint_after(std::time::Duration::from_millis(250));
+                } else {
+                    let text = if waiting_on.is_empty() {
+                        tl!("It updates on its own when no app is using it. You can also update it now.").to_string()
+                    } else {
+                        fmt(
+                            tl!("Waiting until no app is using it. Using it now: {apps}. Update now stops the engine; apps reconnect on their own."),
+                            &[("apps", &waiting_on.join(", "))],
+                        )
+                    };
+                    // The explanation, and Update now on the trailing edge, centred on it.
+                    let button_w = widgets::button_width(ui, tl!("Update now"), widgets::Size::Md);
+                    ui.horizontal(|ui| {
+                        let text_w = (ui.available_width() - button_w - space::S6).max(0.0);
+                        ui.vertical(|ui| {
+                            ui.set_width(text_w);
+                            ui.add(egui::Label::new(RichText::new(text).size(theme::text::BODY_SM).color(t.muted)).wrap());
+                        });
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            if widgets::button(ui, tl!("Update now"), Kind::Primary, 0.0).clicked() {
+                                ask = Some(Ask::UpdateNow);
+                            }
+                        });
+                    });
+                }
+            });
+        }
 
         if let Some(what) = ask {
             match what {
@@ -219,7 +243,7 @@ impl LauncherUi {
         // The attached list changes as apps open and close; look again every few seconds while open.
         ui.ctx().request_repaint_after(std::time::Duration::from_secs(5));
 
-        ui.add_space(12.0);
+        ui.add_space(theme::space::S4);
         ui.add(
             egui::Label::new(
                 RichText::new(tl!("The engine holds the Redrob key, picks the model provider and masks personal details, once, for every app."))

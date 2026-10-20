@@ -116,6 +116,15 @@ fn a_running_engine_lists_its_apps_and_offers_stop_and_restart() {
     if let Some(dir) = std::env::var_os("REDROB_LAUNCHER_SNAPSHOTS") {
         h.render().unwrap().save(std::path::Path::new(&dir).join("engine.png")).unwrap();
     }
+    // The footer's actions and the apps' pids share the card's trailing edge, Stop before Restart.
+    let restart = h.get_by_label("Restart").rect();
+    let pid = h.get_by_label("pid 7").rect();
+    assert!((restart.right() - pid.right()).abs() <= 1.0, "restart {restart:?} pid {pid:?}");
+    assert!(h.get_by_label("Stop").rect().right() < restart.left());
+    // The attached apps are list rows, not 65 px bands.
+    let design = h.get_by_label("Redrob Design").rect();
+    let cowork = h.get_by_label("Redrob Cowork").rect();
+    assert!(cowork.center().y - design.center().y < 44.0, "app row pitch {}", cowork.center().y - design.center().y);
     h.get_by_label("Restart").click();
     h.run_steps(4);
     h.get_by_label("Stop").click();
@@ -142,10 +151,16 @@ fn an_idle_engine_says_when_it_stops_and_a_stopped_one_can_be_started() {
     h.get_by_label("Engine").click();
     h.run_steps(12);
     h.get_by_label("No app is using it. It stops on its own in about 5 min.");
+    if let Some(dir) = std::env::var_os("REDROB_LAUNCHER_SNAPSHOTS") {
+        h.render().unwrap().save(std::path::Path::new(&dir).join("engine-idle.png")).unwrap();
+    }
 
     state.borrow_mut().state = Some(EngineState::Stopped);
     h.run_steps(8);
     h.get_by_label("Not running");
+    if let Some(dir) = std::env::var_os("REDROB_LAUNCHER_SNAPSHOTS") {
+        h.render().unwrap().save(std::path::Path::new(&dir).join("engine-stopped.png")).unwrap();
+    }
     h.get_by_label("Start").click();
     h.run_steps(4);
     assert_eq!(state.borrow().asked, ["refresh", "start"]);
@@ -160,6 +175,9 @@ fn without_the_engine_installed_the_dialog_installs_redrob_code() {
     h.get_by_label("Engine").click();
     h.run_steps(12);
     h.get_by_label("Not installed");
+    if let Some(dir) = std::env::var_os("REDROB_LAUNCHER_SNAPSHOTS") {
+        h.render().unwrap().save(std::path::Path::new(&dir).join("engine-not-installed.png")).unwrap();
+    }
     h.get_by_label("Install Redrob Code").click();
     h.run_steps(4);
     assert!(state.borrow().commands.contains(&Command::Install { app: "redrob-code".into() }));
