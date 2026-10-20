@@ -1,4 +1,3 @@
-# ADDED-LINE-RATIONALE acc0be926d937f78:1: Supports `workspace.lints.rust` while preserving the nearby constraint: `snap_layouts.rs`) can `#![allow(unsafe_code)]`. No other code may.
 [workspace]
 resolver = "3"
 members = ["crates/*", "apps/*", "xtask"]

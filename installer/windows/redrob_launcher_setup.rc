@@ -1,12 +1,3 @@
-// ADDED-LINE-RATIONALE f3f419ea264986b0:1: Supports `REDROB_UNINSTALLER_PATH` while preserving the nearby constraint: endif.
-// ADDED-LINE-RATIONALE 6cafe2bc8b567555:1: Isolates `REDROB_FONT_SEMIBOLD_PATH` as the owner of this behavior so callers can use and test it without duplicating policy.
-// ADDED-LINE-RATIONALE e27cd227b0e54546:1: Supports `REDROB_FONT_SEMIBOLD_PATH` while preserving the nearby constraint: ifdef REDROB_FONT_SEMIBOLD_PATH.
-// ADDED-LINE-RATIONALE 118a17085c6b6205:3: Keeps `REDROB_FONT_SEMIBOLD_PATH` on the `endif` compile-time path required by the supported native targets.
-// ADDED-LINE-RATIONALE 026b1bc4cc58578e:1: Supports `REDROB_FONT_REGULAR_PATH` while preserving the nearby constraint: endif.
-// ADDED-LINE-RATIONALE 13d96fbc15b6b230:1: Supports `REDROB_FONT_REGULAR_PATH` while preserving the nearby constraint: ifdef REDROB_FONT_REGULAR_PATH.
-// ADDED-LINE-RATIONALE 118a17085c6b6205:4: Keeps `REDROB_FONT_REGULAR_PATH` on the `endif` compile-time path required by the supported native targets.
-// ADDED-LINE-RATIONALE 8c653422cd823e9d:1: Supports `REDROB_FONT_HANGUL_PATH` while preserving the nearby constraint: endif.
-// ADDED-LINE-RATIONALE 856a8c5a82677d2a:1: Supports `REDROB_FONT_HANGUL_PATH` while preserving the nearby constraint: ifdef REDROB_FONT_HANGUL_PATH.
 // SPDX-License-Identifier: MIT OR Apache-2.0
 // Resources for the Redrob Launcher setup and uninstaller. build.py writes build_defs.h with the file
 // paths and version; a build without a payload (the uninstaller, or a demo build) defines REDROB_NO_PAYLOAD.

@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<!-- ADDED-LINE-RATIONALE 28edd68fcdc239ae:1: Keeps `link / data / trunk` inside the `index` document region so loading-page structure and styling stay scoped. -->
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -9,10 +8,6 @@
   <link data-trunk rel="icon" href="../../assets/app-icon/hicolor/64x64/apps/ai.redrob.launcher.png" />
   <link data-trunk rel="css" href="generated_tokens.css" />
   <style>
-/* ADDED-LINE-RATIONALE 7846f82bf0f6cfba:1: Supports `index` while preserving the nearby constraint: Browser chrome follows the same appearance selected by the generated loading-page roles. */
-/* ADDED-LINE-RATIONALE 10449ad3e8eb3822:1: Limits the `html / body / margin` visual role to `index` so generated tokens do not leak into unrelated elements. */
-/* ADDED-LINE-RATIONALE 5a01348c3514b9a6:1: Supports `index` while preserving the nearby constraint: launcher_loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;. */
-/* ADDED-LINE-RATIONALE 0b7dfa95c900ddbf:1: Limits the `pointer / events / none` visual role to `index` so generated tokens do not leak into unrelated elements. */
     /* Browser chrome follows the same appearance selected by the generated loading-page roles. */
     :root { color-scheme: light dark; }
     html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: var(--surface-base); }

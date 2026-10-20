@@ -1,19 +1,3 @@
-// ADDED-LINE-RATIONALE c68835a2e731298c:1: Declares the `cfg / windows` contract on `settings_file` so the compiler or runner applies it before execution.
-// ADDED-LINE-RATIONALE 2be0c77f4737486a:1: Supports `snap_layouts` while preserving the nearby constraint: [cfg(windows)].
-// ADDED-LINE-RATIONALE 296a4554278f811e:1: Gives `tray` direct access to `std / sync / mpsc` instead of relying on an implicit platform facility.
-// ADDED-LINE-RATIONALE fc520fab1a99a03f:1: Freezes `starts` for `main` so every later calculation in this path observes the same input.
-// ADDED-LINE-RATIONALE 80ce05b2871aa093:1: Delegates `native_options`'s `with_inner_size` work to `with_inner_size` so existing state and error handling remain centralized.
-// ADDED-LINE-RATIONALE 26ff82622f72fc23:1: Delegates `native_options`'s `with_min_inner_size` work to `with_min_inner_size` so existing state and error handling remain centralized.
-// ADDED-LINE-RATIONALE fd833ac8f051f7ad:1: Freezes `language` for `start` so every later calculation in this path observes the same input.
-// ADDED-LINE-RATIONALE 92587a4ff25dd4c1:1: Delegates `start`'s `log / info / first` work to `log::info` so existing state and error handling remain centralized.
-// ADDED-LINE-RATIONALE fd479d47f7cd99a8:1: Freezes `self` for `start` so every later calculation in this path observes the same input.
-// ADDED-LINE-RATIONALE 46769c14a32744ac:1: Supports `new` while preserving the nearby constraint: The pointer-sized HWND bridge supports every Windows target without truncating handles.
-// ADDED-LINE-RATIONALE ef7a935e620e5842:1: Supports `new` while preserving the nearby constraint: [cfg(windows)].
-// ADDED-LINE-RATIONALE cb47d4e1e7cf1721:1: Gives `new` direct access to `eframe / wgpu / rwh` instead of relying on an implicit platform facility.
-// ADDED-LINE-RATIONALE 2b41b389f50c0994:1: Freezes `if` for `new` so every later calculation in this path observes the same input.
-// ADDED-LINE-RATIONALE dcdd76e175e6b269:1: Delegates `new`'s `snap_layouts / install / w` work to `snap_layouts::install` so existing state and error handling remain centralized.
-// ADDED-LINE-RATIONALE 922e313d474e9160:10: Bounds the `new` implementation here so `snap_layouts / install / w` cannot leak into the adjacent declaration or control path.
-// ADDED-LINE-RATIONALE ef7a8d5e620e4e10:16: Bounds the `new` implementation here so `Started / hidden / at` cannot leak into the adjacent declaration or control path.
 //! Redrob Launcher: install, update and open the Redrob apps.
 //!
 //! The window can close to the tray (menu bar) and keep checking for updates, or quit entirely.

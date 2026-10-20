@@ -1,8 +1,3 @@
-# ADDED-LINE-RATIONALE b034cbd9c7affae6:1: Declares the `lints` contract on `lints` so the compiler or runner applies it before execution.
-# ADDED-LINE-RATIONALE 55e4d9a036c3c2ac:1: Freezes `workspace` for `lints` so every later calculation in this path observes the same input.
-# ADDED-LINE-RATIONALE 6c6652fdaf9cbd17:1: Supports `target.'cfg(target_os = "windows")'.dependencies` while preserving the nearby constraint: Layouts (snap_layouts.rs). Already in Cargo.lock; pinned exactly to that version.
-# ADDED-LINE-RATIONALE 22df334a9df0c7eb:1: Freezes `windows` for `target.'cfg(target_os = "windows")'.dependencies` so every later calculation in this path observes the same input.
-# ADDED-LINE-RATIONALE ad6f0ff5c16a99ef:1: Freezes `objc2` for `target.'cfg(target_os = "macos")'.dependencies` so every later calculation in this path observes the same input.
 [package]
 name = "redrob-launcher"
 description = "Redrob Launcher: install, update and open the Redrob apps"

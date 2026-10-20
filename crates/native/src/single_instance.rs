@@ -1,7 +1,3 @@
-// ADDED-LINE-RATIONALE 596a6b1aeeb1cb05:1: Supports `claim` while preserving the nearby constraint: Claims the instance; `wake` is set later (the UI context doesn't exist yet).
-// ADDED-LINE-RATIONALE b45492675dda6dd9:1: Freezes `Ok` for `claim` so every later calculation in this path observes the same input.
-// ADDED-LINE-RATIONALE 97e9579b55ab4a76:1: Freezes `buf` for `listen` so every later calculation in this path observes the same input.
-// ADDED-LINE-RATIONALE a6ad93a2829960ab:1: Freezes `theirs` for `answer` so every later calculation in this path observes the same input.
 //! One launcher at a time: a second start asks the first to show its window, then exits.
 //!
 //! The first instance listens on a fixed loopback port. A second start says hello with its

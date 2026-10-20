@@ -1,29 +1,3 @@
-// ADDED-LINE-RATIONALE 101d4c621cbcb55d:1: Supports `every_download_state_offers_the_right_action` while preserving the nearby constraint: A download is running, so the header says so.
-// ADDED-LINE-RATIONALE 101d4c621cbcb55d:2: Delegates `served_models_show_their_verdict_and_start_or_stop`'s `h / get_by_label / On` work to `h.get_by_label` so existing state and error handling remain centralized.
-// ADDED-LINE-RATIONALE 3f30b50dcab50c59:2: Freezes `if` for `served_models_show_their_verdict_and_start_or_stop` so every later calculation in this path observes the same input.
-// ADDED-LINE-RATIONALE a0e69b1199f90bda:1: Delegates `served_models_show_their_verdict_and_start_or_stop`'s `h / render / unwrap` work to `h.render` so existing state and error handling remain centralized.
-// ADDED-LINE-RATIONALE 49624bd8ee6842cc:18: Bounds the `served_models_show_their_verdict_and_start_or_stop` implementation here so `h / render / unwrap` cannot leak into the adjacent declaration or control path.
-// ADDED-LINE-RATIONALE d1926cae4a2e35c2:3: Declares the `test` contract on `served_models_show_their_verdict_and_start_or_stop` so the compiler or runner applies it before execution.
-// ADDED-LINE-RATIONALE ddd7c29d33c33ea3:1: Supports `every_row_starts_its_verdict_on_one_edge_and_ends_its_actions_on_another` while preserving the nearby constraint: [test].
-// ADDED-LINE-RATIONALE 1def8764dede8063:3: Freezes `m` for `every_row_starts_its_verdict_on_one_edge_and_ends_its_actions_on_another` so every later calculation in this path observes the same input.
-// ADDED-LINE-RATIONALE 83470da85696b23b:1: Freezes `let` for `every_row_starts_its_verdict_on_one_edge_and_ends_its_actions_on_another` so every later calculation in this path observes the same input.
-// ADDED-LINE-RATIONALE aa94bd7762b49d90:2: Keeps `view / m / ModelState` in `every_row_starts_its_verdict_on_one_edge_and_ends_its_actions_on_another`'s API-defined order so positional values retain their intended meaning.
-// ADDED-LINE-RATIONALE 83e1d2221cf9c9af:2: Keeps `view / m / ModelState` in `every_row_starts_its_verdict_on_one_edge_and_ends_its_actions_on_another`'s API-defined order so positional values retain their intended meaning.
-// ADDED-LINE-RATIONALE 875b953dc626596d:2: Keeps `view / m / ModelState` in `every_row_starts_its_verdict_on_one_edge_and_ends_its_actions_on_another`'s API-defined order so positional values retain their intended meaning.
-// ADDED-LINE-RATIONALE e95d40f5c4146c8c:3: Makes `view / m / ModelState` an explicit part of `every_row_starts_its_verdict_on_one_edge_and_ends_its_actions_on_another` because the regression suite can pin the refreshed behavior before release.
-// ADDED-LINE-RATIONALE 101d4c621cbcb55d:3: Delegates `every_row_starts_its_verdict_on_one_edge_and_ends_its_actions_on_another`'s `h / get_by_label / On` work to `h.get_by_label` so existing state and error handling remain centralized.
-// ADDED-LINE-RATIONALE 027c24ace805fe9b:3: Delegates `every_row_starts_its_verdict_on_one_edge_and_ends_its_actions_on_another`'s `h / run_steps` work to `h.run_steps` so existing state and error handling remain centralized.
-// ADDED-LINE-RATIONALE 8b6d0b5827535a86:1: Supports `every_row_starts_its_verdict_on_one_edge_and_ends_its_actions_on_another` while preserving the nearby constraint: The verdict chips line up on the content edge, whatever the headline's length.
-// ADDED-LINE-RATIONALE 8f217392ff0c3dd6:1: Makes `every_row_starts_its_verdict_on_one_edge_and_ends_its_actions_on_another` fail visibly when `assert_eq / lefts / len` violates the behavior this path promises.
-// ADDED-LINE-RATIONALE 2021ea04b5ad2576:1: Freezes `assert` for `every_row_starts_its_verdict_on_one_edge_and_ends_its_actions_on_another` so every later calculation in this path observes the same input.
-// ADDED-LINE-RATIONALE 8bbb2c52c9bda881:1: Supports `every_row_starts_its_verdict_on_one_edge_and_ends_its_actions_on_another` while preserving the nearby constraint: device card's Measure again with them.
-// ADDED-LINE-RATIONALE 60dbdc1cab4aa119:1: Freezes `assert` for `every_row_starts_its_verdict_on_one_edge_and_ends_its_actions_on_another` so every later calculation in this path observes the same input.
-// ADDED-LINE-RATIONALE 088a167bc0c09d03:1: Supports `every_row_starts_its_verdict_on_one_edge_and_ends_its_actions_on_another` while preserving the nearby constraint: The primary is the trailing action: Resume is right of Delete.
-// ADDED-LINE-RATIONALE 46033292b17f522d:1: Supports `every_row_starts_its_verdict_on_one_edge_and_ends_its_actions_on_another` while preserving the nearby constraint: While installing, the bar says so; there is no second "Installing" chip.
-// ADDED-LINE-RATIONALE 0a2a80a034e31b63:1: Supports `every_row_starts_its_verdict_on_one_edge_and_ends_its_actions_on_another` while preserving the nearby constraint: A row is about as tall as its three lines: a hairline list, not a box per model.
-// ADDED-LINE-RATIONALE 6c364396a436a975:1: Freezes `resume` for `every_row_starts_its_verdict_on_one_edge_and_ends_its_actions_on_another` so every later calculation in this path observes the same input.
-// ADDED-LINE-RATIONALE f4799d0fc8d0477f:1: Makes `every_row_starts_its_verdict_on_one_edge_and_ends_its_actions_on_another` fail visibly when `assert / resume / center` violates the behavior this path promises.
-// ADDED-LINE-RATIONALE 13b970aaca60d63c:8: Bounds the `every_row_starts_its_verdict_on_one_edge_and_ends_its_actions_on_another` implementation here so `assert / resume / center` cannot leak into the adjacent declaration or control path.
 //! The models dialog against a fake model backend: every state's label and buttons, and the
 //! requests they send.
 

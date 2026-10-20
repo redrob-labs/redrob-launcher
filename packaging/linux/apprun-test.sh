@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# ADDED-LINE-RATIONALE 54fcb1fd4c47ab81:1: Supports `-f "$DESKTOP"` while preserving the nearby constraint: everything else preserved from the packaged entry.
-# ADDED-LINE-RATIONALE bb0217629c4b7f53:1: Freezes `grep` for `"$before" = "$after"` so every later calculation in this path observes the same input.
 # Smoke test for packaging/linux/AppRun: the AppImage's desktop integration writes
 # and refreshes the host .desktop entry and icons, is idempotent, honours the opt-out
 # and an unwritable HOME, and always launches the app.
