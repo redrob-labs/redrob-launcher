@@ -9,8 +9,9 @@ use std::f32::consts::{PI, TAU};
 
 use egui::{Color32, Painter, Pos2, Rect, Shape, Stroke, pos2, vec2};
 
-/// A drawn icon.
+/// A drawn icon. The full DS set is kept even where a variant has no caller yet.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[allow(dead_code)]
 pub(crate) enum Icon {
     /// A gear: Settings.
     Settings,
