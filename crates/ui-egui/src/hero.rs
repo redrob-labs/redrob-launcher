@@ -123,6 +123,17 @@ fn wrapped_height(ui: &Ui, text: RichText, width: f32) -> f32 {
     ui.fonts_mut(|f| f.layout_job(job)).size().y
 }
 
+/// Paints the hero's gradient over `rect` at strength `k`, clipped to `radius`: the hovered app
+/// tile's edge uses it, so the page has one accent.
+///
+/// * `ui` - the Ui whose painter (and clip) draw it.
+/// * `rect` - where the gradient is stretched.
+/// * `radius` - the corners it is clipped to.
+/// * `k` - its opacity, 0 (nothing) to 1 (full).
+pub(crate) fn paint_gradient(ui: &Ui, rect: Rect, radius: CornerRadius, k: f32) {
+    egui::Image::new((gradient(ui.ctx()).id(), rect.size())).corner_radius(radius).tint(Color32::WHITE.gamma_multiply(k)).paint_at(ui, rect);
+}
+
 /// The gradient texture, made on first use and kept in the context's memory.
 ///
 /// * `ctx` - the egui context the texture belongs to.
