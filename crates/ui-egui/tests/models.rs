@@ -186,6 +186,9 @@ fn served_models_show_their_verdict_and_start_or_stop() {
     h.get_by_label("Installed");
     h.get_by_label("Runs slowly");
     h.get_by_label("Won't run here");
+    if let Some(dir) = std::env::var_os("REDROB_LAUNCHER_SNAPSHOTS") {
+        h.render().unwrap().save(std::path::Path::new(&dir).join("models-served.png")).unwrap();
+    }
     h.get_by_label("Stop").click();
     h.run_steps(8);
     h.get_by_label("Start").click();

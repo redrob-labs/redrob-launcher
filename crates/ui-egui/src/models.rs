@@ -15,6 +15,9 @@ use crate::model::Tone;
 use crate::theme::{self, Tokens};
 use crate::widgets::{self, Kind};
 
+/// The page's reading measure: the same column as the Engine, Account and Settings pages.
+const MEASURE: f32 = 720.0;
+
 /// What one row asks the backend to do.
 enum Ask {
     Download,
@@ -155,12 +158,15 @@ impl LauncherUi {
     }
 
     fn device_card(ui: &mut egui::Ui, t: &Tokens, device: &Device, disk_free: Option<u64>) -> bool {
+        use theme::space;
         let mut remeasure = false;
         widgets::card_frame(t).show(ui, |ui| {
             ui.set_width(ui.available_width());
+            ui.spacing_mut().item_spacing.y = 0.0;
+            // Head: what this is and its GPU, Measure again on the trailing edge, centred on them.
             ui.horizontal(|ui| {
                 ui.vertical(|ui| {
-                    ui.spacing_mut().item_spacing.y = 3.0;
+                    ui.spacing_mut().item_spacing.y = space::S1;
                     widgets::hud(ui, tl!("This computer"), t.muted);
                     let gpu = match &device.gpu {
                         Some(g) => match g.memory_mb {
@@ -176,38 +182,41 @@ impl LauncherUi {
                         None if device.gpu_probed => tl!("No GPU found; models run on the CPU").to_string(),
                         None => tl!("GPU not measured yet").to_string(),
                     };
-                    ui.label(RichText::new(gpu).family(theme::medium()).color(t.ink_strong));
-                    let mut line = Vec::new();
-                    if !device.cpu.is_empty() {
-                        line.push(device.cpu.clone());
-                    }
-                    if device.cores > 0 {
-                        line.push(fmt(tl!("{n} cores"), &[("n", &device.cores.to_string())]));
-                    }
-                    if device.ram_mb > 0 {
-                        line.push(fmt(tl!("{gb} GB RAM"), &[("gb", &(device.ram_mb / 1024).to_string())]));
-                    }
-                    if let Some(npu) = &device.npu {
-                        line.push(fmt(tl!("NPU: {name}"), &[("name", &npu.name)]));
-                    }
-                    if !line.is_empty() {
-                        ui.add(egui::Label::new(RichText::new(line.join(" · ")).size(12.5).color(t.muted)).wrap());
-                    }
-                    ui.horizontal(|ui| {
-                        widgets::hud(ui, &fmt(tl!("Backend: {backend}"), &[("backend", device.backend().id())]), t.faint);
-                        if let Some(gb) = device.runs_up_to_gb().filter(|gb| *gb > 0) {
-                            ui.add_space(8.0);
-                            widgets::hud(ui, &fmt(tl!("Runs models up to about {gb} GB"), &[("gb", &gb.to_string())]), t.faint);
-                        }
-                        if let Some(free) = disk_free {
-                            ui.add_space(8.0);
-                            widgets::hud(ui, &fmt(tl!("{free} free for models"), &[("free", &widgets::human_bytes(free))]), t.faint);
-                        }
-                    });
+                    ui.label(RichText::new(gpu).size(theme::text::CONTROL).family(theme::medium()).color(t.ink_strong));
                 });
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
-                    remeasure = widgets::button(ui, tl!("Measure again"), Kind::Secondary, 0.0).clicked();
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    remeasure = widgets::button_sized(ui, tl!("Measure again"), Kind::Secondary, widgets::Size::Sm, 0.0).clicked();
                 });
+            });
+            // Body: the processor line, then the facts that decide what runs, on one meta line.
+            let mut line = Vec::new();
+            if !device.cpu.is_empty() {
+                line.push(device.cpu.clone());
+            }
+            if device.cores > 0 {
+                line.push(fmt(tl!("{n} cores"), &[("n", &device.cores.to_string())]));
+            }
+            if device.ram_mb > 0 {
+                line.push(fmt(tl!("{gb} GB RAM"), &[("gb", &(device.ram_mb / 1024).to_string())]));
+            }
+            if let Some(npu) = &device.npu {
+                line.push(fmt(tl!("NPU: {name}"), &[("name", &npu.name)]));
+            }
+            ui.add_space(space::S2);
+            if !line.is_empty() {
+                ui.add(egui::Label::new(RichText::new(line.join(" · ")).size(theme::text::BODY_SM).color(t.muted)).wrap());
+                ui.add_space(space::S1);
+            }
+            widgets::tight_wrapped(ui, |ui| {
+                widgets::hud(ui, &fmt(tl!("Backend: {backend}"), &[("backend", device.backend().id())]), t.faint);
+                if let Some(gb) = device.runs_up_to_gb().filter(|gb| *gb > 0) {
+                    widgets::meta_sep(ui);
+                    widgets::hud(ui, &fmt(tl!("Runs models up to about {gb} GB"), &[("gb", &gb.to_string())]), t.faint);
+                }
+                if let Some(free) = disk_free {
+                    widgets::meta_sep(ui);
+                    widgets::hud(ui, &fmt(tl!("{free} free for models"), &[("free", &widgets::human_bytes(free))]), t.faint);
+                }
             });
         });
         remeasure
@@ -253,41 +262,39 @@ impl LauncherUi {
         let mut toggle = only_runnable;
 
         widgets::page_scroll(ui, "models", |ui| {
-            ui.set_width(ui.available_width().min(920.0));
-            ui.horizontal(|ui| {
-                ui.vertical(|ui| {
-                    // The title is in the page's top bar.
-                    ui.add(
-                        egui::Label::new(
-                            RichText::new(tl!(
-                                "Install what the apps need to work offline on this computer. Anything missing is done on Redrob's servers instead."
-                            ))
-                            .size(13.0)
-                            .color(t.muted),
-                        )
-                        .wrap(),
-                    );
-                });
-            });
-            ui.add_space(14.0);
+            use theme::space;
+            ui.set_width(ui.available_width().min(MEASURE));
+            // The rhythm below is the DS's 4 px grid, set step by step.
+            ui.spacing_mut().item_spacing.y = 0.0;
+            // The title is in the page's top bar.
+            ui.add(
+                egui::Label::new(
+                    RichText::new(tl!(
+                        "Install what the apps need to work offline on this computer. Anything missing is done on Redrob's servers instead."
+                    ))
+                    .size(theme::text::BODY_SM)
+                    .color(t.muted),
+                )
+                .wrap(),
+            );
+            ui.add_space(space::S6);
             if Self::device_card(ui, &t, &device, disk_free) {
                 ask = Some((Ask::Remeasure, String::new(), String::new()));
             }
-            ui.add_space(10.0);
+            ui.add_space(space::S4);
+            // The filter toolbar: the switch and what it hides, the runtimes on the trailing edge.
             ui.horizontal(|ui| {
-                ui.checkbox(&mut toggle, tl!("Only show what runs on this computer"));
+                widgets::switch(ui, &mut toggle, tl!("Only show what runs on this computer"));
                 if hidden > 0 {
-                    ui.add_space(8.0);
                     widgets::hud(ui, &crate::i18n::tn(hidden as u64, "{n} model hidden", "{n} models hidden"), t.faint);
                 }
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    ui.spacing_mut().item_spacing.x = space::S3;
                     for (r, st) in &runtimes {
                         Self::runtime_line(ui, &t, *r, st);
-                        ui.add_space(10.0);
                     }
                 });
             });
-            ui.add_space(6.0);
 
             let mut last_task = "";
             for v in &views {
@@ -297,12 +304,13 @@ impl LauncherUi {
                 }
                 if m.task != last_task {
                     last_task = &m.task;
-                    ui.add_space(12.0);
-                    ui.label(RichText::new(task_label(&m.task)).size(15.0).family(theme::medium()).color(t.ink_strong));
+                    ui.add_space(space::S6);
+                    ui.label(RichText::new(task_label(&m.task)).size(theme::text::BODY).family(theme::semibold()).color(t.ink_strong));
                     if let Some(blurb) = purpose_blurb(&m.task) {
-                        ui.add(egui::Label::new(RichText::new(blurb).size(12.5).color(t.muted)).wrap());
+                        ui.add_space(space::S1);
+                        ui.add(egui::Label::new(RichText::new(blurb).size(theme::text::BODY_SM).color(t.muted)).wrap());
                     }
-                    ui.add_space(6.0);
+                    ui.add_space(space::S3);
                 }
                 widgets::card_frame(&t).show(ui, |ui| {
                     ui.set_width(ui.available_width());
@@ -412,11 +420,11 @@ impl LauncherUi {
                         });
                     });
                 });
-                ui.add_space(6.0);
+                ui.add_space(space::S2);
             }
-            ui.add_space(10.0);
+            ui.add_space(space::S4);
             widgets::hud(ui, tl!("Every file is checked against its official copy before an app uses it."), t.faint);
-            ui.add_space(16.0);
+            ui.add_space(space::S8);
         });
 
         if toggle != only_runnable {

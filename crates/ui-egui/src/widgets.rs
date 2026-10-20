@@ -983,3 +983,22 @@ pub fn theme_switch(ui: &mut Ui, value: &mut theme::ThemeChoice, vertical: bool)
     }
     changed
 }
+
+/// A row of text and badges, wrapping, only as tall as its tallest item. egui's
+/// `horizontal_wrapped` is at least `interact_size.y` tall (40, the DS control height), which
+/// leaves about 13 px of air above and below a 12-14 px line; rows of controls keep it.
+pub fn tight_wrapped<R>(ui: &mut Ui, add: impl FnOnce(&mut Ui) -> R) -> egui::InnerResponse<R> {
+    ui.scope(|ui| {
+        ui.spacing_mut().interact_size.y = 0.0;
+        ui.horizontal_wrapped(add).inner
+    })
+}
+
+/// The faint "·" between the items of a meta line ([`hud`] items in a row). Decoration only:
+/// screen readers skip it.
+pub fn meta_sep(ui: &mut Ui) {
+    let t = Tokens::get(ui.ctx());
+    let galley = hud_galley(ui, "·", t.faint);
+    let (rect, _) = ui.allocate_exact_size(galley.size(), Sense::hover());
+    paint_left(ui, rect, galley, t.faint);
+}
