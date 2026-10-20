@@ -26,8 +26,6 @@
 	Newest release	최근 출시
 	GitHub	GitHub
 	Website	웹사이트
-	Create	창작
-	Work	업무
 	Install	설치
 	Update to {v}	{v} 버전으로 업데이트
 	Open	열기
@@ -579,3 +577,6 @@ month	Dec	12월
 	On standby. It starts on its own when an app needs it	대기 중이에요. 앱이 필요로 하면 저절로 켜져요
 	Not installed. Install it to use AI in your apps	설치되지 않았어요. 앱에서 AI를 쓰려면 설치하세요
 	Your Redrob apps use it to reach AI. It starts on its own when one needs it.	Redrob 앱은 이 엔진을 거쳐 AI를 써요. 앱이 필요로 하면 저절로 켜져요.
+	For your AI engine	AI 엔진을 위한 앱
+	For your everyday work	업무를 위한 앱
+	For your creative work	창작을 위한 앱

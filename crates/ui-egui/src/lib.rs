@@ -33,6 +33,7 @@ mod models;
 mod notes;
 pub mod settings;
 mod shell;
+mod shelves;
 pub mod theme;
 mod views;
 mod widgets;

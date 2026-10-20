@@ -683,11 +683,14 @@ impl LauncherUi {
         }
     }
 
-    /// The ids to show, filtered, in suite order (the grid's only order).
+    /// The ids to show, filtered, in page order ([`crate::shelves::page_order`], the grid's only
+    /// order). Apps kept off the page ([`crate::shelves::shown`]) never appear.
     pub(crate) fn visible_ids(&self) -> Vec<&'static str> {
         let needle = self.search.trim().to_lowercase();
-        self.entries
-            .iter()
+        crate::shelves::page_order()
+            .into_iter()
+            .filter_map(|id| self.entry(id))
+            .filter(|e| self.shown(e))
             .filter(|e| {
                 let s = e.status(self.platform, self.caps.manage_apps);
                 let keep = match self.settings.filter {
@@ -728,9 +731,16 @@ impl LauncherUi {
         }
     }
 
+    /// Whether an app is on the page (and in its counts): every app except those kept off it
+    /// unless installed ([`crate::shelves::HIDDEN_UNLESS_INSTALLED`]).
+    pub(crate) fn shown(&self, e: &AppEntry) -> bool {
+        crate::shelves::shown(e.app.id, e.installed.is_some())
+    }
+
     pub(crate) fn count(&self, filter: Filter) -> usize {
         self.entries
             .iter()
+            .filter(|e| self.shown(e))
             .filter(|e| {
                 let s = e.status(self.platform, self.caps.manage_apps);
                 match filter {

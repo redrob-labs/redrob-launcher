@@ -5,7 +5,7 @@ use egui::{Color32, CornerRadius, FontId, Rect, RichText, Sense, Stroke, Ui, vec
 use redrob_launcher_core::platform::pick_asset;
 use redrob_launcher_core::protocol::{Command, JobPhase};
 use redrob_launcher_core::status::AppStatus;
-use redrob_launcher_core::{AppGroup, time};
+use redrob_launcher_core::time;
 
 use crate::app::{Dialog, LauncherUi, Page, TitleBar};
 use crate::glyphs::Icon;
@@ -349,14 +349,20 @@ impl LauncherUi {
         // DS ConnectorCard tiles, 16 px apart (no shared hairlines).
         let cols = (((width + CARD_GAP) / (CARD_MIN_W + CARD_GAP)).floor() as usize).max(1);
         let card_w = (width - (cols as f32 - 1.0) * CARD_GAP) / cols as f32;
-        // Every app, unsearched: split into the classic apps and the new ones (always suite order).
+        // Every app, unsearched: on its shelf, in page order. One voice across the three headings.
         let grouped = self.settings.filter == Filter::All && self.search.trim().is_empty();
         let sections: Vec<Section> = if grouped {
-            [(AppGroup::Create, tl!("Create")), (AppGroup::Work, tl!("Work"))]
+            use crate::shelves::{Shelf, shelf_of};
+            Shelf::ALL
                 .iter()
-                .map(|(g, title)| {
-                    let list = ids.iter().copied().filter(|id| self.entry(id).is_some_and(|e| e.app.group == *g)).collect();
-                    (Some(*title), list)
+                .map(|shelf| {
+                    let title = match shelf {
+                        Shelf::Engine => tl!("For your AI engine"),
+                        Shelf::Work => tl!("For your everyday work"),
+                        Shelf::Creative => tl!("For your creative work"),
+                    };
+                    let list = ids.iter().copied().filter(|id| self.entry(id).is_some_and(|e| shelf_of(e.app) == *shelf)).collect();
+                    (Some(title), list)
                 })
                 .collect()
         } else {

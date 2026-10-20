@@ -87,7 +87,9 @@ fn events() -> Vec<Event> {
             from: Origin::RedrobApi,
         });
     }
-    ev.push(Event::Latest { app: "redrob-recall".into(), latest: LatestRelease::None, from: Origin::RedrobApi });
+    // Redrob Query and Recall are kept off the page unless installed, so the states the grid tests
+    // read sit on apps it shows: Design has no release yet ("Coming soon").
+    ev.push(Event::Latest { app: "redrob-design".into(), latest: LatestRelease::None, from: Origin::RedrobApi });
     let installed = [("redrob-canvas", "0.4.1"), ("redrob-code", "0.3.0"), ("redrob-browser", "0.5.0")];
     for app in &SUITE {
         let inst = installed.iter().find(|(id, _)| *id == app.id).map(|(_, v)| Installed {
@@ -222,7 +224,11 @@ fn grid_shows_every_status_and_installs_on_click() {
 
 #[test]
 fn downloads_can_be_paused_resumed_and_discarded() {
-    let (mut h, sent) = harness(egui::Theme::Dark, true);
+    // The fixture's reconnecting download is Redrob Query's, which the page hides when it isn't
+    // installed: give one to Redrob Office too, which it shows.
+    let mut ev = events();
+    ev.push(Event::Progress { app: "redrob-office".into(), phase: JobPhase::Reconnecting { done: 10 << 20, total: 90 << 20 } });
+    let (mut h, sent) = harness_with(ev, egui::Theme::Dark, true, 1.0);
     h.run_steps(4);
     // Bring the paused and reconnecting apps on screen (the sidebar leaves the grid three
     // columns, so the third row needs a taller window).
@@ -334,7 +340,10 @@ fn an_install_waiting_for_another_says_so_and_can_be_cancelled() {
     snapshot(&mut h, "grid-waiting-dark");
     h.get_by_label("Installing…");
     h.get_by_label("Waiting for another app…");
-    // Only the waiting one: the install that is running can't be called off.
+    // Only the waiting one: the install that is running can't be called off. (Redrob Shape is on
+    // the third shelf now: bring it on screen first.)
+    h.get_by_label("Cancel").scroll_to_me();
+    h.run_steps(4);
     h.get_by_label("Cancel").click();
     h.run_steps(2);
     let cancels: Vec<_> = sent.borrow().iter().filter(|c| matches!(c, Command::Cancel { .. })).cloned().collect();
@@ -486,13 +495,18 @@ fn an_old_table_or_sort_setting_still_loads_and_the_grid_ignores_it() {
         None,
     );
     h.run_steps(6);
-    // The grid, grouped in suite order: Create before Work, Redrob Canvas first.
-    let create = h.get_by_label("Create").rect();
-    let work = h.get_by_label("Work").rect();
-    assert!(create.top() < work.top());
+    // The grid, on its three shelves in page order: the AI engine, everyday work, creative work.
+    let engine = h.get_by_label("For your AI engine").rect();
+    let work = h.get_by_label("For your everyday work").rect();
+    let creative = h.get_by_label("For your creative work").rect();
+    assert!(engine.top() < work.top() && work.top() < creative.top());
     assert!(h.query_by_label("Kind").is_none(), "no table header");
-    let canvas = h.get_all_by_label("Redrob Canvas").next().unwrap().rect();
-    assert!(canvas.top() > create.bottom() && canvas.top() < work.top());
+    let top = |name: &str| h.get_all_by_label(name).next().unwrap().rect().top();
+    assert!(top("Redrob Code") > engine.bottom() && top("Redrob Code") < work.top());
+    assert!(top("Redrob Cowork") > work.bottom() && top("Redrob Browser") < creative.top());
+    assert!(top("Redrob Design") > creative.bottom());
+    // Query and Recall, not installed here, stay off the page.
+    assert!(h.query_all_by_label("Redrob Query").next().is_none() && h.query_all_by_label("Redrob Recall").next().is_none());
 }
 
 /// How far the middle of these lines of text is below the middle of the app icon beside them, in
@@ -774,7 +788,8 @@ fn the_page_ends_24_px_from_the_edge_with_its_scroll_bar_beyond_it() {
     h.run_steps(6);
     // The cards (each carries its status as its name) and the refresh above them share the page's
     // right edge, 24 px in: the scroll bar sits in that padding, at the window's edge.
-    let right = h.query_all_by_label_contains(": Available to install").map(|n| n.rect().right()).fold(0.0, f32::max);
+    // Redrob Browser ends the everyday-work shelf's row of three, so it sits in the last column.
+    let right = h.query_all_by_label_contains("Redrob Browser: ").map(|n| n.rect().right()).fold(0.0, f32::max);
     let refresh = h.get_by_label("Check for updates").rect().right();
     // The harness draws inside an 8 px margin of its own, so its "window" edge is at 1172.
     assert!((right - (1180.0 - 8.0 - 24.0)).abs() <= 1.0, "cards end at {right}");

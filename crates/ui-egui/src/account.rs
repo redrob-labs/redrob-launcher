@@ -163,7 +163,10 @@ impl LauncherUi {
         // The page scrolls as a whole; the apps are a card of rows on hairlines.
         widgets::card_frame(&t).show(ui, |ui| {
             ui.set_width(ui.available_width());
-            for (i, app) in SUITE.iter().enumerate() {
+            // Page order, and only the apps the Apps page shows.
+            let apps: Vec<&'static redrob_launcher_core::CraftApp> =
+                crate::shelves::page_order().into_iter().filter_map(|id| self.entry(id)).filter(|e| self.shown(e)).map(|e| e.app).collect();
+            for (i, app) in apps.into_iter().enumerate() {
                 if i > 0 {
                     widgets::row_rule(ui, 4.0);
                 }
