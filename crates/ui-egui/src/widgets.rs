@@ -291,26 +291,134 @@ fn window_button(ui: &mut Ui, button: WindowButton, height: f32) -> Response {
         pressed |= os.pressed;
     }
     let k = ui.ctx().animate_bool_with_time(resp.id.with("hover"), hovered, theme::motion::duration(ui.ctx(), theme::motion::FAST));
+    // Electron fills hover and press with the caption foreground (black on a light frame, white
+    // on a dark one), not with the symbol colour.
+    let base = if t.dark { Color32::WHITE } else { Color32::BLACK };
     let (fill, ink) = match button {
         WindowButton::Close if pressed => (CAPTION_CLOSE_RED.gamma_multiply(CAPTION_CLOSE_PRESSED_ALPHA), Color32::WHITE),
-        WindowButton::Close => (CAPTION_CLOSE_RED.gamma_multiply(k), theme::mix(t.faint, Color32::WHITE, k)),
-        _ if pressed => (tint(t.faint, CAPTION_PRESSED_ALPHA), t.faint),
-        _ => (tint(t.faint, CAPTION_HOVER_ALPHA * k), t.faint),
+        WindowButton::Close => (CAPTION_CLOSE_RED.gamma_multiply(k), theme::mix(CAPTION_SYMBOL, Color32::WHITE, k)),
+        _ if pressed => (base.gamma_multiply(CAPTION_PRESSED_ALPHA), CAPTION_SYMBOL),
+        _ => (base.gamma_multiply(CAPTION_HOVER_ALPHA * k), CAPTION_SYMBOL),
     };
     let p = ui.painter();
     if k > 0.0 || pressed {
         p.rect_filled(rect, CornerRadius::ZERO, fill);
     }
-    let (label, icon) = match button {
-        WindowButton::Minimize => (tl!("Minimize"), Icon::Minimize),
-        WindowButton::Maximize => (tl!("Maximize"), Icon::Maximize),
-        WindowButton::Restore => (tl!("Restore"), Icon::Restore),
-        WindowButton::Close => (tl!("Close"), Icon::CaptionClose),
+    let label = match button {
+        WindowButton::Minimize => tl!("Minimize"),
+        WindowButton::Maximize => tl!("Maximize"),
+        WindowButton::Restore => tl!("Restore"),
+        WindowButton::Close => tl!("Close"),
     };
-    // 10 px, like Windows' own caption glyphs; the icon grid draws them with a 1 px line.
-    crate::glyphs::paint(p, Rect::from_center_size(rect.center(), vec2(10.0, 10.0)), icon, ink);
+    // Electron lays Cowork's caption buttons out under the window's 1 px top frame border and one
+    // pixel further right, so restored its glyphs sit 1 point lower and 1 px right of the
+    // button's centre (measured against Cowork at 150%: 2 px down, 1 px right).
+    let ppp = ui.ctx().pixels_per_point();
+    let glyph_rect = rect.translate(vec2(1.0 / ppp, if maximized { 0.0 } else { 1.0 }));
+    caption_glyph(p, glyph_rect, button, ink, ppp);
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, label));
     tip(resp, label)
+}
+
+/// Redrob Cowork's caption symbol colour (`titleBarOverlay.symbolColor`, both themes).
+const CAPTION_SYMBOL: Color32 = Color32::from_rgb(0xAA, 0xB0, 0xBB);
+/// Scale on close's stroke so egui's feathered diagonals carry the ink of Chromium's.
+const CLOSE_INK_MATCH: f32 = 0.68;
+
+/// Paints a caption glyph exactly as Redrob Cowork's are painted: Chromium's
+/// `Windows11IconPainter` (`windows_icon_painter.cc`, via Electron's `win_caption_button.cc`),
+/// worked in physical pixels. A `round(10 * scale)` px square centred in the button, a
+/// `round(scale)` px stroke kept inside it; minimize is a crisp line through the middle, maximize
+/// a rounded square (radius `floor(1.5 * scale)` px), restore a rounded square with a second one
+/// behind it (its top-right radius doubled), close two diagonals clipped to the square with a 5%
+/// (10% when white) halo.
+fn caption_glyph(p: &egui::Painter, rect: Rect, button: WindowButton, color: Color32, ppp: f32) {
+    use egui::pos2;
+    let (bl, bt) = ((rect.left() * ppp).round(), (rect.top() * ppp).round());
+    let (bw, bh) = ((rect.width() * ppp).round(), (rect.height() * ppp).round());
+    let size = (10.0 * ppp).round();
+    let (x0, y0) = (bl + ((bw - size) / 2.0).floor(), bt + ((bh - size) / 2.0).floor());
+    let w = ppp.round().max(1.0);
+    let pt = |x: f32, y: f32| pos2(x / ppp, y / ppp);
+    let stroke = |px: f32| Stroke::new(px / ppp, color);
+    let radius = (1.5 * ppp).floor();
+    let half = w / 2.0;
+    match button {
+        WindowButton::Minimize => {
+            // Not anti-aliased: whole pixel rows centred on the square's middle row. A plain mesh,
+            // because the tessellator feathers a filled rect's edges.
+            let cy = y0 + (size / 2.0).floor();
+            let top = cy - (w / 2.0).ceil();
+            let mut mesh = egui::Mesh::default();
+            mesh.add_colored_rect(Rect::from_min_max(pt(x0, top), pt(x0 + size, top + w)), color);
+            p.add(egui::Shape::mesh(mesh));
+        }
+        WindowButton::Maximize => {
+            let r = [x0 + half, y0 + half, x0 + size - half, y0 + size - half];
+            p.add(egui::Shape::closed_line(rounded_rect_path(r, [radius; 4]).into_iter().map(|(x, y)| pt(x, y)).collect(), stroke(w)));
+        }
+        WindowButton::Restore => {
+            let sep = 2.0 * ppp;
+            // Front square: the stroke-inset box, shrunk at the top and right for the back one.
+            let front = [x0 + half, y0 + half + sep, x0 + size - half - sep, y0 + size - half];
+            p.add(egui::Shape::closed_line(rounded_rect_path(front, [radius; 4]).into_iter().map(|(x, y)| pt(x, y)).collect(), stroke(w)));
+            // Back square: offset up and right, clipped out where the front (grown by
+            // sep - half) covers it, so only its top and right edges show.
+            let back = [front[0] + sep, front[1] - sep, front[2] + sep, front[3] - sep];
+            let g = sep - half;
+            let grown = [front[0] - g, front[1] - g, front[2] + g, front[3] + g];
+            let path = rounded_rect_path(back, [radius, 2.0 * radius, radius, radius]);
+            let outside = |&(x, y): &(f32, f32)| x < grown[0] || x > grown[2] || y < grown[1] || y > grown[3];
+            // The visible run is contiguous on the closed path: start it right after a hidden point.
+            if let Some(first_hidden) = path.iter().position(|q| !outside(q)) {
+                let n = path.len();
+                let run: Vec<_> = (1..=n).map(|i| path[(first_hidden + i) % n]).filter(outside).map(|(x, y)| pt(x, y)).collect();
+                p.add(egui::Shape::line(run, stroke(w)));
+            }
+        }
+        WindowButton::Close => {
+            let halo = w * if color == Color32::WHITE { 0.1 } else { 0.05 };
+            // Chromium's anti-aliased diagonals carry less ink than egui's feathered ones at the
+            // same width: measured against Cowork at 150%, 0.68 of the stroke matches its weight.
+            let width = (w + halo) * CLOSE_INK_MATCH;
+            let clip = p.with_clip_rect(Rect::from_min_max(pt(x0, y0), pt(x0 + size, y0 + size)).intersect(p.clip_rect()));
+            clip.line_segment([pt(x0, y0), pt(x0 + size, y0 + size)], stroke(width));
+            clip.line_segment([pt(x0 + size, y0), pt(x0, y0 + size)], stroke(width));
+        }
+    }
+}
+
+/// Points along a rounded rectangle `[left, top, right, bottom]` with corner radii
+/// `[top-left, top-right, bottom-right, bottom-left]`, clockwise from the top-left corner,
+/// densely enough (about 0.25 px apart) to be clipped point by point.
+fn rounded_rect_path(r: [f32; 4], radii: [f32; 4]) -> Vec<(f32, f32)> {
+    use std::f32::consts::{FRAC_PI_2, PI};
+    let [l, t, rr, b] = r;
+    let [tl, tr, br, bl] = radii;
+    let mut out = Vec::new();
+    let edge = |from: (f32, f32), to: (f32, f32), out: &mut Vec<(f32, f32)>| {
+        let steps = (((to.0 - from.0).abs() + (to.1 - from.1).abs()) / 0.25).ceil().max(1.0) as usize;
+        for i in 0..steps {
+            let f = i as f32 / steps as f32;
+            out.push((from.0 + (to.0 - from.0) * f, from.1 + (to.1 - from.1) * f));
+        }
+    };
+    let arc = |c: (f32, f32), rad: f32, start: f32, out: &mut Vec<(f32, f32)>| {
+        let steps = ((rad * FRAC_PI_2) / 0.25).ceil().max(1.0) as usize;
+        for i in 0..steps {
+            let a = start + FRAC_PI_2 * i as f32 / steps as f32;
+            out.push((c.0 + rad * a.cos(), c.1 + rad * a.sin()));
+        }
+    };
+    arc((l + tl, t + tl), tl, PI, &mut out);
+    edge((l + tl, t), (rr - tr, t), &mut out);
+    arc((rr - tr, t + tr), tr, -FRAC_PI_2, &mut out);
+    edge((rr, t + tr), (rr, b - br), &mut out);
+    arc((rr - br, b - br), br, 0.0, &mut out);
+    edge((rr - br, b), (l + bl, b), &mut out);
+    arc((l + bl, b - bl), bl, FRAC_PI_2, &mut out);
+    edge((l, b - bl), (l, t + tl), &mut out);
+    out
 }
 
 /// Custom title bars: a hairline round the window, and resizing it from its edges and corners.
