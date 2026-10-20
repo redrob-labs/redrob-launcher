@@ -164,7 +164,8 @@ fn show_system_menu(hwnd: HWND) {
         set_system_command_enabled(menu, SC_MAXIMIZE, !maximized && style & WS_MAXIMIZEBOX as isize != 0);
         set_system_command_enabled(menu, SC_CLOSE, true);
 
-        let mut bounds = RECT::default();
+        // windows-sys structs do not implement Default.
+        let mut bounds = RECT { left: 0, top: 0, right: 0, bottom: 0 };
         if GetWindowRect(hwnd, &mut bounds) == 0 {
             log::warn!("Snap Layouts: couldn't position the system menu");
             return;
