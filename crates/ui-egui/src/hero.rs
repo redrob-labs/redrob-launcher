@@ -1,10 +1,10 @@
 //! The Apps page's hero banner: a vivid, Apple Music-style gradient card that introduces the Redrob
 //! product suite, between the filter row and the first shelf ("For your AI engine").
 //!
-//! The gradient runs from Redrob Blue into the Design violet with a magenta glow. It is computed
-//! once into a small texture and stretched over the banner (it has no fine detail, so linear
-//! filtering keeps it smooth). Nothing on it moves: the design system's motion law keeps type and
-//! marks still.
+//! The gradient falls from Apple Music's red in the top-right corner through magenta and violet
+//! into Redrob Blue in the bottom-left, where the white copy sits. It is computed once into a small
+//! texture and stretched over the banner (it has no fine detail, so linear filtering keeps it
+//! smooth). Nothing on it moves: the design system's motion law keeps type and marks still.
 
 use egui::{Color32, ColorImage, CornerRadius, Rect, RichText, Sense, TextureHandle, TextureOptions, Ui, vec2};
 
@@ -29,9 +29,9 @@ const HERO_ICONS_MIN_W: f32 = 640.0;
 const GRADIENT_W: usize = 512;
 const GRADIENT_H: usize = 128;
 
-/// The gradient's colour stops along its diagonal, as (position 0..1, sRGB): a deeper Redrob Blue,
-/// Redrob Blue (`blue-6`), then the Design product violet.
-const STOPS: [(f32, [u8; 3]); 3] = [(0.0, [0x14, 0x2c, 0xd9]), (0.45, [0x2b, 0x52, 0xff]), (1.0, [0xc1, 0x62, 0xf4])];
+/// The gradient's colour stops from the top-right corner (0) to the bottom-left (1), as
+/// (position 0..1, sRGB): Apple Music's red, a magenta, a blue-violet, then Redrob Blue (`blue-6`).
+const STOPS: [(f32, [u8; 3]); 4] = [(0.0, [0xfa, 0x2d, 0x48]), (0.3, [0xe0, 0x2a, 0x8c]), (0.62, [0x7a, 0x3c, 0xf5]), (1.0, [0x2b, 0x52, 0xff])];
 
 /// A soft round light over the gradient: centre (in 0..1 of the banner, may sit outside it), radius
 /// (in banner heights), colour and strength. Together they give the gradient Apple Music's
@@ -47,16 +47,17 @@ struct Glow {
     strength: f32,
 }
 
-/// A magenta bloom in the lower right and a pale blue light in the upper left.
+/// A warm pink light in the top-right, where the red starts, and a deep blue shade in the
+/// bottom-left under the copy (it keeps the white text readable).
 const GLOWS: [Glow; 2] = [
-    Glow { center: (0.92, 1.1), radius: 1.6, color: [0xff, 0x4f, 0xa3], strength: 0.85 },
-    Glow { center: (0.12, -0.3), radius: 1.3, color: [0x8f, 0xa8, 0xff], strength: 0.45 },
+    Glow { center: (0.98, -0.25), radius: 1.4, color: [0xff, 0x6a, 0x88], strength: 0.55 },
+    Glow { center: (0.02, 1.25), radius: 1.5, color: [0x1a, 0x2c, 0xc8], strength: 0.6 },
 ];
 
 impl LauncherUi {
     /// Draws the hero banner across the page's width: the suite's title and one line on what it
-    /// does on the left in white, the suite's app icons (exactly as supplied) on the right when
-    /// there is room.
+    /// does in the bottom-left corner in white, the suite's app icons (exactly as supplied) on the
+    /// right when there is room.
     ///
     /// * `ui` - the Apps page's scroll content, top-down; the banner takes its full width.
     pub(crate) fn hero(&self, ui: &mut Ui) {
@@ -78,9 +79,9 @@ impl LauncherUi {
         let radius = CornerRadius::same(theme::radius::XL);
         egui::Image::new((gradient(ui.ctx()).id(), rect.size())).corner_radius(radius).paint_at(ui, rect);
 
-        // The copy, vertically centred on the banner's left. A detached child: laying it out never
-        // moves the page's cursor back up into the banner.
-        let copy = Rect::from_min_size(rect.min + vec2(HERO_PAD, (height - copy_h) / 2.0), vec2(copy_w, copy_h));
+        // The copy, anchored to the banner's bottom-left padding. A detached child: laying it out
+        // never moves the page's cursor back up into the banner.
+        let copy = Rect::from_min_size(egui::pos2(rect.left() + HERO_PAD, rect.bottom() - HERO_PAD - copy_h), vec2(copy_w, copy_h));
         let mut child = ui.new_child(egui::UiBuilder::new().max_rect(copy).layout(egui::Layout::top_down(egui::Align::Min)));
         child.spacing_mut().item_spacing.y = theme::space::S2;
         child.add(egui::Label::new(title).wrap());
@@ -102,12 +103,12 @@ impl LauncherUi {
     }
 }
 
-/// The banner's title: DS title-2 (27, 700) in the display face, white, tracked in like the
+/// The banner's title: DS title-3 (21, 600) in the display face, white, tracked in like the
 /// site's headings.
 ///
 /// * `text` - the translated title.
 fn hero_title(text: &str) -> RichText {
-    crate::widgets::heading(text, theme::text::TITLE_2, Color32::WHITE)
+    crate::widgets::heading(text, theme::text::TITLE_3, Color32::WHITE)
 }
 
 /// The height `text` takes wrapped at `width`.
@@ -135,14 +136,16 @@ fn gradient(ctx: &egui::Context) -> TextureHandle {
     handle
 }
 
-/// The gradient as pixels: [`STOPS`] along a shallow diagonal, then each of [`GLOWS`] laid over it.
+/// The gradient as pixels: [`STOPS`] along a shallow diagonal from the top-right corner to the
+/// bottom-left, then each of [`GLOWS`] laid over it.
 fn gradient_image() -> ColorImage {
     let aspect = GRADIENT_W as f32 / GRADIENT_H as f32;
     let mut pixels = Vec::with_capacity(GRADIENT_W * GRADIENT_H);
     for y in 0..GRADIENT_H {
         for x in 0..GRADIENT_W {
             let (u, v) = ((x as f32 + 0.5) / GRADIENT_W as f32, (y as f32 + 0.5) / GRADIENT_H as f32);
-            let mut c = along(0.8 * u + 0.2 * v);
+            // 0 in the top-right corner, 1 in the bottom-left: mostly across, a little down.
+            let mut c = along(0.7 * (1.0 - u) + 0.3 * v);
             for g in &GLOWS {
                 // Distance in banner heights, so the glows stay round on the wide strip.
                 let d = (((u - g.center.0) * aspect).powi(2) + (v - g.center.1).powi(2)).sqrt() / g.radius;
@@ -188,15 +191,16 @@ fn to_u8(c: f32) -> u8 {
 mod tests {
     use super::*;
 
-    /// The gradient starts in Redrob Blue, ends warm, and keeps white copy readable on its left.
+    /// The gradient starts in Apple Music red at the top-right, falls to Redrob Blue at the
+    /// bottom-left, and keeps the white copy readable everywhere it can sit (the left 45 %).
     #[test]
-    fn gradient_runs_blue_to_violet_and_keeps_the_copy_readable() {
+    fn gradient_falls_red_to_blue_and_keeps_the_copy_readable() {
         let img = gradient_image();
         let at = |x: usize, y: usize| img.pixels[y * GRADIENT_W + x];
-        let left = at(16, GRADIENT_H / 2);
-        let right = at(GRADIENT_W - 16, GRADIENT_H / 2);
-        assert!(left.b() > left.r() && left.b() > 200, "blue on the left: {left:?}");
-        assert!(right.r() > 150, "violet/magenta on the right: {right:?}");
+        let top_right = at(GRADIENT_W - 8, 8);
+        let bottom_left = at(8, GRADIENT_H - 8);
+        assert!(top_right.r() > 220 && top_right.r() > top_right.b() + 60, "red at the top-right: {top_right:?}");
+        assert!(bottom_left.b() > 180 && bottom_left.b() > bottom_left.r() + 60, "blue at the bottom-left: {bottom_left:?}");
         // WCAG relative luminance of every pixel under the copy (left 45 %) leaves white text at
         // 3:1 or more (large text).
         let lum = |c: Color32| {
