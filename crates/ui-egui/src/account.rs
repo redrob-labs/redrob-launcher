@@ -3,7 +3,7 @@
 
 use egui::{RichText, vec2};
 use redrob_launcher_core::SUITE;
-use redrob_launcher_core::account::{AppLink, ConnectState};
+use redrob_launcher_core::account::{AppLink, ConnectState, LoginState};
 use redrob_launcher_core::protocol::LatestRelease;
 
 use crate::app::{Dialog, LauncherUi};
@@ -17,16 +17,20 @@ pub(crate) enum HeaderAccount {
     None,
     SignedOut,
     Busy,
+    /// The Redrob account's browser sign-in is open.
+    BrowserSignIn,
     SignedIn(String),
 }
 
 impl LauncherUi {
     pub(crate) fn header_account(&mut self) -> HeaderAccount {
         let Some(acct) = self.backend.account() else { return HeaderAccount::None };
-        match (acct.workspace(), acct.state()) {
-            (_, ConnectState::Starting | ConnectState::Waiting(_)) => HeaderAccount::Busy,
-            (Some(w), _) => HeaderAccount::SignedIn(w.account_name),
-            (None, _) => HeaderAccount::SignedOut,
+        match (acct.workspace(), acct.state(), acct.login()) {
+            (_, ConnectState::Starting | ConnectState::Waiting(_), _) => HeaderAccount::Busy,
+            (_, _, LoginState::SigningIn) => HeaderAccount::BrowserSignIn,
+            (Some(w), _, _) => HeaderAccount::SignedIn(w.account_name),
+            (None, _, LoginState::SignedIn(name)) => HeaderAccount::SignedIn(if name.is_empty() { tl!("Redrob account").to_string() } else { name }),
+            (None, _, _) => HeaderAccount::SignedOut,
         }
     }
 
@@ -36,6 +40,7 @@ impl LauncherUi {
             HeaderAccount::None => return,
             HeaderAccount::SignedOut => (tl!("Sign in").to_string(), tl!("Sign in to Redrob once for every app on this computer").to_string()),
             HeaderAccount::Busy => (tl!("Signing in…").to_string(), tl!("Approve the code on console.redrob.ai").to_string()),
+            HeaderAccount::BrowserSignIn => (tl!("Signing in…").to_string(), tl!("Finish signing in in your browser").to_string()),
             HeaderAccount::SignedIn(name) => (name, tl!("Your Redrob workspace and the apps that use it").to_string()),
         };
         if widgets::nav_link(ui, &label, &tip, height, matches!(self.dialog, Some(Dialog::Account))).clicked() {
@@ -51,6 +56,52 @@ impl LauncherUi {
         let workspace = acct.workspace();
         let state = acct.state();
         let mut action: Option<fn(&mut dyn redrob_launcher_core::account::AccountBackend)> = None;
+
+        // The Redrob account (redrob-auth), when the backend offers it.
+        let login = acct.login();
+        if login != LoginState::Unavailable {
+            ui.horizontal(|ui| {
+                match &login {
+                    LoginState::SignedIn(name) => {
+                        let name = if name.is_empty() { tl!("Redrob account") } else { name.as_str() };
+                        ui.label(RichText::new(fmt(tl!("Account: {name}"), &[("name", name)])).family(theme::medium()).color(t.ink_strong));
+                    }
+                    LoginState::SigningIn => {
+                        ui.spinner();
+                        ui.label(RichText::new(tl!("Finish signing in in your browser…")).color(t.muted));
+                        // The browser hands the sign-in back on its own; check for it.
+                        ui.ctx().request_repaint_after(std::time::Duration::from_secs(1));
+                    }
+                    LoginState::Failed(why) => {
+                        ui.label(RichText::new(msg(why)).color(t.bad));
+                    }
+                    LoginState::SignedOut | LoginState::Unavailable => {
+                        ui.label(RichText::new(tl!("Sign in with your Redrob account in the browser.")).color(t.muted));
+                    }
+                }
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| match &login {
+                    LoginState::SignedIn(_) => {
+                        if widgets::button(ui, tl!("Sign out"), Kind::Secondary, 100.0)
+                            .on_hover_text(tl!("Signs the Redrob account out on this computer"))
+                            .clicked()
+                        {
+                            action = Some(|a| a.sign_out());
+                        }
+                    }
+                    LoginState::SigningIn => {
+                        if widgets::button(ui, tl!("Cancel"), Kind::Secondary, 90.0).clicked() {
+                            action = Some(|a| a.sign_out());
+                        }
+                    }
+                    _ => {
+                        if widgets::button(ui, tl!("Sign in with browser"), Kind::Secondary, 0.0).clicked() {
+                            action = Some(|a| a.sign_in());
+                        }
+                    }
+                });
+            });
+            ui.add_space(14.0);
+        }
 
         match (&workspace, &state) {
             (_, ConnectState::Starting) => {

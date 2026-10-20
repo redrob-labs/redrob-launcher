@@ -16,10 +16,12 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::{Duration, Instant};
 
-use redrob_launcher_core::account::{AccountBackend, AppLink, ConnectState, PendingConnect, Workspace};
+use redrob_launcher_core::account::{AccountBackend, AppLink, ConnectState, LoginState, PendingConnect, Workspace};
 use serde_json::{Value, json};
 
 pub const CONSOLE_API: &str = "https://console.redrob.ai/api/backend/v1";
+/// The launcher's client id at redrob-auth (the Redrob account sign-in).
+pub const LOGIN_CLIENT_ID: &str = "redrob-launcher";
 /// Overrides the console base URL (tests, staging).
 pub const CONSOLE_API_ENV: &str = "REDROB_CONSOLE_API";
 /// Overrides the shared account file's directory.
@@ -364,6 +366,44 @@ struct Attempt {
     cancelled: Arc<AtomicBool>,
 }
 
+/// The Redrob account (redrob-auth) sign-in, next to the workspace key.
+struct Login {
+    state: LoginState,
+    session: Option<Arc<redrob_login::Session>>,
+    /// Bumped by every sign-in and sign-out, so a thread that finishes late can't undo a newer one.
+    generation: u64,
+}
+
+/// Sets the account's state unless a newer sign-in or sign-out started after `generation`.
+fn set_login(login: &Mutex<Login>, generation: u64, state: LoginState, session: Option<Arc<redrob_login::Session>>) -> bool {
+    let mut l = login.lock().unwrap_or_else(PoisonError::into_inner);
+    if l.generation != generation {
+        return false;
+    }
+    l.state = state;
+    l.session = session;
+    true
+}
+
+/// What the account row shows: the person's name, else their email.
+fn who(session: &redrob_login::Session) -> Result<String, redrob_login::Error> {
+    let u = session.userinfo()?;
+    Ok(u.name.or(u.email).unwrap_or_default())
+}
+
+fn login_plain(e: &redrob_login::Error) -> String {
+    use redrob_login::Error as E;
+    match e {
+        E::Denied => "The sign-in was declined.".into(),
+        E::TimedOut => "The sign-in took too long. Sign in again.".into(),
+        E::StateMismatch => "The sign-in answer didn't match. Sign in again.".into(),
+        E::Browser(_) => "Couldn't open the browser.".into(),
+        E::Network(_) => "Couldn't reach auth.redrob.io. Check the network and sign in again.".into(),
+        E::Keychain(_) => "The keychain wouldn't keep the sign-in.".into(),
+        E::NotAvailable(_) | E::NotSignedIn | E::Expired | E::Server(_) => "auth.redrob.io refused the sign-in.".into(),
+    }
+}
+
 /// This computer's workspace: the shared key, and at most one sign-in running in the background.
 pub struct DeviceAccount {
     path: Option<PathBuf>,
@@ -377,6 +417,7 @@ pub struct DeviceAccount {
     wake: Wake,
     /// Opens the approval page (the browser, in the app; nothing in tests).
     open: Open,
+    login: Arc<Mutex<Login>>,
 }
 
 /// How often the shared file is checked for changes made outside this launcher.
@@ -403,10 +444,12 @@ impl DeviceAccount {
             base: base.trim_end_matches('/').to_string(),
             wake,
             open,
+            login: Arc::new(Mutex::new(Login { state: LoginState::SignedOut, session: None, generation: 0 })),
         }
     }
 
-    /// The launcher's own account: the shared file, the production console, the browser.
+    /// The launcher's own account: the shared file, the production console, the browser, and the
+    /// Redrob account sign-in kept in the keychain.
     pub fn desktop(wake: Wake) -> Self {
         let open: Open = Arc::new(|url: &str| {
             if url.starts_with("https://")
@@ -415,7 +458,45 @@ impl DeviceAccount {
                 log::warn!("couldn't open the approval page: {e}");
             }
         });
-        Self::new(shared_dir().map(|d| d.join(ACCOUNT_FILE)), Arc::new(Https::new()), console_base(), wake, open)
+        let acct = Self::new(shared_dir().map(|d| d.join(ACCOUNT_FILE)), Arc::new(Https::new()), console_base(), wake, open);
+        acct.restore_login();
+        acct
+    }
+
+    /// Picks up the Redrob account kept in the keychain by an earlier run, on a thread (the keychain
+    /// and redrob-auth may be slow), then asks redrob-auth who it is.
+    fn restore_login(&self) {
+        let (login, wake) = (self.login.clone(), self.wake.clone());
+        let generation = login.lock().unwrap_or_else(PoisonError::into_inner).generation;
+        std::thread::spawn(move || {
+            let session = match redrob_login::Session::restore(LOGIN_CLIENT_ID) {
+                Ok(Some(s)) => Arc::new(s),
+                Ok(None) => return,
+                Err(e) => {
+                    log::warn!("couldn't read the Redrob sign-in: {e}");
+                    return;
+                }
+            };
+            if !set_login(&login, generation, LoginState::SignedIn(String::new()), Some(session.clone())) {
+                return;
+            }
+            wake();
+            match who(&session) {
+                Ok(name) => {
+                    set_login(&login, generation, LoginState::SignedIn(name), Some(session));
+                }
+                Err(redrob_login::Error::NotSignedIn) => {
+                    set_login(&login, generation, LoginState::SignedOut, None);
+                }
+                Err(redrob_login::Error::NotAvailable(why)) => {
+                    log::info!("Redrob sign-in isn't available: {why}");
+                    set_login(&login, generation, LoginState::Unavailable, None);
+                }
+                // Offline or a passing refusal: still signed in; the name shows next time.
+                Err(e) => log::warn!("couldn't ask auth.redrob.io who is signed in: {e}"),
+            }
+            wake();
+        });
     }
 
     /// The shared key as the file has it now: re-read when the file changed since it was last
@@ -573,6 +654,62 @@ impl AccountBackend for DeviceAccount {
         let s = self.stored().ok_or("Sign in first.")?;
         let c = connector(app).ok_or("The launcher can't connect this app yet.")?;
         write_app_key(&c, &s).map_err(|e| format!("Couldn't write the app's key file: {e}"))
+    }
+
+    fn login(&mut self) -> LoginState {
+        self.login.lock().unwrap_or_else(PoisonError::into_inner).state.clone()
+    }
+
+    fn sign_in(&mut self) {
+        let generation = {
+            let mut l = self.login.lock().unwrap_or_else(PoisonError::into_inner);
+            if matches!(l.state, LoginState::SigningIn) {
+                return;
+            }
+            l.generation += 1;
+            l.state = LoginState::SigningIn;
+            l.session = None;
+            l.generation
+        };
+        let (login, wake) = (self.login.clone(), self.wake.clone());
+        std::thread::spawn(move || {
+            match redrob_login::login(LOGIN_CLIENT_ID) {
+                Ok(session) => {
+                    let session = Arc::new(session);
+                    let name = who(&session).unwrap_or_else(|e| {
+                        log::warn!("signed in, but couldn't ask auth.redrob.io who: {e}");
+                        String::new()
+                    });
+                    set_login(&login, generation, LoginState::SignedIn(name), Some(session));
+                }
+                Err(redrob_login::Error::NotAvailable(why)) => {
+                    log::info!("Redrob sign-in isn't available: {why}");
+                    set_login(&login, generation, LoginState::Unavailable, None);
+                }
+                Err(e) => {
+                    log::warn!("Redrob sign-in failed: {e}");
+                    set_login(&login, generation, LoginState::Failed(login_plain(&e)), None);
+                }
+            }
+            wake();
+        });
+    }
+
+    fn sign_out(&mut self) {
+        let session = {
+            let mut l = self.login.lock().unwrap_or_else(PoisonError::into_inner);
+            l.generation += 1;
+            l.state = LoginState::SignedOut;
+            l.session.take()
+        };
+        // An open browser sign-in is simply abandoned: its result is ignored when it comes back.
+        if let Some(session) = session {
+            std::thread::spawn(move || {
+                if let Err(e) = session.logout() {
+                    log::warn!("signed out, but the sign-in couldn't be removed: {e}");
+                }
+            });
+        }
     }
 }
 

@@ -339,6 +339,19 @@ month	Dec	12월
 @msg	Sign in first.	먼저 로그인하세요.
 @msg	The launcher can't connect this app yet.	런처가 아직 이 앱을 연결할 수 없어요.
 @msg	Couldn't write the app's key file: {e}	앱의 키 파일을 쓰지 못했어요: {e}
+	Account: {name}	계정: {name}
+	Finish signing in in your browser	브라우저에서 로그인을 마치세요
+	Finish signing in in your browser…	브라우저에서 로그인을 마치는 중…
+	Sign in with browser	브라우저로 로그인
+	Sign in with your Redrob account in the browser.	브라우저에서 Redrob 계정으로 로그인하세요.
+	Signs the Redrob account out on this computer	이 컴퓨터에서 Redrob 계정을 로그아웃해요
+@msg	The sign-in was declined.	로그인을 거절했어요.
+@msg	The sign-in took too long. Sign in again.	로그인이 너무 오래 걸렸어요. 다시 로그인하세요.
+@msg	The sign-in answer didn't match. Sign in again.	로그인 응답이 맞지 않아요. 다시 로그인하세요.
+@msg	Couldn't open the browser.	브라우저를 열지 못했어요.
+@msg	Couldn't reach auth.redrob.io. Check the network and sign in again.	auth.redrob.io에 연결하지 못했어요. 네트워크를 확인하고 다시 로그인하세요.
+@msg	The keychain wouldn't keep the sign-in.	키체인이 로그인 정보를 저장하지 않았어요.
+@msg	auth.redrob.io refused the sign-in.	auth.redrob.io가 로그인을 거부했어요.
 
 # Model downloads (models.rs) and the manifest's descriptions (assets/models/models.json).
 	Delete	삭제

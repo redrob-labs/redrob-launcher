@@ -24,6 +24,9 @@ crates/
   native    redrob-launcher-native    desktop only: HTTP, detecting installed apps, download,
                                         verify and install
   ui-egui   redrob-launcher-ui-egui   the shared egui UI (desktop and web)
+  redrob-login  redrob-login            desktop only: sign-in to the Redrob account (redrob-auth) through
+                                        the system browser (PKCE) or a device code; refresh token in
+                                        the OS keychain. Shared with the other Redrob desktop apps
 apps/
   redrob-launcher                     desktop shell (eframe): window, tray icon, notifications
   redrob-launcher-web                 the same UI in the browser (trunk; catalog and downloads only)
