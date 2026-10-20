@@ -252,25 +252,53 @@ pub fn window_buttons(ui: &mut Ui, height: f32) {
     }
 }
 
-/// One caption button, drawn like Redrob Cowork's (Windows' native ones over its 48 px bar): a
-/// 10 px glyph, idle in ink-faint (Cowork's caption symbols are Gray 5, a step lighter than the
-/// secondary ink); hover fills 8% of ink and the glyph takes ink; close's hover is status-danger
-/// with white (was a hard-coded #c42b1c).
+/// Close's hover red: Windows' own caption red, which Redrob Cowork's caption buttons use
+/// (Electron's `win_caption_button.cc`).
+const CAPTION_CLOSE_RED: Color32 = Color32::from_rgb(0xE8, 0x11, 0x23);
+/// Hover and pressed fills of minimize and maximize: the glyph's colour at Electron's alphas
+/// (0x1A, 0x33 of 0xFF).
+const CAPTION_HOVER_ALPHA: f32 = 26.0 / 255.0;
+const CAPTION_PRESSED_ALPHA: f32 = 51.0 / 255.0;
+/// Close pressed: the red at Electron's 0x98.
+const CAPTION_CLOSE_PRESSED_ALPHA: f32 = 152.0 / 255.0;
+
+/// One caption button, drawn like Redrob Cowork's (Windows caption buttons over its 48 px bar,
+/// Electron's `win_caption_button.cc`): a 10 px glyph in ink-faint (Cowork's symbol colour is
+/// Gray 5). Hover fades in a 10% fill of the glyph's colour, press shows 20% at once; close
+/// hovers Windows red with a white glyph and presses a lighter red.
+///
+/// Maximized, the buttons reach the top of the screen and close its right edge, as Windows'
+/// do, so flinging the pointer into the corner lands on Close. Restored, the top 5 px stay the
+/// window's resize band.
+///
+/// On Windows the desktop host can hand Maximize to the OS ([`crate::caption`]) so hovering it
+/// opens Snap Layouts. The OS then gets the pointer instead of egui, and its hover and press come
+/// back through that hand-off.
 fn window_button(ui: &mut Ui, button: WindowButton, height: f32) -> Response {
     let t = Tokens::get(ui.ctx());
     let (rect, _) = ui.allocate_exact_size(vec2(CAPTION_W, height), Sense::hover());
-    // Clickable below the resize band along the top (and, for close, the right edge).
-    let right = if button == WindowButton::Close { RESIZE_EDGE } else { 0.0 };
-    let hit = Rect::from_min_max(rect.min + vec2(0.0, RESIZE_EDGE), rect.max - vec2(right, 0.0));
+    let maximized = ui.input(|i| i.viewport().maximized.unwrap_or(false) || i.viewport().fullscreen.unwrap_or(false));
+    let edge = if maximized { 0.0 } else { RESIZE_EDGE };
+    let right = if button == WindowButton::Close { edge } else { 0.0 };
+    let hit = Rect::from_min_max(rect.min + vec2(0.0, edge), rect.max - vec2(right, 0.0));
     let resp = ui.interact(hit, ui.id().with(("window-button", button as u8)), Sense::click());
-    let hovered = resp.hovered() || resp.is_pointer_button_down_on();
+    let mut pressed = resp.is_pointer_button_down_on() && resp.contains_pointer();
+    let mut hovered = resp.hovered() || pressed;
+    if matches!(button, WindowButton::Maximize | WindowButton::Restore) {
+        crate::caption::publish_maximize(ui.ctx(), hit);
+        let os = crate::caption::os_state();
+        hovered |= os.hovered;
+        pressed |= os.pressed;
+    }
     let k = ui.ctx().animate_bool_with_time(resp.id.with("hover"), hovered, theme::motion::duration(ui.ctx(), theme::motion::FAST));
     let (fill, ink) = match button {
-        WindowButton::Close => (t.bad.gamma_multiply(k), theme::mix(t.faint, t.on_brand(), k)),
-        _ => (tint(t.ink, 0.08 * k), theme::mix(t.faint, t.ink, k)),
+        WindowButton::Close if pressed => (CAPTION_CLOSE_RED.gamma_multiply(CAPTION_CLOSE_PRESSED_ALPHA), Color32::WHITE),
+        WindowButton::Close => (CAPTION_CLOSE_RED.gamma_multiply(k), theme::mix(t.faint, Color32::WHITE, k)),
+        _ if pressed => (tint(t.faint, CAPTION_PRESSED_ALPHA), t.faint),
+        _ => (tint(t.faint, CAPTION_HOVER_ALPHA * k), t.faint),
     };
     let p = ui.painter();
-    if k > 0.0 {
+    if k > 0.0 || pressed {
         p.rect_filled(rect, CornerRadius::ZERO, fill);
     }
     let (label, icon) = match button {

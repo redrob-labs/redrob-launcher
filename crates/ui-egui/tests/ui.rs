@@ -1236,8 +1236,24 @@ fn custom_title_bar_has_window_buttons() {
     // Check for updates moved down to the filter row.
     assert!(h.get_by_label("Check for updates").rect().top() > 48.0);
     assert!(h.get_all_by_label("Apps").all(|n| n.rect().top() >= 48.0), "the sidebar and page start under the title bar");
-    h.get_by_label("Minimize");
+    // Restored, the top 5 px of the caption buttons and close's right 5 px stay the resize band.
+    // (The harness insets the bar: its top is minimize's minus that band.)
     h.get_by_label("Maximize");
+    let restored_close = h.get_by_label("Close").rect();
+    let bar_top = minimize.top() - 5.0;
+    assert!((restored_close.top() - (bar_top + 5.0)).abs() < 0.5, "{restored_close:?}");
+    // Maximized there is no resize band: the buttons run to the top of the screen and close to its
+    // right edge, so flinging the pointer into the corner lands on Close (Windows' own buttons).
+    for _ in 0..3 {
+        h.input_mut().viewports.entry(egui::ViewportId::ROOT).or_default().maximized = Some(true);
+        h.step();
+    }
+    let close = h.get_by_label("Close").rect();
+    let restore = h.get_by_label("Restore").rect();
+    assert!((close.top() - bar_top).abs() < 0.5 && (close.right() - (restored_close.right() + 5.0)).abs() < 0.5, "{close:?}");
+    assert!((restore.top() - bar_top).abs() < 0.5 && (restore.right() - close.left()).abs() < 0.5, "{restore:?}");
+    h.get_by_label("Minimize");
+    h.get_by_label("Restore");
     h.get_by_label("Close").click();
     h.step();
     let closes = h.output().viewport_output.values().any(|v| v.commands.contains(&egui::ViewportCommand::Close));
