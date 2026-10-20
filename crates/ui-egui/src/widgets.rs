@@ -149,6 +149,61 @@ pub fn alert_frame_dense(t: &Tokens) -> egui::Frame {
     alert_frame(t).inner_margin(egui::Margin::symmetric(12, 6))
 }
 
+/// How far a page's scroll bar sits from the window's right edge: clear of the 5 px resize band of
+/// a custom title bar, and otherwise hugging the edge (the central panel's right margin).
+pub const PAGE_SCROLL_EDGE: f32 = 6.0;
+/// The page's own right padding inside its scroll area, so the content still ends 24 px from the
+/// window's edge (DS page padding) with the bar over that padding, not over the content.
+pub const PAGE_SCROLL_PAD: f32 = theme::space::S6 - PAGE_SCROLL_EDGE;
+
+/// A page's vertical scroll, like Redrob Cowork's (Base UI ScrollArea): the bar floats over the
+/// page's right padding at the window's edge, a round 8 px thumb in border-strong with no track,
+/// hidden until the pointer is over the page, stronger when hovered or dragged. `add` draws the
+/// page with the page's own style (only the bar is restyled).
+pub fn page_scroll<R>(ui: &mut Ui, id_salt: &str, add: impl FnOnce(&mut Ui) -> R) -> R {
+    let t = Tokens::get(ui.ctx());
+    let page_style = ui.style().clone();
+    ui.scope(|ui| {
+        let style = ui.style_mut();
+        let mut scroll = egui::style::ScrollStyle::floating();
+        scroll.bar_width = 8.0;
+        // The same width hovered or not: the thumb fades in, it doesn't grow.
+        scroll.floating_width = 8.0;
+        scroll.floating_allocated_width = 0.0;
+        scroll.bar_inner_margin = 0.0;
+        scroll.handle_min_length = 24.0;
+        // The thumb takes the widgets' foreground colours set below; no track behind it.
+        scroll.foreground_color = true;
+        scroll.dormant_background_opacity = 0.0;
+        scroll.active_background_opacity = 0.0;
+        scroll.interact_background_opacity = 0.0;
+        // Hidden until the pointer is over the page, like Cowork's.
+        scroll.dormant_handle_opacity = 0.0;
+        scroll.active_handle_opacity = 1.0;
+        scroll.interact_handle_opacity = 1.0;
+        style.spacing.scroll = scroll;
+        // The thumb: border-strong at rest, a step darker hovered and dragged, fully round.
+        for (w, ink) in [
+            (&mut style.visuals.widgets.inactive, t.line_strong),
+            (&mut style.visuals.widgets.hovered, t.faint),
+            (&mut style.visuals.widgets.active, t.muted),
+        ] {
+            w.fg_stroke.color = ink;
+            w.corner_radius = CornerRadius::same(theme::radius::PILL);
+        }
+        egui::ScrollArea::vertical()
+            .id_salt(id_salt)
+            .auto_shrink(false)
+            .content_margin(egui::Margin { right: PAGE_SCROLL_PAD as i8, ..egui::Margin::ZERO })
+            .show(ui, |ui| {
+                ui.set_style(page_style);
+                add(ui)
+            })
+            .inner
+    })
+    .inner
+}
+
 /// How far in from the window's edges a custom title bar's window resizes ([`window_edges`]).
 /// The title bar's own controls leave this band alone.
 const RESIZE_EDGE: f32 = 5.0;

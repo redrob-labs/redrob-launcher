@@ -761,6 +761,23 @@ fn looks_again_at_installed_apps_every_few_minutes_not_every_frame() {
 }
 
 #[test]
+fn the_page_ends_24_px_from_the_edge_with_its_scroll_bar_beyond_it() {
+    let (mut h, _) = harness(egui::Theme::Light, true);
+    h.run_steps(6);
+    // The cards (each carries its status as its name) and the refresh above them share the page's
+    // right edge, 24 px in: the scroll bar sits in that padding, at the window's edge.
+    let right = h.query_all_by_label("Available to install").map(|n| n.rect().right()).fold(0.0, f32::max);
+    let refresh = h.get_by_label("Check for updates").rect().right();
+    // The harness draws inside an 8 px margin of its own, so its "window" edge is at 1172.
+    assert!((right - (1180.0 - 8.0 - 24.0)).abs() <= 1.0, "cards end at {right}");
+    assert!((refresh - right).abs() <= 1.0, "refresh {refresh} vs cards {right}");
+    // Hovering the page shows the thumb (for the snapshot: it is painted, not a node).
+    h.hover_at(egui::pos2(700.0, 500.0));
+    h.run_steps(6);
+    snapshot(&mut h, "grid-scroll-hover-light");
+}
+
+#[test]
 fn the_launcher_update_banner_is_one_slim_line() {
     let mut ev = events();
     ev.push(Event::LauncherUpdate(release("redrob-launcher", "0.2.0", NOW)));

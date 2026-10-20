@@ -625,12 +625,15 @@ impl LauncherUi {
                 .resizable(false)
                 .show(ui, |ui| self.page_top_bar(ui));
         }
+        // The right margin is only the scroll bar's gap from the window's edge: the page's own
+        // 24 px is inside its scroll area, so the bar hugs the edge like Cowork's.
+        let edge = crate::widgets::PAGE_SCROLL_EDGE as i8;
         egui::CentralPanel::default()
-            .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin { left: 24, right: 24, top: 20, bottom: 0 }))
+            .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin { left: 24, right: edge, top: 20, bottom: 0 }))
             .show(ui, |ui| match self.page {
                 Page::Models => self.models_page(ui),
                 Page::Engine | Page::Account | Page::Settings => {
-                    egui::ScrollArea::vertical().auto_shrink(false).show(ui, |ui| {
+                    crate::widgets::page_scroll(ui, "page", |ui| {
                         // A reading measure, like Cowork's content column.
                         ui.set_max_width(720.0);
                         match self.page {
@@ -643,10 +646,13 @@ impl LauncherUi {
                     });
                 }
                 Page::Apps => {
-                    self.toolbar(ui);
+                    // Above the scroll: the page's right padding, as inside it.
+                    egui::Frame::new()
+                        .inner_margin(egui::Margin { right: crate::widgets::PAGE_SCROLL_PAD as i8, ..egui::Margin::ZERO })
+                        .show(ui, |ui| self.toolbar(ui));
                     ui.add_space(16.0);
                     let ids = self.visible_ids();
-                    egui::ScrollArea::vertical().auto_shrink(false).show(ui, |ui| {
+                    crate::widgets::page_scroll(ui, "apps", |ui| {
                         if ids.is_empty() {
                             self.empty_state(ui);
                         } else {

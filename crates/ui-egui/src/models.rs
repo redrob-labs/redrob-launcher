@@ -252,7 +252,7 @@ impl LauncherUi {
         let mut ask: Option<(Ask, String, String)> = None;
         let mut toggle = only_runnable;
 
-        egui::ScrollArea::vertical().auto_shrink(false).show(ui, |ui| {
+        widgets::page_scroll(ui, "models", |ui| {
             ui.set_width(ui.available_width().min(920.0));
             ui.horizontal(|ui| {
                 ui.vertical(|ui| {
