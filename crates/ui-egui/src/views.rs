@@ -461,11 +461,11 @@ impl LauncherUi {
         }
     }
 
-    /// One app as a DS ConnectorCard: raised, radius 12, a hairline that fades into the hero's red
-    /// -> violet -> blue gradient with a shadow-md on hover (140 ms), when the icon also rises 2 px;
-    /// the icon itself exactly as supplied (no shadow, border or tint) with
-    /// the name centred beside it, then the full short description under both; the version; the
-    /// actions. No status chip and no links: the
+    /// One app as a DS ConnectorCard: raised, radius 12, a hairline that fades into the hero's
+    /// red -> violet -> blue gradient with a shadow-md on hover (140 ms), when the icon also rises
+    /// 2 px; the icon exactly as supplied (no shadow, border or tint) with the name centred beside
+    /// it, then the full short description under both; the version; the actions. No status chip
+    /// and no links: the
     /// button says what can be done, and every card exposes its menu through both the named …
     /// button and right-click. The product's colour is only its icon.
     fn card(&mut self, ui: &mut Ui, id: &str, rect: Rect) {
@@ -500,12 +500,13 @@ impl LauncherUi {
             shadow.color = shadow.color.gamma_multiply(k);
             painter.add(shadow.as_shape(rect, radius));
         }
-        painter.rect(rect, radius, card_fill(&t), Stroke::new(1.0, t.line), egui::StrokeKind::Inside);
+        let fill = card_fill(&t);
+        painter.rect(rect, radius, fill, Stroke::new(1.0, t.line), egui::StrokeKind::Inside);
         // On hover the grey edge fades into the hero's red -> violet -> blue gradient: the gradient
         // fills the tile, then the tile's own fill covers all but a 1 px rim.
         if k > 0.0 {
             crate::hero::paint_gradient(ui, rect, radius, k);
-            painter.rect_filled(rect.shrink(1.0), CornerRadius::same(theme::radius::LG - 1), card_fill(&t));
+            painter.rect_filled(rect.shrink(1.0), CornerRadius::same(theme::radius::LG - 1), fill);
         }
 
         let inner = rect.shrink(CARD_PAD);
@@ -513,7 +514,7 @@ impl LauncherUi {
         let mut child = ui.new_child(egui::UiBuilder::new().max_rect(inner).layout(egui::Layout::top_down(egui::Align::Min)));
         child.set_clip_rect(rect.intersect(ui.clip_rect()));
         let ui = &mut child;
-        let (name_font, desc_font, _) = card_fonts();
+        let (name_font, desc_font, meta_font) = card_fonts();
         let text_w = (inner.width() - CARD_ICON - theme::space::S3).max(1.0);
         // Row 1: the icon, and the app's name centred on it vertically.
         ui.horizontal_top(|ui| {
@@ -540,7 +541,7 @@ impl LauncherUi {
         ui.add_space(CARD_ACTIONS_GAP);
         // The version alone, in the lightest ink, with no release date. A narrow tile cuts it short;
         // egui then shows the whole line on hover.
-        ui.add(egui::Label::new(RichText::new(version_line(&entry, &status)).font(card_fonts().2).color(t.faint)).truncate());
+        ui.add(egui::Label::new(RichText::new(version_line(&entry, &status)).font(meta_font).color(t.faint)).truncate());
         ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
             ui.horizontal(|ui| self.actions(ui, &entry, &status, inner.width()));
         });

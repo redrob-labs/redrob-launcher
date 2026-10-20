@@ -83,17 +83,15 @@ impl LauncherUi {
                         let heading = widgets::heading(title, theme::text::TITLE_4, t.ink);
                         // A lone title is centred on the 40 px icon beside it (the 17 px title is
                         // shorter than the icon); a wrapped one, or one with a meta line, starts at
-                        // the icon's top.
+                        // the icon's top. The measured galley is the one drawn, laid out once.
                         if has_icon && subtitle.is_empty() {
-                            let galley = egui::WidgetText::from(heading.clone()).into_galley(
-                                ui,
-                                Some(egui::TextWrapMode::Wrap),
-                                text_w,
-                                egui::FontSelection::Default,
-                            );
+                            let galley =
+                                egui::WidgetText::from(heading).into_galley(ui, Some(egui::TextWrapMode::Wrap), text_w, egui::FontSelection::Default);
                             ui.add_space(((MODAL_ICON - galley.size().y) / 2.0).max(0.0));
+                            ui.add(egui::Label::new(galley));
+                        } else {
+                            ui.add(egui::Label::new(heading).wrap());
                         }
-                        ui.add(egui::Label::new(heading).wrap());
                         if !subtitle.is_empty() {
                             widgets::hud(ui, subtitle, t.faint);
                         }

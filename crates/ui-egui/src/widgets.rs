@@ -153,7 +153,7 @@ pub const PAGE_SCROLL_EDGE: f32 = 6.0;
 pub const PAGE_SCROLL_PAD: f32 = theme::space::S6 - PAGE_SCROLL_EDGE;
 /// How far a page's scroll track stays from the top and bottom of the page area: the sidebar
 /// card's own inset, so the thumb's travel lines up with the card.
-pub const SCROLL_TRACK_INSET: f32 = 8.0;
+pub const SCROLL_TRACK_INSET: f32 = crate::shell::INSET;
 
 /// A page's vertical scroll, like Redrob Cowork's (Base UI ScrollArea): the bar floats over the
 /// page's right padding at the window's edge, a round 8 px thumb in border-strong with no track,
