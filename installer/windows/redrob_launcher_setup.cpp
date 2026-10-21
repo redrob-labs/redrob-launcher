@@ -1925,6 +1925,39 @@ static std::wstring InstallDir() {
 
 static bool Exists(const std::wstring& p) { return GetFileAttributesW(p.c_str()) != INVALID_FILE_ATTRIBUTES; }
 
+// Moves every file under `from` into the same place under `to`, replacing what is there. Used when the
+// install folder itself cannot be renamed: a process whose working directory is that folder (the old
+// launcher's update helper, in every version up to 0.11.4) holds the folder, not its files.
+static DWORD MoveTreeInto(const std::wstring& from, const std::wstring& to) {
+  CreateDirectoryW(to.c_str(), nullptr);
+  WIN32_FIND_DATAW fd;
+  HANDLE find = FindFirstFileW((from + L"\\*").c_str(), &fd);
+  if (find == INVALID_HANDLE_VALUE) return GetLastError();
+  DWORD result = 0;
+  do {
+    const std::wstring name = fd.cFileName;
+    if (name == L"." || name == L"..") continue;
+    const std::wstring src = from + L"\\" + name, dst = to + L"\\" + name;
+    if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+      const DWORD r = MoveTreeInto(src, dst);
+      if (r && !result) result = r;
+      continue;
+    }
+    if (Exists(dst)) {
+      // A file that cannot be replaced in place (still mapped) can still be renamed out of the way.
+      const std::wstring old = dst + L".old";
+      DeleteFileW(old.c_str());
+      if (!MoveFileExW(dst.c_str(), old.c_str(), MOVEFILE_REPLACE_EXISTING)) DeleteFileW(dst.c_str());
+      MoveFileExW(old.c_str(), nullptr, MOVEFILE_DELAY_UNTIL_REBOOT);
+      DeleteFileW(old.c_str());
+    }
+    if (!MoveFileExW(src.c_str(), dst.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED) && !result)
+      result = GetLastError();
+  } while (FindNextFileW(find, &fd));
+  FindClose(find);
+  return result;
+}
+
 // The one subfolder of `dir` that holds `rel` (a path starting with a backslash), or empty.
 static std::wstring SingleSubfolderWith(const std::wstring& dir, const wchar_t* rel) {
   std::wstring found;
@@ -2241,20 +2274,33 @@ DWORD SetupApp::InstallLauncher() {
   DeleteFileW((staging + kPortableMarker).c_str());
 
   // Swap. The rename fails, rather than half-copying, if anything still holds a file in the old folder.
+  bool inPlace = false;
   if (Exists(dir)) {
     if (!MoveFileExW(dir.c_str(), aside.c_str(), 0)) {
       const DWORD err = GetLastError();
-      DeleteTree(staging);
-      return err == ERROR_ACCESS_DENIED || err == ERROR_SHARING_VIOLATION ? kResultAppRunning : err;
+      const bool locked = err == ERROR_ACCESS_DENIED || err == ERROR_SHARING_VIOLATION;
+      // Nothing runs from the folder any more (checked above), so what holds it is a working
+      // directory -- the old launcher's update helper sits in it. Replace the files in place.
+      if (locked && !AnythingRunningFrom(dir)) {
+        const DWORD moved = MoveTreeInto(staging, dir);
+        DeleteTree(staging);
+        if (moved) return moved;
+        inPlace = true;
+      } else {
+        DeleteTree(staging);
+        return locked ? kResultAppRunning : err;
+      }
     }
   }
-  if (!MoveFileExW(staging.c_str(), dir.c_str(), 0)) {
-    const DWORD err = GetLastError();
-    if (Exists(aside)) MoveFileExW(aside.c_str(), dir.c_str(), 0);  // put the old install back
-    DeleteTree(staging);
-    return err;
+  if (!inPlace) {
+    if (!MoveFileExW(staging.c_str(), dir.c_str(), 0)) {
+      const DWORD err = GetLastError();
+      if (Exists(aside)) MoveFileExW(aside.c_str(), dir.c_str(), 0);  // put the old install back
+      DeleteTree(staging);
+      return err;
+    }
+    DeleteTree(aside);
   }
-  DeleteTree(aside);
 
   // The rest is best effort: the launcher is installed and runs without any of it.
   InstallUninstaller(dir);
@@ -2363,6 +2409,9 @@ void SetupApp::ScheduleSelfCleanup() {
 int SetupApp::RunSilent(HINSTANCE hinst, bool deleteData) {
   hinst_ = hinst;
   silent_ = true;
+  // The update helper starts us with its own working directory, the install folder; leave it so we
+  // do not hold the folder we are about to replace.
+  SetCurrentDirectoryW(LocalAppData().c_str());
   deleteData_ = deleteData;
   CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);  // the shortcut writer is COM
   DWORD result;
