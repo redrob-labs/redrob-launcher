@@ -288,6 +288,9 @@ fn windows_helper(pid: u32, step: &str, exe: &Path, paths: &Paths) -> Result<(),
     );
     let mut cmd = process::command("powershell.exe");
     cmd.args(["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-Command", &script]).env_remove(PRETEND_VAR);
+    // Not the launcher's own working directory (its install folder): a process sitting in that folder
+    // holds it, and the setup could not swap it.
+    cmd.current_dir(&paths.data);
     process::spawn_detached(cmd).map_err(|e| format!("couldn't schedule the update ({e})"))
 }
 
