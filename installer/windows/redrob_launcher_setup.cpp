@@ -2028,6 +2028,26 @@ static bool AnythingRunningFrom(const std::wstring& dir) {
   return found;
 }
 
+// Ends every process whose image lives under `dir` (the launcher being replaced). Silent update only.
+static void EndProcessesFrom(const std::wstring& dir) {
+  HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+  if (snap == INVALID_HANDLE_VALUE) return;
+  const std::wstring prefix = dir + L"\\";
+  const DWORD self = GetCurrentProcessId();
+  PROCESSENTRY32W pe = {sizeof(pe)};
+  for (BOOL ok = Process32FirstW(snap, &pe); ok; ok = Process32NextW(snap, &pe)) {
+    if (pe.th32ProcessID == self) continue;
+    HANDLE h = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_TERMINATE, FALSE, pe.th32ProcessID);
+    if (!h) continue;
+    wchar_t path[MAX_PATH];
+    DWORD len = MAX_PATH;
+    if (QueryFullProcessImageNameW(h, 0, path, &len) && _wcsnicmp(path, prefix.c_str(), prefix.size()) == 0)
+      TerminateProcess(h, 1);
+    CloseHandle(h);
+  }
+  CloseHandle(snap);
+}
+
 // Run a command hidden and wait. Returns its exit code, or the CreateProcess error.
 static DWORD RunHidden(std::wstring cmd, const wchar_t* cwd = nullptr) {
   STARTUPINFOW si = {sizeof(si)};
@@ -2174,6 +2194,17 @@ void SetupApp::RecordChoices(const std::wstring& dir) {
 DWORD SetupApp::InstallLauncher() {
   const std::wstring dir = InstallDir();
   if (dir.empty()) return ERROR_PATH_NOT_FOUND;
+  // --silent is the launcher's own self-update: the old launcher was asked to quit and its helper
+  // waited for it, but a copy that is still shutting down (or hung) would make this refuse, and the
+  // helper then reopens the old version. Give it a little longer, then end it: the user already
+  // chose to update, and this runs no matter which launcher version started the update.
+  if (silent_) {
+    for (int i = 0; i < 20 && AnythingRunningFrom(dir); ++i) Sleep(500);
+    if (AnythingRunningFrom(dir)) {
+      EndProcessesFrom(dir);
+      for (int i = 0; i < 10 && AnythingRunningFrom(dir); ++i) Sleep(500);
+    }
+  }
   if (AnythingRunningFrom(dir)) return kResultAppRunning;
 
   std::wstring zip;

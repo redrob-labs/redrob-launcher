@@ -273,16 +273,26 @@ fn explorer_select_arg(path: &Path) -> Option<std::ffi::OsString> {
 /// Whether a process started from inside `path` (an exe, an AppImage, or a `.app`) is running.
 pub fn is_running(path: &Path) -> bool {
     if cfg!(windows) {
+        // Compare full paths, not image names: several Redrob apps ship an exe with the same name
+        // (Office's `redrob.exe` and the Redrob Code engine's), so a running engine made Office
+        // look "running" and its update was refused.
         let Some(name) = path.file_name().and_then(|n| n.to_str()) else { return false };
-        let filter = format!("IMAGENAME eq {name}");
-        capture("tasklist", &["/FI", &filter, "/NH", "/FO", "CSV"], Duration::from_secs(5))
-            .is_some_and(|out| out.to_ascii_lowercase().contains(&name.to_ascii_lowercase()))
+        let Some(p) = path.to_str() else { return false };
+        let script =
+            format!("Get-CimInstance Win32_Process -Filter \"Name='{}'\" | ForEach-Object {{ $_.ExecutablePath }}", name.replace('\'', "''"));
+        capture("powershell", &["-NoProfile", "-NonInteractive", "-Command", &script], Duration::from_secs(10))
+            .is_some_and(|out| out.lines().any(|l| same_path(l.trim(), p)))
     } else {
         let Some(p) = path.to_str() else { return false };
         let pattern = pgrep_pattern(p);
         // pgrep exits 0 when something matches; it never matches itself.
         capture("pgrep", &["-f", "--", &pattern], Duration::from_secs(5)).is_some()
     }
+}
+
+/// Windows paths compare without case and with either slash.
+fn same_path(a: &str, b: &str) -> bool {
+    !a.is_empty() && a.replace('/', "\\").eq_ignore_ascii_case(&b.replace('/', "\\"))
 }
 
 /// Quote the path's metacharacters for pgrep's extended regular expression.
