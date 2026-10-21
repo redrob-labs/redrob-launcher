@@ -135,7 +135,24 @@ fn native_options(hidden: bool) -> eframe::NativeOptions {
     if let Some(icon) = icon {
         viewport = viewport.with_icon(icon);
     }
-    eframe::NativeOptions { viewport, persist_window: true, wgpu_options: wgpu_options(), ..Default::default() }
+    // Centre only the first window: with a saved position eframe restores it, and centring it as
+    // well put it on the primary monitor at a size clamped to the LARGEST monitor, its title bar
+    // above the top of a smaller screen. A window still bigger than its monitor is maximized on
+    // the first frame (`redrob_launcher_ui_egui::fit_window`).
+    let centered = !has_saved_position(settings_file::path(APP_ID).as_deref());
+    eframe::NativeOptions { viewport, persist_window: true, centered, wgpu_options: wgpu_options(), ..Default::default() }
+}
+
+/// Whether eframe's saved state (`app.ron`) holds a window position from an earlier session. The
+/// window entry is a RON string inside the file, so a text match is enough; eframe restores the
+/// inner position on macOS and the outer one elsewhere.
+fn has_saved_position(path: Option<&std::path::Path>) -> bool {
+    let Some(text) = path.and_then(|p| std::fs::read_to_string(p).ok()) else {
+        return false;
+    };
+    let key = if cfg!(target_os = "macos") { "inner_position_pixels:Some(" } else { "outer_position_pixels:Some(" };
+    let compact: String = text.chars().filter(|c| !c.is_whitespace()).collect();
+    compact.contains(key)
 }
 
 /// wgpu's backend list. On Windows that is Direct3D 12 with GL as the fallback, not Vulkan:
@@ -647,6 +664,10 @@ impl<'a> Shell<'a> {
 
 impl eframe::App for Shell<'_> {
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Once per window, while it is shown: a window bigger than its monitor is maximized.
+        if self.visible {
+            redrob_launcher_ui_egui::fit_window(ctx);
+        }
         let requests = self.launcher.tick(ctx);
         #[cfg(target_os = "macos")]
         if self.applied_follow != Some(self.launcher.ui.settings.show_on_current_desktop) {
