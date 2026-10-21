@@ -113,6 +113,10 @@ pub struct LauncherUi {
     restart_requested: bool,
     /// The running check is one the user started (Refresh): it installs nothing on its own.
     manual_check: bool,
+    /// The running check came from the tray: say what it found when it ends.
+    report_check: bool,
+    /// "Redrob Launcher updated to …", waiting for the next `logic` to hand it to the system too.
+    launcher_updated: Option<String>,
     /// News from the release feed, shown inline until dismissed.
     pub(crate) announcements: Vec<redrob_launcher_core::feed::Notice>,
     /// Alerts from the feed, shown as popups until acknowledged.
@@ -189,6 +193,8 @@ impl LauncherUi {
             launcher_job: None,
             restart_requested: false,
             manual_check: false,
+            report_check: false,
+            launcher_updated: None,
             announcements: Vec::new(),
             alerts: Vec::new(),
             search: String::new(),
@@ -218,7 +224,8 @@ impl LauncherUi {
         egui_extras::install_image_loaders(ctx);
         self.fonts_ready = false;
         self.applied_theme = None;
-        self.toasts.clear();
+        // Toasts are timed on the old context's clock; one still waiting to be seen stays.
+        self.toasts.retain(|t| t.until.is_infinite());
     }
 
     /// Installed apps with an update waiting (the tray shows the count).
@@ -239,6 +246,14 @@ impl LauncherUi {
             engine.refresh();
         }
         self.set_page(Page::Engine);
+    }
+
+    /// The tray's "Check for Updates": the window is shown for it, and toasts say that the check
+    /// started and what it found.
+    pub fn check_now_and_report(&mut self, ctx: &egui::Context) {
+        self.check_now();
+        self.report_check = true;
+        self.toast(ctx, tl!("Checking for updates"), false);
     }
 
     pub fn check_now(&mut self) {
@@ -352,6 +367,12 @@ impl LauncherUi {
         for event in self.backend.poll() {
             changed |= self.handle(ctx, event);
         }
+        if let Some(msg) = self.launcher_updated.take()
+            && self.settings.notify
+        {
+            // Also outside the window: the new copy may open behind other windows.
+            host.notify("Redrob Launcher", &crate::i18n::msg(&msg));
+        }
         if changed {
             self.announce_updates(host);
             if self.settings.auto_update {
@@ -440,6 +461,11 @@ impl LauncherUi {
                     engine.start();
                 }
                 match result {
+                    // The new copy just started: stays until the window has been seen.
+                    Ok(msg) if launcher => {
+                        self.toasts.push(Toast { text: msg.clone(), error: false, until: f64::INFINITY });
+                        self.launcher_updated = Some(msg);
+                    }
                     Ok(msg) => self.toast(ctx, msg, false),
                     // The paused card says it all.
                     Err(e) if e == PAUSED => {}
@@ -484,6 +510,14 @@ impl LauncherUi {
                 self.settings.last_check = Some(at);
                 self.last_source = Some(source);
                 self.rate_limited_until = rate_limited_until;
+                if std::mem::take(&mut self.report_check) {
+                    let n = self.update_count() + usize::from(self.launcher_update.is_some());
+                    if n == 0 {
+                        self.toast(ctx, tl!("Everything is up to date"), false);
+                    } else {
+                        self.toast(ctx, crate::i18n::tn(n as u64, "{n} update is available", "{n} updates are available"), false);
+                    }
+                }
                 true
             }
         }
@@ -840,6 +874,12 @@ impl LauncherUi {
     fn draw_toasts(&mut self, ctx: &egui::Context) {
         use crate::glyphs::Icon;
         let now = ctx.input(|i| i.time);
+        // A toast waiting to be seen starts its time once the window has the focus.
+        if ctx.input(|i| i.viewport().focused).unwrap_or(true) {
+            for t in self.toasts.iter_mut().filter(|t| t.until.is_infinite()) {
+                t.until = now + 10.0;
+            }
+        }
         self.toasts.retain(|t| t.until > now);
         if self.toasts.is_empty() {
             return;
