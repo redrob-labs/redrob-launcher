@@ -161,6 +161,10 @@ pub(crate) fn effective_lang(pref: &str) -> crate::i18n::Lang {
 const RESCAN_EVERY: i64 = 5 * 60;
 /// Coming back to the window re-checks, but not more often than this.
 const RESCAN_ON_FOCUS_AFTER: i64 = 30;
+/// The main area's left padding. The sidebar card already keeps an 8 px gap to its right
+/// ([`crate::shell::INSET`]), so 16 here puts the content 24 px from the card's edge: the same as
+/// the 24 px from the content's right end to the window's edge (scroll gap + page padding).
+const PAGE_LEFT: i8 = (crate::widgets::PAGE_SCROLL_EDGE + crate::widgets::PAGE_SCROLL_PAD - crate::shell::INSET) as i8;
 
 impl LauncherUi {
     pub fn new(ctx: &egui::Context, backend: Box<dyn Backend>, settings: Settings) -> Self {
@@ -651,7 +655,7 @@ impl LauncherUi {
         // only, on the same base ground as the card's gap. There is no footer: what it said (the
         // last check, GitHub's limit, the platform) is in Settings > Updates.
         // A window the OS decorates (and the web build) has no title bar of ours: the title bar's
-        // search, logo and Update sit in a 48 px row over the main area instead.
+        // search and logo sit in a 48 px row over the main area instead.
         let bar = host.title_bar();
         if bar != TitleBar::Native {
             egui::Panel::top("header")
@@ -674,10 +678,10 @@ impl LauncherUi {
                 .resizable(false)
                 .show(ui, |ui| self.header(ui, bar));
         }
-        // The Apps page has no top bar: its actions are in the chrome and its filter row.
+        // The Apps page has no top bar: its actions (Update all, Check for updates) are in its filter row.
         if self.page != Page::Apps {
             egui::Panel::top("page-top")
-                .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin::symmetric(24, 0)))
+                .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin { left: PAGE_LEFT, right: 24, top: 0, bottom: 0 }))
                 .exact_size(crate::shell::PAGE_TOP_H)
                 .resizable(false)
                 .show(ui, |ui| self.page_top_bar(ui));
@@ -685,8 +689,11 @@ impl LauncherUi {
         // The right margin is only the scroll bar's gap from the window's edge: the page's own
         // 24 px is inside its scroll area, so the bar hugs the edge like Cowork's.
         let edge = crate::widgets::PAGE_SCROLL_EDGE as i8;
+        // The Apps page keeps no fixed strip above its scroll: its top gap is inside the scroll
+        // (see below), so the cards scroll right up to the title bar's hairline.
+        let top = if self.page == Page::Apps { 0 } else { 20 };
         egui::CentralPanel::default()
-            .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin { left: 24, right: edge, top: 20, bottom: 0 }))
+            .frame(egui::Frame::new().fill(tokens.bg).inner_margin(egui::Margin { left: PAGE_LEFT, right: edge, top, bottom: 0 }))
             .show(ui, |ui| match self.page {
                 Page::Models => self.models_page(ui),
                 Page::Engine | Page::Account | Page::Settings => {
@@ -703,13 +710,14 @@ impl LauncherUi {
                     });
                 }
                 Page::Apps => {
-                    // Above the scroll: the page's right padding, as inside it.
-                    egui::Frame::new()
-                        .inner_margin(egui::Margin { right: crate::widgets::PAGE_SCROLL_PAD as i8, ..egui::Margin::ZERO })
-                        .show(ui, |ui| self.toolbar(ui));
-                    ui.add_space(16.0);
                     let ids = self.visible_ids();
                     crate::widgets::page_scroll(ui, "apps", |ui| {
+                        // The page's first row starts level with the sidebar card's top edge (the
+                        // card's own 8 px inset), and this gap scrolls away with the page.
+                        ui.add_space(crate::shell::INSET);
+                        // The filter row scrolls with the cards rather than staying pinned over them.
+                        self.toolbar(ui);
+                        ui.add_space(16.0);
                         if ids.is_empty() {
                             self.empty_state(ui);
                         } else {
