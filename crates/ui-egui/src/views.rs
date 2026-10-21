@@ -55,16 +55,25 @@ pub(crate) const HEADER_H: f32 = 48.0;
 /// Three tiles across the main area beside the sidebar at the default 1180 px window (four once
 /// it is wider).
 const CARD_MIN_W: f32 = 240.0;
-/// A tile's height: padding, the icon row, the version line and the actions row.
-const CARD_H: f32 = 172.0;
+/// The gap between a tile's icon row (icon and name) and its description under it.
+const CARD_DESC_GAP: f32 = theme::space::S2;
+/// The height a tile reserves for its actions row: the Sm main button and the … button (32 px).
+/// A 40 px progress row fits too, by taking the [`CARD_ACTIONS_GAP`] above it.
+const CARD_ACTION_H: f32 = theme::control::SM;
+/// The gap above a tile's version line, and the least gap above its actions row.
+const CARD_ACTIONS_GAP: f32 = theme::space::S2;
 /// The space between tiles (DS card gap in a dense grid: space-4).
 const CARD_GAP: f32 = 16.0;
 /// DS card padding, dense (space-4).
 const CARD_PAD: f32 = 16.0;
-/// The app icon on a tile (was 48).
-const CARD_ICON: f32 = 40.0;
+/// The app icon on a tile (36 px; was 48, then 40).
+const CARD_ICON: f32 = 36.0;
+/// How far a tile's icon rises while the tile is hovered, in points.
+const CARD_ICON_LIFT: f32 = 2.0;
 /// The icon buttons beside an app's main action (pause, cancel, More actions): DS IconButton sm.
 pub(crate) const ACTION_ICON: f32 = theme::control::SM;
+/// The least width of a tile's main button (Sm), so a short label like Open still reads as a button.
+const ACTION_MIN_W: f32 = 80.0;
 /// Room macOS's traffic lights take at the left of the header.
 const TRAFFIC_LIGHTS_W: f32 = 72.0;
 /// Where the group logo leads (Redrob Cowork's title bar does the same).
@@ -75,6 +84,23 @@ const SEARCH_MIN_W: f32 = 160.0;
 const SEARCH_W: std::ops::RangeInclusive<f32> = 260.0..=416.0;
 /// Empty title bar left of the controls, so the window can always be dragged.
 const DRAG_MIN_W: f32 = 24.0;
+/// Debug builds only: set to a number (`REDROB_LAUNCHER_SAMPLE_UPDATES=2`) to preview the filter
+/// row's Update all button with that many sample updates, even when nothing needs updating.
+const SAMPLE_UPDATES_ENV: &str = "REDROB_LAUNCHER_SAMPLE_UPDATES";
+
+/// How many sample updates [`SAMPLE_UPDATES_ENV`] asks for, read once. Always 0 in release builds,
+/// so the preview can never ship.
+fn sample_updates() -> usize {
+    #[cfg(debug_assertions)]
+    {
+        static SAMPLE: std::sync::OnceLock<usize> = std::sync::OnceLock::new();
+        *SAMPLE.get_or_init(|| std::env::var(SAMPLE_UPDATES_ENV).ok().and_then(|v| v.trim().parse().ok()).unwrap_or(0))
+    }
+    #[cfg(not(debug_assertions))]
+    {
+        0
+    }
+}
 
 /// The update-check status lines Settings shows (see [`LauncherUi::update_status`]).
 pub(crate) struct UpdateStatus {
@@ -92,7 +118,7 @@ type Section = (Option<&'static str>, Vec<&'static str>);
 impl LauncherUi {
     /// The title bar (Redrob Cowork's): with a custom or macOS title bar the whole bar drags the
     /// window outside its controls. At its right end, right to left: the window buttons (custom
-    /// bar), the search, the Redrob group logo (console.redrob.ai) and, with updates, Update. With
+    /// bar), the search and the Redrob group logo (console.redrob.ai). With
     /// `TitleBar::Native` (the OS's bar, or the web) the same cluster is a 48 px row over the page.
     pub(crate) fn header(&mut self, ui: &mut Ui, bar: TitleBar) {
         let h = HEADER_H;
@@ -119,16 +145,12 @@ impl LauncherUi {
         });
     }
 
-    /// Search, the group logo and Update all, right to left. The search shrinks first in a narrow
-    /// window (never under [`SEARCH_MIN_W`]), leaving the bar room to drag.
+    /// Search and the group logo, right to left. The search shrinks first in a narrow window (never
+    /// under [`SEARCH_MIN_W`]), leaving the bar room to drag. Update all lives in the filter row
+    /// ([`Self::toolbar`]), so the chrome carries no action button.
     fn chrome_cluster(&mut self, ui: &mut Ui, bar_w: f32) {
         let gap = theme::space::S2;
-        let updates = if self.caps.manage_apps { self.count(Filter::Updates) } else { 0 };
-        let update = (updates > 0).then(|| {
-            if updates == 1 { tl!("Update 1 app").to_string() } else { fmt(tl!("Update all ({count})"), &[("count", &updates.to_string())]) }
-        });
-        let update_w = update.as_ref().map_or(0.0, |l| widgets::button_width(ui, l, widgets::Size::Sm) + gap);
-        let room = ui.available_width() - theme::control::SM - gap - update_w - DRAG_MIN_W;
+        let room = ui.available_width() - theme::control::SM - gap - DRAG_MIN_W;
         let search_w = (bar_w * 0.29).clamp(*SEARCH_W.start(), *SEARCH_W.end()).min(room).max(SEARCH_MIN_W);
         // Typing here from another page shows the apps it finds.
         if widgets::search_field(ui, &mut self.search, tl!("Search apps"), search_w, "apps").changed() && self.page != Page::Apps {
@@ -138,12 +160,35 @@ impl LauncherUi {
         if widgets::logo_button(ui, crate::icons::redrob_mark(), tl!("Go to console.redrob.ai")).clicked() {
             ui.ctx().open_url(egui::OpenUrl::new_tab(CONSOLE_URL));
         }
-        if let Some(label) = update {
-            ui.add_space(gap);
-            // Tinted, not filled: the chrome stays quiet (Cowork's title bar has no filled button).
-            if widgets::button_sized(ui, &label, Kind::Tinted, widgets::Size::Sm, 0.0).clicked() {
-                self.update_all();
-            }
+    }
+
+    /// The filter row's update button label, "Update 1 app" or "Update all (N)", and how many of
+    /// the counted updates are debug samples; None when nothing can be updated. Debug builds add
+    /// [`sample_updates`] to the count so the button can be previewed with nothing to update.
+    fn update_all_label(&self) -> Option<(String, usize)> {
+        let real = if self.caps.manage_apps { self.count(Filter::Updates) } else { 0 };
+        let sample = sample_updates();
+        let updates = real + sample;
+        if updates == 0 {
+            return None;
+        }
+        let label = if updates == 1 { tl!("Update 1 app").to_string() } else { fmt(tl!("Update all ({count})"), &[("count", &updates.to_string())]) };
+        Some((label, sample))
+    }
+
+    /// Draws the update button from [`Self::update_all_label`] (Tinted, Size::Sm padding and label,
+    /// as tall as the filter cells, [`widgets::CELLS_H`]) and installs every real update when pressed.
+    ///
+    /// * `ui` - a right-to-left row; the button lands left of what came before it.
+    /// * `label` - the button's text.
+    /// * `sample` - how many of the counted updates are debug samples (they install nothing).
+    fn update_all_button(&mut self, ui: &mut Ui, label: &str, sample: usize) {
+        let resp = widgets::button_with_height(ui, label, Kind::Tinted, widgets::Size::Sm, widgets::CELLS_H, 0.0);
+        // Debug-only preview text, never shipped, so it is left untranslated.
+        let resp = if sample > 0 { resp.on_hover_text(format!("Preview: {sample} sample update(s) from {SAMPLE_UPDATES_ENV}")) } else { resp };
+        if resp.clicked() {
+            // Sample updates have no app behind them: only real ones are installed.
+            self.update_all();
         }
     }
 
@@ -165,17 +210,19 @@ impl LauncherUi {
         if self.dialog.is_none()
             && let Some(r) = self.launcher_update.clone()
         {
-            widgets::alert_frame_dense(&t).show(ui, |ui| {
+            widgets::notice_bar_frame(&t).show(ui, |ui| {
                 // A row is at least interact_size tall: 32 here (the Sm buttons), not the page's 40.
                 ui.spacing_mut().interact_size.y = theme::control::SM;
                 ui.horizontal(|ui| {
-                    // A one-line DS Alert: a 16 px icon in the tone's ink, then the title, all on a
-                    // 32 px row (the buttons and the dismiss are Sm).
+                    // A one-line notice: a 16 px icon in dark grey (ink-secondary), then the title
+                    // at the filter cells' label size (13 / 600), all on a 32 px row (the buttons
+                    // and the dismiss are Sm).
                     let (icon, _) = ui.allocate_exact_size(vec2(16.0, 16.0), Sense::hover());
-                    crate::glyphs::paint(ui.painter(), icon, Icon::Download, t.accent_ink);
+                    crate::glyphs::paint(ui.painter(), icon, Icon::Download, t.muted);
                     ui.add_space(4.0);
                     ui.label(
                         RichText::new(fmt(tl!("Redrob Launcher {version} is available."), &[("version", &r.version_label())]))
+                            .size(theme::text::LABEL)
                             .family(theme::semibold())
                             .color(t.ink_strong),
                     );
@@ -221,14 +268,20 @@ impl LauncherUi {
                                 ui.ctx().open_url(egui::OpenUrl::new_tab(url));
                             }
                         }
-                        ui.add_space(8.0);
-                        widgets::hud_link(ui, tl!("What's new"), &r.html_url);
                     });
                 });
             });
             ui.add_space(theme::space::S3);
         }
         self.announcements(ui);
+        // The suite's hero banner, above the filter row, on every filter: only a search (whose
+        // results should lead) hides it.
+        if self.search.trim().is_empty() {
+            self.hero(ui);
+            ui.add_space(theme::space::S6);
+        }
+        let update = self.update_all_label();
+        let mut update_below = false;
         ui.horizontal(|ui| {
             let filters: Vec<(Filter, Cell<'_>)> = [
                 (Filter::All, tl!("All"), tl!("Every Redrob app"), None),
@@ -242,13 +295,24 @@ impl LauncherUi {
             .map(|(f, label, tip, highlight)| (f, Cell { label, tip, count: Some((self.count(f), highlight)) }))
             .collect();
             widgets::cells(ui, &mut self.settings.filter, &filters);
-            // Check for updates at the row's right end (where the sort was).
+            // Check for updates at the row's right end (where the sort was), Update all left of it.
+            // When the filters leave no room for both, Update all moves to its own row below.
+            let gap = ui.spacing().item_spacing.x;
+            let need = update.as_ref().map_or(0.0, |(l, _)| widgets::button_width(ui, l, widgets::Size::Sm) + gap) + theme::control::SM + gap;
+            update_below = update.is_some() && ui.available_width() < need;
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if widgets::icon_button_busy(ui, Icon::Refresh, tl!("Check for updates"), theme::control::SM, self.checking).clicked() {
                     self.check_now();
                 }
+                if let Some((label, sample)) = update.as_ref().filter(|_| !update_below) {
+                    self.update_all_button(ui, label, *sample);
+                }
             });
         });
+        if update_below && let Some((label, sample)) = &update {
+            ui.add_space(theme::space::S2);
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| self.update_all_button(ui, label, *sample));
+        }
     }
 
     /// The DS EmptyState for a filter or search that matches nothing: left aligned, a 48 px
@@ -369,6 +433,8 @@ impl LauncherUi {
             vec![(None, ids.to_vec())]
         };
         let t = Tokens::get(ui.ctx());
+        // Every tile is as tall as the one whose description wraps to the most lines.
+        let card_h = card_height(ui, ids, card_w);
         for (title, list) in sections {
             if list.is_empty() {
                 continue;
@@ -384,20 +450,22 @@ impl LauncherUi {
                 ui.add_space(theme::space::S3);
             }
             let rows = list.len().div_ceil(cols);
-            let height = rows as f32 * (CARD_H + CARD_GAP) - CARD_GAP;
+            let height = rows as f32 * (card_h + CARD_GAP) - CARD_GAP;
             let (area, _) = ui.allocate_exact_size(vec2(width, height), Sense::hover());
             for (i, id) in list.iter().enumerate() {
                 let (row, col) = (i / cols, i % cols);
-                let min = area.min + vec2(col as f32 * (card_w + CARD_GAP), row as f32 * (CARD_H + CARD_GAP));
-                self.card(ui, id, Rect::from_min_size(min, vec2(card_w, CARD_H)));
+                let min = area.min + vec2(col as f32 * (card_w + CARD_GAP), row as f32 * (card_h + CARD_GAP));
+                self.card(ui, id, Rect::from_min_size(min, vec2(card_w, card_h)));
             }
             ui.add_space(theme::space::S6);
         }
     }
 
-    /// One app as a DS ConnectorCard: raised, radius 12, a hairline that strengthens with a
-    /// shadow-md on hover (140 ms); the icon exactly as supplied (no shadow, border or tint) beside
-    /// the name, tagline and kind; the version; the actions. No status chip and no links: the
+    /// One app as a DS ConnectorCard: raised, radius 12, a hairline that fades into the hero's
+    /// red -> violet -> blue gradient with a shadow-md on hover (140 ms), when the icon also rises
+    /// 2 px; the icon exactly as supplied (no shadow, border or tint) with the name centred beside
+    /// it, then the full short description under both; the version; the actions. No status chip
+    /// and no links: the
     /// button says what can be done, and every card exposes its menu through both the named …
     /// button and right-click. The product's colour is only its icon.
     fn card(&mut self, ui: &mut Ui, id: &str, rect: Rect) {
@@ -432,48 +500,48 @@ impl LauncherUi {
             shadow.color = shadow.color.gamma_multiply(k);
             painter.add(shadow.as_shape(rect, radius));
         }
-        painter.rect(rect, radius, t.raised(), Stroke::new(1.0, theme::mix(t.line, t.line_strong, k)), egui::StrokeKind::Inside);
+        let fill = card_fill(&t);
+        painter.rect(rect, radius, fill, Stroke::new(1.0, t.line), egui::StrokeKind::Inside);
+        // On hover the grey edge fades into the hero's red -> violet -> blue gradient: the gradient
+        // fills the tile, then the tile's own fill covers all but a 1 px rim.
+        if k > 0.0 {
+            crate::hero::paint_gradient(ui, rect, radius, k);
+            painter.rect_filled(rect.shrink(1.0), CornerRadius::same(theme::radius::LG - 1), fill);
+        }
 
         let inner = rect.shrink(CARD_PAD);
         // A detached child: the card's contents never move the next card along.
         let mut child = ui.new_child(egui::UiBuilder::new().max_rect(inner).layout(egui::Layout::top_down(egui::Align::Min)));
         child.set_clip_rect(rect.intersect(ui.clip_rect()));
         let ui = &mut child;
-        ui.horizontal(|ui| {
-            const ICON: f32 = CARD_ICON;
-            let [name, tagline, like] = [
-                FontId::new(theme::text::BODY, theme::display()),
-                FontId::proportional(theme::text::BODY_SM),
-                FontId::proportional(theme::text::META),
-            ];
-            const GAP: f32 = 2.0;
-            // The slot is as tall as the text beside it when that is taller, so the two share a centre.
-            let block = lines_height(ui, &[&name, &tagline, &like], GAP);
-            let (slot, icon_response) = ui.allocate_exact_size(vec2(ICON, block.max(ICON)), Sense::hover());
+        let (name_font, desc_font, meta_font) = card_fonts();
+        let text_w = (inner.width() - CARD_ICON - theme::space::S3).max(1.0);
+        // Row 1: the icon, and the app's name centred on it vertically.
+        ui.horizontal_top(|ui| {
+            let (slot, icon_response) = ui.allocate_exact_size(vec2(CARD_ICON, CARD_ICON), Sense::hover());
             icon_response.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Image, true, fmt(tl!("{name} icon"), &[("name", app.name)])));
-            if let Some(icon) = crate::icons::app(app.id) {
-                egui::Image::new(icon).paint_at(ui, Rect::from_center_size(slot.center(), vec2(ICON, ICON)));
+            // On hover the icon rises a little (its size never changes). With motion off it stays put.
+            let motion = theme::motion::duration(ui.ctx(), 1.0) > 0.0;
+            let lift = if motion { CARD_ICON_LIFT * theme::motion::Easing::Standard.apply(k) } else { 0.0 };
+            let icon = slot.translate(vec2(0.0, -lift));
+            if let Some(image) = crate::icons::app(app.id) {
+                egui::Image::new(image).paint_at(ui, icon);
             }
             ui.add_space(theme::space::S3);
-            centered_lines(ui, &[&name, &tagline, &like], GAP, |ui| {
-                // The name's row is as tall as its text, not as a button.
-                ui.spacing_mut().interact_size.y = 0.0;
-                widgets::wordmark(ui, app, theme::text::BODY);
-                ui.add(egui::Label::new(RichText::new(tr_ctx(current(), app.id, app.tagline)).font(tagline.clone()).color(t.muted)).truncate());
-                ui.add(egui::Label::new(RichText::new(crate::i18n::tr(current(), app.like)).font(like.clone()).color(t.faint)).truncate());
+            ui.allocate_ui_with_layout(vec2(text_w, CARD_ICON), egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                // The name's row is as tall as the icon, so the text sits on its centre line.
+                ui.set_min_height(CARD_ICON);
+                widgets::wordmark(ui, app, name_font.size);
             });
         });
-        ui.add_space(theme::space::S3);
-        // One line, never cut short: where the dated line doesn't fit the tile, the date moves to
-        // the tooltip.
-        let full = version_line(&entry, &status);
-        let font = FontId::proportional(theme::text::META);
-        let fits = ui.fonts_mut(|f| f.layout_no_wrap(full.clone(), font.clone(), t.muted).size().x) <= ui.available_width();
-        if fits {
-            ui.label(RichText::new(full).font(font).color(t.muted));
-        } else {
-            ui.label(RichText::new(version_line_dated(&entry, &status, false)).font(font).color(t.muted)).on_hover_text(full);
-        }
+        // Row 2: the short description in full, from the card's left edge (under the icon), wrapping
+        // instead of being cut off.
+        ui.add_space(CARD_DESC_GAP);
+        ui.add(egui::Label::new(RichText::new(tr_ctx(current(), app.id, app.tagline)).font(desc_font).color(t.muted)).wrap());
+        ui.add_space(CARD_ACTIONS_GAP);
+        // The version alone, in the lightest ink, with no release date. A narrow tile cuts it short;
+        // egui then shows the whole line on hover.
+        ui.add(egui::Label::new(RichText::new(version_line(&entry, &status)).font(meta_font).color(t.faint)).truncate());
         ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
             ui.horizontal(|ui| self.actions(ui, &entry, &status, inner.width()));
         });
@@ -516,7 +584,6 @@ impl LauncherUi {
         let gap = ui.spacing().item_spacing.x;
         // The named menu is always reachable by keyboard, including while an install job replaces
         // the primary action; right-click remains a pointer shortcut to the same commands.
-        let main_w = (width - ACTION_ICON - gap).max(120.0);
         if let Some(phase) = entry.job {
             let downloading = matches!(phase, JobPhase::Downloading { .. } | JobPhase::Reconnecting { .. });
             // Reserve the exact number of trailing controls so the progress caption yields space
@@ -591,24 +658,44 @@ impl LauncherUi {
                 w if w < 220.0 => format!("{}{pct}", tl!("Resume")),
                 _ => format!("{}{pct}", tl!("Resume download")),
             };
-            let resp = widgets::button(ui, &label, Kind::Primary, resume_w);
             let tip = if p.total > 0 {
                 fmt(tl!("{done} of {total} downloaded"), &[("done", &widgets::human_bytes(p.done)), ("total", &widgets::human_bytes(p.total))])
             } else {
                 fmt(tl!("{done} downloaded"), &[("done", &widgets::human_bytes(p.done))])
             };
-            if resp.on_hover_text(tip).clicked() {
-                self.send(Command::Install { app: id.clone() });
-            }
-            if widgets::icon_button(ui, crate::glyphs::Icon::Close, tl!("Discard download"), ACTION_ICON).clicked() {
-                self.send(Command::Cancel { app: id.clone() });
-            }
-            self.menu(ui, entry, status);
+            // Right to left like the main button: …, Discard, then Resume (Sm, its label's width).
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                self.menu(ui, entry, status);
+                if widgets::icon_button(ui, crate::glyphs::Icon::Close, tl!("Discard download"), ACTION_ICON).clicked() {
+                    self.send(Command::Cancel { app: id.clone() });
+                }
+                let resp = widgets::button_sized(ui, &label, Kind::Primary, widgets::Size::Sm, ACTION_MIN_W);
+                if resp.on_hover_text(tip).clicked() {
+                    self.send(Command::Install { app: id.clone() });
+                }
+            });
             return;
         }
+        // Right to left: the … menu at the tile's right edge, the main button just left of it.
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            self.menu(ui, entry, status);
+            self.primary_button(ui, entry, status);
+        });
+    }
+
+    /// The tile's main button (Install, Open, Update to …, Retry, Download, or a disabled state):
+    /// DS Size::Sm (32 px, like the … button), as wide as its label but at least
+    /// [`ACTION_MIN_W`].
+    ///
+    /// * `ui` - the actions row's right-to-left layout, so the button lands left of the … menu.
+    /// * `entry` - the app the button acts on.
+    /// * `status` - its current status, which picks the button (see [`Self::primary_action`]).
+    fn primary_button(&mut self, ui: &mut Ui, entry: &AppEntry, status: &AppStatus) {
+        let id = entry.app.id.to_string();
+        let button = |ui: &mut Ui, label: &str, kind: Kind| widgets::button_sized(ui, label, kind, widgets::Size::Sm, ACTION_MIN_W);
         match self.primary_action(entry, status) {
             Primary::Install => {
-                let resp = widgets::button(ui, tl!("Install"), Kind::Primary, main_w);
+                let resp = button(ui, tl!("Install"), Kind::Primary);
                 // Opened by a `redrob://open` link for an app that isn't installed yet.
                 if self.focus_install == Some(entry.app.id) {
                     self.focus_install = None;
@@ -616,23 +703,23 @@ impl LauncherUi {
                     resp.scroll_to_me(None);
                 }
                 if resp.clicked() {
-                    self.send(Command::Install { app: id.clone() });
+                    self.send(Command::Install { app: id });
                 }
             }
             Primary::Retry(label) => {
                 let tip = tl!("The download is still here. It's checked again, then installed.");
-                if widgets::button(ui, &label, Kind::Primary, main_w).on_hover_text(tip).clicked() {
-                    self.send(Command::Install { app: id.clone() });
+                if button(ui, &label, Kind::Primary).on_hover_text(tip).clicked() {
+                    self.send(Command::Install { app: id });
                 }
             }
             Primary::Update(v) => {
-                if widgets::button(ui, &fmt(tl!("Update to {v}"), &[("v", &v)]), Kind::Primary, main_w).clicked() {
-                    self.send(Command::Install { app: id.clone() });
+                if button(ui, &fmt(tl!("Update to {v}"), &[("v", &v)]), Kind::Primary).clicked() {
+                    self.send(Command::Install { app: id });
                 }
             }
             Primary::Open => {
-                if widgets::button(ui, tl!("Open"), Kind::Secondary, main_w).clicked() {
-                    self.send(Command::Launch { app: id.clone(), args: Vec::new() });
+                if button(ui, tl!("Open"), Kind::Secondary).clicked() {
+                    self.send(Command::Launch { app: id, args: Vec::new() });
                 }
             }
             Primary::Download(url) => {
@@ -640,15 +727,14 @@ impl LauncherUi {
                     Some(p) => fmt(tl!("Download for {os}"), &[("os", p.os.label())]),
                     None => tl!("Download").into(),
                 };
-                if widgets::button(ui, &label, Kind::Primary, main_w).clicked() {
+                if button(ui, &label, Kind::Primary).clicked() {
                     ui.ctx().open_url(egui::OpenUrl::new_tab(url));
                 }
             }
             Primary::Unavailable(label) => {
-                ui.add_enabled_ui(false, |ui| widgets::button(ui, label, Kind::Secondary, main_w));
+                ui.add_enabled_ui(false, |ui| button(ui, label, Kind::Secondary));
             }
         }
-        self.menu(ui, entry, status);
     }
 
     /// The … button and its menu.
@@ -732,22 +818,17 @@ impl LauncherUi {
     }
 }
 
-/// "0.4.1 installed → 0.5.0 released · Oct 8, 2026" and friends.
+/// "0.4.1 installed → 0.5.0 released", "Version 0.3.0" and friends: versions only, no release date
+/// (the date is in Release notes).
 fn version_line(e: &AppEntry, status: &AppStatus) -> String {
-    version_line_dated(e, status, true)
-}
-
-/// [`version_line`], with or without the release date.
-fn version_line_dated(e: &AppEntry, status: &AppStatus, dated: bool) -> String {
-    let released = e.release().and_then(|r| r.published_at).filter(|_| dated).map(|at| format!(" · {}", date_text(at))).unwrap_or_default();
     match (status, e.installed_label(), e.latest_label()) {
         (AppStatus::UpdateAvailable, Some(i), Some(l)) => {
-            format!("{}{released}", fmt(tl!("{version} installed → {latest} released"), &[("version", i.as_str()), ("latest", l.as_str())]))
+            fmt(tl!("{version} installed → {latest} released"), &[("version", i.as_str()), ("latest", l.as_str())])
         }
-        (AppStatus::UpToDate, Some(i), _) => format!("{}{released}", fmt(tl!("Version {version}"), &[("version", i.as_str())])),
+        (AppStatus::UpToDate, Some(i), _) => fmt(tl!("Version {version}"), &[("version", i.as_str())]),
         (_, Some(i), Some(l)) => fmt(tl!("{installed} installed · latest {latest}"), &[("installed", i.as_str()), ("latest", l.as_str())]),
         (_, Some(i), None) => fmt(tl!("Version {version} installed"), &[("version", i.as_str())]),
-        (_, None, Some(l)) => format!("{}{released}", fmt(tl!("Version {latest}"), &[("latest", l.as_str())])),
+        (_, None, Some(l)) => fmt(tl!("Version {latest}"), &[("latest", l.as_str())]),
         (AppStatus::NoRelease, None, None) => tl!("No release published yet").to_string(),
         _ => " ".to_string(),
     }
@@ -763,19 +844,42 @@ pub(crate) fn launcher_download(r: &redrob_launcher_core::Release, p: redrob_lau
     pick_asset(r, &[redrob_launcher_core::catalog::LAUNCHER_ID], p, kinds).map(|(a, _)| a.url.clone())
 }
 
-/// A column of single-line texts, one per font and `gap` apart, centred across the row it is in.
-/// `ui.vertical` starts at the top of the row instead: a row only centres what it knows the height of.
-/// Each line is measured as an empty galley, which is rounded to the pixel like a label, unlike `Fonts::row_height`.
-fn centered_lines(ui: &mut Ui, fonts: &[&FontId], gap: f32, add_contents: impl FnOnce(&mut Ui)) {
-    let height = lines_height(ui, fonts, gap);
-    ui.allocate_ui_with_layout(vec2(ui.available_width(), height), egui::Layout::top_down(egui::Align::Min), |ui| {
-        ui.spacing_mut().item_spacing.y = gap;
-        add_contents(ui);
-    });
+/// The height every tile takes at `card_w`, set by the app whose description wraps to the most
+/// lines: padding, the icon row, the full-width description under it, the version line, the
+/// actions row, padding.
+///
+/// * `ui` - any Ui on the page, for font metrics and item spacing.
+/// * `ids` - the apps shown; every tile takes the tallest one's height so rows stay even.
+/// * `card_w` - one tile's outer width.
+fn card_height(ui: &Ui, ids: &[&'static str], card_w: f32) -> f32 {
+    let (_, desc, meta) = card_fonts();
+    // The description runs the card's full inner width, under the icon.
+    let text_w = (card_w - 2.0 * CARD_PAD).max(1.0);
+    let line = |font: &FontId| ui.fonts_mut(|f| f.layout_no_wrap(String::new(), font.clone(), Color32::PLACEHOLDER)).size().y;
+    let desc_h = ids
+        .iter()
+        .filter_map(|id| redrob_launcher_core::CraftApp::by_id(id))
+        .map(|app| {
+            let text = tr_ctx(current(), app.id, app.tagline).to_string();
+            ui.fonts_mut(|f| f.layout(text, desc.clone(), Color32::PLACEHOLDER, text_w)).size().y
+        })
+        .fold(line(&desc), f32::max);
+    // The layout's own spacing after the icon row, the description and the version line.
+    let spacing = 3.0 * ui.spacing().item_spacing.y;
+    let block = CARD_ICON + CARD_DESC_GAP + desc_h;
+    (2.0 * CARD_PAD + block + CARD_ACTIONS_GAP + line(&meta) + CARD_ACTIONS_GAP + CARD_ACTION_H + spacing).ceil()
 }
 
-/// The height of [`centered_lines`] with these fonts.
-fn lines_height(ui: &Ui, fonts: &[&FontId], gap: f32) -> f32 {
-    let line = |font: &FontId| ui.fonts_mut(|f| f.layout_no_wrap(String::new(), font.clone(), Color32::PLACEHOLDER)).size().y;
-    (fonts.iter().map(|font| line(font) + gap).sum::<f32>() - gap).max(0.0)
+/// A tile's fill: white (`surface-base`, #ffffff) in light, where the hairline and the hover shadow
+/// separate it from the page; in dark the raised surface stays, since a white tile would break
+/// the dark appearance.
+///
+/// * `t` - the current appearance's tokens.
+fn card_fill(t: &Tokens) -> Color32 {
+    if t.dark { t.raised() } else { t.bg }
+}
+
+/// A tile's three type roles: (app name in the display face, description, version line).
+fn card_fonts() -> (FontId, FontId, FontId) {
+    (FontId::new(theme::text::BODY, theme::display()), FontId::proportional(theme::text::BODY_SM), FontId::proportional(theme::text::META))
 }
