@@ -301,16 +301,42 @@ fn result_file(paths: &Paths) -> PathBuf {
 
 /// Logs what the last self-update helper wrote, once, so a failed install leaves a trace in the
 /// launcher's own log instead of silently starting the old version again.
-/// Says whether that update installed (`install exit 0`), so the new copy can tell the user.
+/// Says, once, whether this copy is the version the launcher just updated itself to, so it can
+/// tell the user: the helper's `install exit 0` (Windows), or the update marker naming this very
+/// version (every platform, and Windows when the helper's file is missing).
 pub fn report_last(paths: &Paths) -> bool {
     let file = result_file(paths);
-    let Ok(text) = std::fs::read_to_string(&file) else { return false };
-    for line in text.lines().filter(|l| !l.trim().is_empty()) {
-        log::info!("last self-update: {}", line.trim());
+    let installed = match std::fs::read_to_string(&file) {
+        Ok(text) => {
+            for line in text.lines().filter(|l| !l.trim().is_empty()) {
+                log::info!("last self-update: {}", line.trim());
+            }
+            let _ = std::fs::remove_file(&file);
+            text.lines().any(|l| l.trim() == "install exit 0")
+        }
+        Err(_) => false,
+    };
+    let Ok(text) = std::fs::read_to_string(marker(paths)) else { return installed };
+    let mut lines = text.lines();
+    let (tag, at, seen) = (lines.next().unwrap_or_default(), lines.next().and_then(|a| a.parse::<i64>().ok()), lines.next() == Some(SEEN));
+    if seen {
+        return false;
     }
-    let _ = std::fs::remove_file(&file);
-    text.lines().any(|l| l.trim() == "install exit 0")
+    let this = version::parse(env!("CARGO_PKG_VERSION"));
+    let arrived = this.is_some() && version::parse(tag) == this && at.is_some_and(|at| crate::now() - at < JUST_UPDATED_FOR);
+    if !(installed || arrived) {
+        return false;
+    }
+    // Once: the marker keeps its first two lines for `just_updated_to`.
+    let at = at.unwrap_or_else(crate::now);
+    if let Err(e) = crate::paths::write_atomic(&marker(paths), format!("{tag}\n{at}\n{SEEN}\n").as_bytes()) {
+        log::warn!("couldn't record the update notice: {e}");
+    }
+    true
 }
+
+/// The update marker's third line once the new version has told the user it arrived.
+const SEEN: &str = "announced";
 
 /// A PowerShell single-quoted literal.
 #[cfg_attr(not(windows), allow(dead_code))]

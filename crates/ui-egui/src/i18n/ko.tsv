@@ -181,6 +181,8 @@
 	{done} of {total} downloaded	{done}/{total} 다운로드됨
 	{done} downloaded	{done} 다운로드됨
 	Checking for updates…	업데이트 확인 중…
+	Checking for updates	업데이트를 확인하고 있어요
+	Everything is up to date	모두 최신이에요
 	Downloads the new version, replaces this one and opens it again	새 버전을 다운로드해 지금 버전과 바꾼 뒤 다시 열어요
 	Couldn't check for updates: {f}	업데이트를 확인하지 못했어요: {f}
 	GitHub repository	GitHub 저장소
@@ -237,12 +239,14 @@ month	Oct	10월
 month	Nov	11월
 month	Dec	12월
 @plural	{n} app|{n} apps	앱 {n}개
+@plural	{n} update is available|{n} updates are available	업데이트가 {n}개 있어요
 @plural	{n} min ago|{n} min ago	{n}분 전
 @plural	{n} h ago|{n} h ago	{n}시간 전
 @plural	{n} day ago|{n} days ago	{n}일 전
 @plural	Redrob Launcher · {n} update available|Redrob Launcher · {n} updates available	Redrob Launcher · 업데이트 {n}개
 @msg	Couldn't open {name}: {e}	{name} 앱을 열지 못했어요: {e}
 @msg	Download cancelled	다운로드 취소됨
+@msg	Redrob Launcher updated to {version}	Redrob Launcher를 {version} 버전으로 업데이트했어요
 @msg	{name} updated to {version}	{name} 앱을 {version} 버전으로 업데이트했어요
 @msg	{name} installed: {version}	{name} {version} 버전을 설치했어요
 @msg	{name} updated to {version} (this release publishes no checksum, so only its size was checked)	{name} 앱을 {version} 버전으로 업데이트했어요. 이 버전은 체크섬을 공개하지 않아 크기만 확인했어요.
