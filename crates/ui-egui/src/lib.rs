@@ -45,3 +45,4 @@ pub use i18n::{
     t, t_id, tn, tr, tr_ctx, tr_id, trn,
 };
 pub use settings::Settings;
+pub use shell::fit_window;

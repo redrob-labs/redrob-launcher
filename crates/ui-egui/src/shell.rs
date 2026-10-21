@@ -156,3 +156,43 @@ impl LauncherUi {
         });
     }
 }
+
+/// Room kept free at the monitor's bottom edge for a taskbar or Dock egui can't see (the Windows
+/// taskbar is 40–48 pt tall; a bottom Dock about as much).
+const TASKBAR: f32 = 48.0;
+
+/// Does a window of `outer` size fit on a `monitor` less the taskbar?
+fn fits(outer: egui::Vec2, monitor: egui::Vec2) -> bool {
+    outer.x <= monitor.x + 0.5 && outer.y <= monitor.y - TASKBAR + 0.5
+}
+
+/// Once per window, as soon as its monitor is known: a window bigger than the monitor's work area
+/// is maximized into it. eframe only shrinks a saved size to the LARGEST monitor, so a window
+/// closed on an external monitor reopened on a laptop larger than its screen, the title bar (which
+/// moves and closes it) above the top edge. Egui doesn't expose the work area itself, only the
+/// monitor's size, so the taskbar is a fixed margin. Returns true when it asked to maximize.
+pub fn fit_window(ctx: &egui::Context) -> bool {
+    let fitted = egui::Id::new("launcher-window-fitted");
+    if ctx.data(|d| d.get_temp::<bool>(fitted)).is_some() {
+        return false;
+    }
+    let content = ctx.content_rect();
+    let (monitor, outer, maximized, fullscreen) = ctx.input(|i| {
+        let v = i.viewport();
+        (v.monitor_size, v.outer_rect, v.maximized, v.fullscreen)
+    });
+    let Some(monitor) = monitor else { return false };
+    ctx.data_mut(|d| d.insert_temp(fitted, true));
+    // macOS keeps new windows inside the screen's visible frame itself.
+    if cfg!(target_os = "macos") {
+        return false;
+    }
+    // Wayland never tells a window where it is, so there is no outer rect: the content is the
+    // least the window takes up.
+    let outer = outer.unwrap_or(content);
+    if maximized == Some(true) || fullscreen == Some(true) || !monitor.is_finite() || !outer.is_finite() || fits(outer.size(), monitor) {
+        return false;
+    }
+    ctx.send_viewport_cmd(egui::ViewportCommand::Maximized(true));
+    true
+}
