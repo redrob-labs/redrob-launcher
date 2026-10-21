@@ -278,10 +278,8 @@ pub fn is_running(path: &Path) -> bool {
         // look "running" and its update was refused.
         let Some(name) = path.file_name().and_then(|n| n.to_str()) else { return false };
         let Some(p) = path.to_str() else { return false };
-        let script = format!(
-            "Get-CimInstance Win32_Process -Filter \"Name='{}'\" | ForEach-Object {{ $_.ExecutablePath }}",
-            name.replace('\'', "''")
-        );
+        let script =
+            format!("Get-CimInstance Win32_Process -Filter \"Name='{}'\" | ForEach-Object {{ $_.ExecutablePath }}", name.replace('\'', "''"));
         capture("powershell", &["-NoProfile", "-NonInteractive", "-Command", &script], Duration::from_secs(10))
             .is_some_and(|out| out.lines().any(|l| same_path(l.trim(), p)))
     } else {
