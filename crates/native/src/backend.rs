@@ -121,7 +121,7 @@ impl NativeBackend {
         };
         let source: Option<Arc<dyn ReleaseSource>> =
             http.clone().map(|h| Arc::new(GitHubSource::new(h, paths.release_cache())) as Arc<dyn ReleaseSource>);
-        crate::self_update::report_last(&paths);
+        let just_updated = crate::self_update::report_last(&paths);
         let shared = Arc::new(Shared {
             events: Mutex::new(Vec::new()),
             waker,
@@ -142,6 +142,13 @@ impl NativeBackend {
             feed_throttle: Mutex::new(FeedThrottle::load(&paths.feed_throttle(), crate::now())),
             last_check: Mutex::new(None),
         });
+        if just_updated {
+            // The toast the app shows for a finished update, now that the new copy is running.
+            shared.emit(Event::JobFinished {
+                app: LAUNCHER_ID.to_string(),
+                result: Ok(format!("Redrob Launcher updated to {}", env!("CARGO_PKG_VERSION"))),
+            });
+        }
         let account = crate::account::DeviceAccount::desktop(shared.waker.clone());
         let models = crate::models::Models::desktop(http.clone(), shared.waker.clone());
         let engine = crate::engine::Engine::desktop(shared.waker.clone());

@@ -301,13 +301,15 @@ fn result_file(paths: &Paths) -> PathBuf {
 
 /// Logs what the last self-update helper wrote, once, so a failed install leaves a trace in the
 /// launcher's own log instead of silently starting the old version again.
-pub fn report_last(paths: &Paths) {
+/// Says whether that update installed (`install exit 0`), so the new copy can tell the user.
+pub fn report_last(paths: &Paths) -> bool {
     let file = result_file(paths);
-    let Ok(text) = std::fs::read_to_string(&file) else { return };
+    let Ok(text) = std::fs::read_to_string(&file) else { return false };
     for line in text.lines().filter(|l| !l.trim().is_empty()) {
         log::info!("last self-update: {}", line.trim());
     }
     let _ = std::fs::remove_file(&file);
+    text.lines().any(|l| l.trim() == "install exit 0")
 }
 
 /// A PowerShell single-quoted literal.

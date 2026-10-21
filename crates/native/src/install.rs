@@ -51,6 +51,7 @@ pub fn install(
     if let Some(inst) = existing
         && inst.source.launcher_can_update()
         && process::is_running(Path::new(&inst.location))
+        && !process::end_if_windowless(Path::new(&inst.location))
     {
         return Err(format!("{} is running. Quit it, then try again.", app.name));
     }
