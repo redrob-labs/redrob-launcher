@@ -111,6 +111,8 @@ pub struct LauncherUi {
     pub(crate) launcher_job: Option<redrob_launcher_core::protocol::JobPhase>,
     /// The new launcher is in place: quit so it can start.
     restart_requested: bool,
+    /// The running check is one the user started (Refresh): it installs nothing on its own.
+    manual_check: bool,
     /// News from the release feed, shown inline until dismissed.
     pub(crate) announcements: Vec<redrob_launcher_core::feed::Notice>,
     /// Alerts from the feed, shown as popups until acknowledged.
@@ -186,6 +188,7 @@ impl LauncherUi {
             engine_update: crate::engine_update::Flow::default(),
             launcher_job: None,
             restart_requested: false,
+            manual_check: false,
             announcements: Vec::new(),
             alerts: Vec::new(),
             search: String::new(),
@@ -240,6 +243,8 @@ impl LauncherUi {
 
     pub fn check_now(&mut self) {
         self.auto_update_attempted.clear();
+        // A check the user asked for only looks: a newer launcher it finds waits for its button.
+        self.manual_check = true;
         self.backend.send(Command::CheckForUpdates { force: true });
         self.backend.send(Command::Detect);
         self.last_detect = self.backend.now();
@@ -460,6 +465,9 @@ impl LauncherUi {
                 // setting (off by default): an old launcher is what can't find or install fixes.
                 // Only a copy that can't replace itself asks.
                 log::info!("launcher update available: {}", r.version_label());
+                if self.manual_check {
+                    self.auto_update_attempted.insert((redrob_launcher_core::catalog::LAUNCHER_ID.to_string(), r.version_label()));
+                }
                 let automatic = self.caps.self_update;
                 if fresh && !automatic && self.dialog.is_none() && self.launcher_job.is_none() {
                     self.dialog = Some(Dialog::LauncherUpdate(r));
@@ -472,6 +480,7 @@ impl LauncherUi {
             }
             Event::CheckFinished { at, source, rate_limited_until } => {
                 self.checking = false;
+                self.manual_check = false;
                 self.settings.last_check = Some(at);
                 self.last_source = Some(source);
                 self.rate_limited_until = rate_limited_until;

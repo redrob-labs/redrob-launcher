@@ -290,6 +290,29 @@ pub fn is_running(path: &Path) -> bool {
     }
 }
 
+/// Windows: ends the processes started from the exe at `path` when none of them shows a window,
+/// and says whether it did (`false` also when one has a window: the app is really open). An
+/// Electron app leaves helpers and background processes running from its own exe after its
+/// window closes (Office's `redrob.exe`); they would block its update for good.
+pub fn end_if_windowless(path: &Path) -> bool {
+    if !cfg!(windows) {
+        return false;
+    }
+    let Some(p) = path.to_str() else { return false };
+    let script = format!(
+        "$p = '{}'; $all = @(Get-Process | Where-Object {{ $_.Path -and $_.Path -ieq $p }}); \
+         if ($all.Count -eq 0 -or @($all | Where-Object {{ $_.MainWindowHandle -ne 0 }}).Count -gt 0) {{ 'keep' }} \
+         else {{ $all | Stop-Process -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 1; 'ended' }}",
+        p.replace('\'', "''")
+    );
+    let ended = capture("powershell", &["-NoProfile", "-NonInteractive", "-Command", &script], Duration::from_secs(15))
+        .is_some_and(|out| out.trim() == "ended");
+    if ended {
+        log::info!("ended the windowless processes running {p}");
+    }
+    ended && !is_running(path)
+}
+
 /// Windows paths compare without case and with either slash.
 fn same_path(a: &str, b: &str) -> bool {
     !a.is_empty() && a.replace('/', "\\").eq_ignore_ascii_case(&b.replace('/', "\\"))
