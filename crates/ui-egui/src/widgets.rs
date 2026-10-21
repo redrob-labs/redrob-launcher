@@ -220,6 +220,10 @@ pub fn title_bar_drag(ui: &mut Ui) {
     let resp = ui.interact(rect, ui.id().with("title-bar"), Sense::click_and_drag());
     if resp.drag_started_by(egui::PointerButton::Primary) {
         ui.ctx().send_viewport_cmd(egui::ViewportCommand::StartDrag);
+        // The OS move loop swallows the button release, so egui would keep this bar as the dragged
+        // widget, and a ScrollArea ignores the wheel while anything is dragged: every page stopped
+        // scrolling with the wheel until the next click.
+        ui.ctx().stop_dragging();
     }
     if resp.double_clicked() {
         let maximized = ui.input(|i| i.viewport().maximized.unwrap_or(false));
