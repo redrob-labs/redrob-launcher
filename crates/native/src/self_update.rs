@@ -167,10 +167,12 @@ pub fn update(
     let (asset, _) = pick_asset(release, &[LAUNCHER.id], platform, &[install.kind()])
         .ok_or_else(|| format!("Redrob Launcher {} has no {} for {}", release.version_label(), install.kind().label(), platform.label()))?;
     let asset = asset.clone();
+    log::info!("self-update: downloading {} ({})", release.version_label(), asset.name);
     let mut job = Job { http, paths, stop, phase };
     let (file, _) = install::download(release, &asset, &mut job)?;
     // The restart ends this process: nothing else may be under way.
     last()?;
+    log::info!("self-update: {} downloaded; installing as {:?} after this copy exits", release.version_label(), install.kind());
     phase(JobPhase::Installing);
     if let Err(e) = crate::paths::write_atomic(&marker(paths), format!("{}\n{}\n", release.tag, crate::now()).as_bytes()) {
         log::warn!("couldn't record the self-update: {e}");
@@ -202,11 +204,12 @@ pub fn update(
         Install::Setup(exe) => windows_helper(
             pid,
             &format!(
-                "Start-Process -FilePath {} -ArgumentList '--silent' -Wait; Remove-Item -LiteralPath {} -ErrorAction SilentlyContinue",
+                "$p = Start-Process -FilePath {} -ArgumentList '--silent' -Wait -PassThru; $code = $p.ExitCode; Remove-Item -LiteralPath {} -ErrorAction SilentlyContinue",
                 ps_quote(&file),
                 ps_quote(&file)
             ),
             exe,
+            paths,
         ),
         #[cfg(windows)]
         Install::Portable(exe) => {
@@ -217,12 +220,13 @@ pub fn update(
                 &format!(
                     "$t = {tmp}; Remove-Item -LiteralPath $t -Recurse -Force -ErrorAction SilentlyContinue; Expand-Archive -LiteralPath {zip} -DestinationPath $t -Force; \
                      $top = Get-ChildItem -LiteralPath $t | Select-Object -First 1; Copy-Item -Path (Join-Path $top.FullName '*') -Destination {dir} -Recurse -Force; \
-                     Remove-Item -LiteralPath $t -Recurse -Force -ErrorAction SilentlyContinue; Remove-Item -LiteralPath {zip} -ErrorAction SilentlyContinue",
+                     Remove-Item -LiteralPath $t -Recurse -Force -ErrorAction SilentlyContinue; Remove-Item -LiteralPath {zip} -ErrorAction SilentlyContinue; $code = 0",
                     tmp = ps_quote(&tmp),
                     zip = ps_quote(&file),
                     dir = ps_quote(dir),
                 ),
                 exe,
+                paths,
             )
         }
         #[allow(unreachable_patterns)]
@@ -269,11 +273,38 @@ fn helper_command(pid: u32, command: &[&std::ffi::OsStr]) -> std::process::Comma
 
 /// Starts a hidden PowerShell that waits for `pid` to exit, runs `step`, then starts `exe`.
 #[cfg(windows)]
-fn windows_helper(pid: u32, step: &str, exe: &Path) -> Result<(), String> {
-    let script = format!("Wait-Process -Id {pid} -Timeout 60 -ErrorAction SilentlyContinue; {step}; Start-Process -FilePath {}", ps_quote(exe));
+fn windows_helper(pid: u32, step: &str, exe: &Path, paths: &Paths) -> Result<(), String> {
+    // The old copy was asked to quit. If it is still there after the wait (a hung shutdown), the
+    // setup would find it running and refuse, and the old version would just start again: stop it.
+    // Every step is written to `self-update-result.txt`, which the next start logs (`report_last`).
+    let result = ps_quote(&result_file(paths));
+    let script = format!(
+        "$r = {result}; Set-Content -LiteralPath $r -Value ('started ' + (Get-Date -Format o)); \
+         Wait-Process -Id {pid} -Timeout 60 -ErrorAction SilentlyContinue; \
+         if (Get-Process -Id {pid} -ErrorAction SilentlyContinue) {{ Add-Content -LiteralPath $r -Value 'old launcher still running after 60 s: stopping it'; Stop-Process -Id {pid} -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 2 }}; \
+         try {{ {step}; Add-Content -LiteralPath $r -Value ('install exit ' + $code) }} catch {{ Add-Content -LiteralPath $r -Value ('install failed: ' + $_) }}; \
+         Start-Process -FilePath {}",
+        ps_quote(exe)
+    );
     let mut cmd = process::command("powershell.exe");
     cmd.args(["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-Command", &script]).env_remove(PRETEND_VAR);
     process::spawn_detached(cmd).map_err(|e| format!("couldn't schedule the update ({e})"))
+}
+
+/// Where the Windows update helper writes what happened.
+fn result_file(paths: &Paths) -> PathBuf {
+    paths.data.join("logs").join("self-update-result.txt")
+}
+
+/// Logs what the last self-update helper wrote, once, so a failed install leaves a trace in the
+/// launcher's own log instead of silently starting the old version again.
+pub fn report_last(paths: &Paths) {
+    let file = result_file(paths);
+    let Ok(text) = std::fs::read_to_string(&file) else { return };
+    for line in text.lines().filter(|l| !l.trim().is_empty()) {
+        log::info!("last self-update: {}", line.trim());
+    }
+    let _ = std::fs::remove_file(&file);
 }
 
 /// A PowerShell single-quoted literal.
