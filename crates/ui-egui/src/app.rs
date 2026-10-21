@@ -352,6 +352,7 @@ impl LauncherUi {
             if self.settings.auto_update {
                 self.trigger_auto_updates();
             }
+            self.update_launcher_automatically();
         }
         self.engine_update_tick();
         self.resolve_link();
@@ -455,8 +456,11 @@ impl LauncherUi {
             Event::LauncherUpdate(r) => {
                 let fresh = self.launcher_update.as_ref().is_none_or(|cur| cur.version != r.version);
                 self.launcher_update = Some(r.clone());
-                // Ask once per new version, unless automatic updates will install it anyway.
-                let automatic = self.settings.auto_update && self.caps.self_update;
+                // The launcher keeps itself current on its own, whatever the apps' auto-update
+                // setting (off by default): an old launcher is what can't find or install fixes.
+                // Only a copy that can't replace itself asks.
+                log::info!("launcher update available: {}", r.version_label());
+                let automatic = self.caps.self_update;
                 if fresh && !automatic && self.dialog.is_none() && self.launcher_job.is_none() {
                     self.dialog = Some(Dialog::LauncherUpdate(r));
                 }
@@ -530,6 +534,10 @@ impl LauncherUi {
             self.auto_update_attempted.insert((id.clone(), version));
             self.send(Command::Install { app: id });
         }
+    }
+
+    /// Installs a newer Redrob Launcher as soon as one is found, once per version.
+    pub(crate) fn update_launcher_automatically(&mut self) {
         if self.caps.self_update
             && let Some(r) = &self.launcher_update
             && self.launcher_job.is_none()

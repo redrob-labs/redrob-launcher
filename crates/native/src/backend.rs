@@ -121,6 +121,7 @@ impl NativeBackend {
         };
         let source: Option<Arc<dyn ReleaseSource>> =
             http.clone().map(|h| Arc::new(GitHubSource::new(h, paths.release_cache())) as Arc<dyn ReleaseSource>);
+        crate::self_update::report_last(&paths);
         let shared = Arc::new(Shared {
             events: Mutex::new(Vec::new()),
             waker,
