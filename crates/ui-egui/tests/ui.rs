@@ -766,32 +766,58 @@ fn custom_title_bar_has_window_buttons() {
         )
     };
     // Narrow windows shrink the search first, never under the caption buttons, and leave the bar
-    // room to drag left of Update.
+    // room to drag left of the logo.
     for width in [600.0, 960.0] {
         let mut h = frameless(width);
         h.run_steps(6);
         snapshot(&mut h, &format!("grid-title-bar-dark-{width}"));
         let minimize = h.get_by_label("Minimize").rect();
         let search = search_field_rect(&h);
-        let update = h.get_by_label("Update all (2)").rect();
+        let logo = h.get_by_label("Go to console.redrob.ai").rect();
         assert!(search.right() <= minimize.left() && search.width() >= 159.5, "{width}: {search:?}");
-        assert!(update.left() >= 24.0, "{width}: {update:?}");
+        assert!(logo.left() >= 24.0, "{width}: {logo:?}");
     }
     let mut h = frameless(1180.0);
     h.run_steps(6);
     snapshot(&mut h, "grid-title-bar-dark");
-    // The custom bar, right to left: window buttons, search, the group logo, Update.
+    // The custom bar, right to left: window buttons, search, the group logo. No action button.
     let minimize = h.get_by_label("Minimize").rect();
     let search = search_field_rect(&h);
     let logo = h.get_by_label("Go to console.redrob.ai").rect();
-    let update = h.get_by_label("Update all (2)").rect();
-    assert!(update.right() <= logo.left() && logo.right() <= search.left() && search.right() <= minimize.left());
+    assert!(logo.right() <= search.left() && search.right() <= minimize.left());
     // One row, inside the caption buttons' band (whose target starts under the 5 px resize edge).
-    for r in [search, logo, update] {
+    for r in [search, logo] {
         assert!(r.top() >= minimize.top() - 5.0 && r.bottom() <= minimize.bottom(), "{r:?} vs {minimize:?}");
     }
-    // Check for updates moved down to the filter row.
-    assert!(h.get_by_label("Check for updates").rect().top() > 48.0);
+    // Check for updates is in the filter row, with Update all directly left of it on the same row.
+    let refresh = h.get_by_label("Check for updates").rect();
+    let update = h.get_by_label("Update all (2)").rect();
+    assert!(refresh.top() > 48.0 && update.top() > 48.0, "both are under the title bar: {update:?} {refresh:?}");
+    assert!(update.right() <= refresh.left() && refresh.left() - update.right() <= 12.0, "{update:?} left of {refresh:?}");
+    assert!((update.center().y - refresh.center().y).abs() < 1.0, "same row: {update:?} {refresh:?}");
+    // A tile's main button is Sm (32 px) at its label's width, right-aligned just left of its … button.
+    let main = h.get_by_label("Update to 0.6.0").rect();
+    assert!((main.height() - 32.0).abs() < 0.5 && main.width() < 200.0, "{main:?}");
+    assert!(
+        h.query_all_by_label("More actions").any(|m| {
+            let m = m.rect();
+            m.left() >= main.right() && m.left() - main.right() <= 12.0 && (m.center().y - main.center().y).abs() < 1.0
+        }),
+        "… directly right of {main:?}"
+    );
+    // The suite's hero leads the page, above the filter row, and stays when a filter narrows the
+    // page (only a search hides it).
+    let hero = h.get_by_label("Work, create and build in one suite.").rect();
+    assert!(hero.bottom() < refresh.top(), "hero above the filter row: {hero:?} {refresh:?}");
+    if let Some(l) = h.state_mut().as_mut() {
+        l.settings.filter = redrob_launcher_ui_egui::settings::Filter::Updates;
+    }
+    h.run_steps(3);
+    assert!(h.query_by_label("Work, create and build in one suite.").is_some(), "the hero stays on a filtered page");
+    if let Some(l) = h.state_mut().as_mut() {
+        l.settings.filter = redrob_launcher_ui_egui::settings::Filter::All;
+    }
+    h.run_steps(3);
     assert!(h.get_all_by_label("All apps").all(|n| n.rect().top() >= 48.0), "the sidebar and page start under the title bar");
     // Restored, the top 5 px of the caption buttons and close's right 5 px stay the resize band.
     // (The harness insets the bar: its top is minimize's minus that band.)

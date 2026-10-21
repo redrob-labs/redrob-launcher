@@ -136,10 +136,13 @@ pub fn alert_frame(t: &Tokens) -> egui::Frame {
         .inner_margin(egui::Margin::symmetric(16, 12))
 }
 
-/// [`alert_frame`] for a one-line alert (the launcher's own update): padding 12 / 6, so with a
-/// 32 px control the bar is 44 px tall (was about 66).
-pub fn alert_frame_dense(t: &Tokens) -> egui::Frame {
-    alert_frame(t).inner_margin(egui::Margin::symmetric(12, 6))
+/// A one-line, neutral notice bar (the launcher's own update): the filter cells' sunken grey
+/// track with no edge, radius 8, padding 12 / 6, so with a 32 px control the bar is 44 px tall.
+/// Neutral rather than brand-tinted, so it sits quietly above the hero.
+///
+/// * `t` - the active appearance's tokens.
+pub fn notice_bar_frame(t: &Tokens) -> egui::Frame {
+    egui::Frame::new().fill(t.sunken).corner_radius(CornerRadius::same(theme::radius::MD)).inner_margin(egui::Margin::symmetric(12, 6))
 }
 
 /// How far a page's scroll bar sits from the window's right edge: clear of the 5 px resize band of
@@ -148,6 +151,9 @@ pub const PAGE_SCROLL_EDGE: f32 = 6.0;
 /// The page's own right padding inside its scroll area, so the content still ends 24 px from the
 /// window's edge (DS page padding) with the bar over that padding, not over the content.
 pub const PAGE_SCROLL_PAD: f32 = theme::space::S6 - PAGE_SCROLL_EDGE;
+/// How far a page's scroll track stays from the top and bottom of the page area: the sidebar
+/// card's own inset, so the thumb's travel lines up with the card.
+pub const SCROLL_TRACK_INSET: f32 = crate::shell::INSET;
 
 /// A page's vertical scroll, like Redrob Cowork's (Base UI ScrollArea): the bar floats over the
 /// page's right padding at the window's edge, a round 8 px thumb in border-strong with no track,
@@ -184,9 +190,14 @@ pub fn page_scroll<R>(ui: &mut Ui, id_salt: &str, add: impl FnOnce(&mut Ui) -> R
             w.fg_stroke.color = ink;
             w.corner_radius = CornerRadius::same(theme::radius::PILL);
         }
+        // The bar's track stops short of the title bar's hairline and the window's foot by the
+        // sidebar card's 8 px inset, so the thumb never runs into either edge.
+        let page = ui.available_rect_before_wrap();
+        let track = Rect::from_min_max(page.min + vec2(0.0, SCROLL_TRACK_INSET), page.max - vec2(0.0, SCROLL_TRACK_INSET));
         egui::ScrollArea::vertical()
             .id_salt(id_salt)
             .auto_shrink(false)
+            .scroll_bar_rect(track)
             .content_margin(egui::Margin { right: PAGE_SCROLL_PAD as i8, ..egui::Margin::ZERO })
             .show(ui, |ui| {
                 ui.set_style(page_style);
@@ -577,8 +588,21 @@ pub fn button(ui: &mut Ui, text: &str, kind: Kind, width: f32) -> Response {
 
 /// A DS button: radius 8, a 600-weight label, `size` tall, at least `width` wide.
 pub fn button_sized(ui: &mut Ui, text: &str, kind: Kind, size: Size, width: f32) -> Response {
+    button_with_height(ui, text, kind, size, size.metrics().0, width)
+}
+
+/// [`button_sized`] at a height other than `size`'s, keeping its padding and label: for a button
+/// that must line up with a neighbouring control (Update all beside the 36 px filter cells).
+///
+/// * `ui` - where the button is added.
+/// * `text` - its label.
+/// * `kind` - its DS variant (fill, edge and ink).
+/// * `size` - the DS size whose padding and label size it takes.
+/// * `height` - how tall it is, in points.
+/// * `width` - the least it is wide; it grows to fit its label.
+pub fn button_with_height(ui: &mut Ui, text: &str, kind: Kind, size: Size, height: f32, width: f32) -> Response {
     let t = Tokens::get(ui.ctx());
-    let (height, pad, label) = size.metrics();
+    let (_, pad, label) = size.metrics();
     let galley = caps(ui, text, label, theme::mono_bold(), theme::BUTTON_SPACING, t.ink);
     let (rect, resp) = ui.allocate_exact_size(vec2((galley.size().x + 2.0 * pad).max(width), height), Sense::click());
     let enabled = ui.is_enabled();
@@ -712,6 +736,10 @@ pub struct Cell<'a> {
     pub count: Option<(usize, Option<Color32>)>,
 }
 
+/// How tall [`cells`] is: its 30 px segments inside the track's 3 px inset. Controls that share
+/// the row (the Apps page's Update all) take this height so their tops and bottoms line up.
+pub const CELLS_H: f32 = 36.0;
+
 /// Mutually exclusive options as the DS segmented control: a sunken pill track (3 px inset)
 /// holding 30 px pill segments, 13 px semibold; the chosen one raised with `shadow-sm`.
 /// Returns whether the choice changed.
@@ -719,7 +747,7 @@ pub fn cells<T: PartialEq + Copy>(ui: &mut Ui, value: &mut T, options: &[(T, Cel
     let t = Tokens::get(ui.ctx());
     let mut changed = false;
     const PAD: f32 = 3.0;
-    const SEG_H: f32 = 30.0;
+    const SEG_H: f32 = CELLS_H - 2.0 * PAD;
     const SEG_PAD: f32 = 14.0;
     // In a right-to-left parent the row fills from the right: keep the options' order.
     let rtl = ui.layout().prefer_right_to_left();
