@@ -517,16 +517,14 @@ impl Launcher {
             match action {
                 tray::TrayAction::Toggle => requests.push(Request::Toggle),
                 tray::TrayAction::Show => requests.push(Request::Show),
-                tray::TrayAction::Check => self.ui.check_now(),
+                // Shown, so the toasts saying what the check found can be seen.
+                tray::TrayAction::Check => {
+                    self.ui.check_now_and_report(ctx);
+                    requests.push(Request::Show);
+                }
                 tray::TrayAction::Engine => {
                     self.ui.show_engine();
                     requests.push(Request::Show);
-                }
-                // Straight to the browser: works while the window is hidden in the tray.
-                tray::TrayAction::Open(url) => {
-                    if let Err(e) = redrob_launcher_native::process::open(std::ffi::OsStr::new(url)) {
-                        log::warn!("couldn't open {url}: {e}");
-                    }
                 }
                 tray::TrayAction::Quit => {
                     if let Some(waker) = &self.waker {

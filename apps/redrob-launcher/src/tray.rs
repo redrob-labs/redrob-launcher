@@ -13,7 +13,6 @@ pub enum TrayAction {
     Check,
     /// Show the window with the AI engine page open.
     Engine,
-    Open(&'static str),
     Quit,
 }
 
@@ -78,7 +77,12 @@ impl Tray {
                 } else if e.id == engine_id {
                     TrayAction::Engine
                 } else if let Some((_, url)) = links.iter().find(|(id, _)| *id == e.id) {
-                    TrayAction::Open(url)
+                    // Opened here and now, the way the sign-in page is (`process::open_url`), so
+                    // nothing waits for the window's next frame.
+                    if let Err(e) = redrob_launcher_native::process::open_url(url) {
+                        log::warn!("couldn't open {url}: {e}");
+                    }
+                    return;
                 } else {
                     return;
                 };
