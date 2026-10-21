@@ -161,7 +161,12 @@ impl ReleaseSource for GitHubSource {
                 Err(e) => Some(e),
             }
         };
-        if !prereleases && api_error.is_none() {
+        if let Some(e) = &api_error {
+            log::warn!("{repo}: GitHub API: {e}");
+        }
+        // The release pages answer whenever the API doesn't: rate limited, refused, or unreachable.
+        // Settling for the saved answer here kept an old launcher from ever seeing a new release.
+        if !prereleases {
             match self.ask_pages(repo) {
                 Ok(answer) => return answer,
                 Err(e) => log::warn!("{repo}: release pages: {e}"),

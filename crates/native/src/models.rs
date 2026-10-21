@@ -195,7 +195,16 @@ pub struct Models {
     /// (a `df`/PowerShell process) are too slow for that and made the Models page scroll in jerks.
     /// A download in progress keeps the views fresh through its own progress (the cache is short).
     views_cache: Mutex<Option<(Instant, Vec<ModelView>)>>,
-    disk_cache: Mutex<Option<(Instant, Option<u64>)>>,
+    /// The free-space probe runs on its own thread: on Windows it starts PowerShell, which takes
+    /// seconds, and run from the UI thread it froze the Models page (the wheel did nothing).
+    disk_cache: Arc<Mutex<DiskCache>>,
+}
+
+#[derive(Default)]
+struct DiskCache {
+    /// The last answer, with when it was made.
+    last: Option<(Instant, Option<u64>)>,
+    probing: bool,
 }
 
 /// How long `models()` reuses its last scan, and `disk_free()` its last probe.
@@ -242,7 +251,7 @@ impl Models {
             runtimes_root: None,
             code_config: None,
             views_cache: Mutex::new(None),
-            disk_cache: Mutex::new(None),
+            disk_cache: Arc::new(Mutex::new(DiskCache::default())),
         }
     }
 
@@ -622,17 +631,21 @@ impl ModelBackend for Models {
     }
 
     fn disk_free(&self) -> Option<u64> {
-        {
-            let cache = self.disk_cache.lock().unwrap_or_else(PoisonError::into_inner);
-            if let Some((at, free)) = cache.as_ref()
-                && at.elapsed() < DISK_FRESH_FOR
-            {
-                return *free;
-            }
+        let mut cache = self.disk_cache.lock().unwrap_or_else(PoisonError::into_inner);
+        let last = cache.last.and_then(|(_, free)| free);
+        if cache.probing || cache.last.is_some_and(|(at, _)| at.elapsed() < DISK_FRESH_FOR) {
+            return last;
         }
-        let free = (self.shared.dir)(SHARED_APP).and_then(|dir| free_bytes(&dir));
-        *self.disk_cache.lock().unwrap_or_else(PoisonError::into_inner) = Some((Instant::now(), free));
-        free
+        // Answer with the last reading now; the new one arrives with a repaint.
+        cache.probing = true;
+        drop(cache);
+        let (disk_cache, shared) = (self.disk_cache.clone(), self.shared.clone());
+        std::thread::spawn(move || {
+            let free = (shared.dir)(SHARED_APP).and_then(|dir| free_bytes(&dir));
+            *disk_cache.lock().unwrap_or_else(PoisonError::into_inner) = DiskCache { last: Some((Instant::now(), free)), probing: false };
+            (shared.wake)();
+        });
+        last
     }
 }
 
