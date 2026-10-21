@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   # Docs-only and version-only PRs skip the Rust work. `test` still starts (its steps skip) so
-  # the required `test (ubuntu-latest)` reports; `wasm` is not required and skips outright.
+  # the required `test (ubuntu-latest)` reports; `wasm` is not required and skips on PRs.
   changes:
     runs-on: ubuntu-latest
     outputs:
@@ -82,28 +82,36 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         if: env.RUN == 'true'
 
+      # PRs compile once: clippy on the workspace without test code. Format, the token check,
+      # clippy over test targets and the tests run on a manual run only; release.yml compiles
+      # every target again before anything ships.
       - name: Format
-        if: env.RUN == 'true' && runner.os == 'Linux'
+        if: env.RUN == 'true' && runner.os == 'Linux' && github.event_name != 'pull_request'
         run: cargo fmt --all -- --check
 
       # The colours are the design system's: theme/generated.rs must match the newest
       # @redrob-labs/ui release (cargo xtask tokens writes it).
       - name: Design-system tokens are current
-        if: env.RUN == 'true' && runner.os == 'Linux'
+        if: env.RUN == 'true' && runner.os == 'Linux' && github.event_name != 'pull_request'
         run: cargo xtask tokens --check
 
+      - name: Clippy (compile)
+        if: env.RUN == 'true' && github.event_name == 'pull_request'
+        run: cargo clippy --workspace --locked -- -D warnings
+
       - name: Clippy
-        if: env.RUN == 'true'
+        if: env.RUN == 'true' && github.event_name != 'pull_request'
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
 
       - name: Test
-        if: env.RUN == 'true'
+        if: env.RUN == 'true' && github.event_name != 'pull_request'
         run: cargo test --workspace --locked
 
   wasm:
     name: wasm32 check + trunk build
     needs: changes
-    if: needs.changes.outputs.heavy == 'true'
+    # A second compile (wasm32): manual runs only. release.yml builds the web app.
+    if: github.event_name != 'pull_request' && needs.changes.outputs.heavy == 'true'
     runs-on: ubuntu-latest
     env:
       TRUNK_VERSION: 0.21.14
