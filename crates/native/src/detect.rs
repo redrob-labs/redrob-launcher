@@ -142,7 +142,7 @@ pub mod macos {
     pub fn read_bundle(app: &CraftApp, path: &Path) -> Option<Installed> {
         let plist = plist::Value::from_file(path.join("Contents/Info.plist")).ok()?;
         let dict = plist.as_dictionary()?;
-        if dict.get("CFBundleIdentifier")?.as_string()? != app.bundle_id() {
+        if dict.get("CFBundleIdentifier")?.as_string()? != app.mac_bundle_id() {
             return None;
         }
         // `<App>Version` carries the full version including a pre-release suffix;

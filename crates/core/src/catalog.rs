@@ -50,6 +50,10 @@ pub struct CraftApp {
     pub repo: &'static str,
     /// Reverse-DNS id: macOS bundle id and Linux desktop-file id.
     pub bundle: &'static str,
+    /// The macOS `CFBundleIdentifier` the app's `.app` really carries, when it differs from
+    /// `bundle`. Redrob Office keeps GenOffice's `com.redrob.app` so its update feed and user
+    /// data stay where they were.
+    pub mac_bundle: Option<&'static str>,
     /// Older names its release assets may carry.
     pub former_ids: &'static [&'static str],
 }
@@ -63,6 +67,11 @@ impl CraftApp {
     /// macOS bundle id and Linux desktop-file id.
     pub fn bundle_id(&self) -> String {
         self.bundle.to_string()
+    }
+
+    /// The `CFBundleIdentifier` of the app's macOS bundle.
+    pub fn mac_bundle_id(&self) -> &'static str {
+        self.mac_bundle.unwrap_or(self.bundle)
     }
 
     pub fn releases_url(&self) -> String {
@@ -108,6 +117,7 @@ macro_rules! app {
             ink_dark: INK_DARK,
             repo: concat!("redrob-labs/", $id),
             bundle: $bundle,
+            mac_bundle: None,
             former_ids: &[],
         }
     };
@@ -191,15 +201,18 @@ pub const SUITE: [CraftApp; 9] = [
         BLUE,
         "ai.redrob.cowork"
     ),
-    app!(
-        "redrob-office",
-        "Redrob Office",
-        "Docs, sheets and slides with AI built in. Opens PDF and Hangul files too",
-        "Office suite",
-        AppGroup::Work,
-        [0xfe, 0x4d, 0x3e],
-        "ai.redrob.office"
-    ),
+    CraftApp {
+        mac_bundle: Some("com.redrob.app"),
+        ..app!(
+            "redrob-office",
+            "Redrob Office",
+            "Docs, sheets and slides with AI built in. Opens PDF and Hangul files too",
+            "Office suite",
+            AppGroup::Work,
+            [0xfe, 0x4d, 0x3e],
+            "ai.redrob.office"
+        )
+    },
 ];
 
 /// Redrob's website.
@@ -221,6 +234,7 @@ pub const LAUNCHER: CraftApp = CraftApp {
     ink_dark: INK_DARK,
     repo: "redrob-labs/redrob-launcher",
     bundle: "ai.redrob.launcher",
+    mac_bundle: None,
     former_ids: &[],
 };
 
