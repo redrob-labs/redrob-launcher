@@ -126,12 +126,11 @@ pub mod macos {
 
     /// Where a `.app` might be: the system and the user's Applications folders.
     pub fn candidates(app: &CraftApp) -> Vec<PathBuf> {
-        let bundle = format!("{}.app", app.name);
-        let mut out = vec![Path::new("/Applications").join(&bundle)];
+        let mut roots = vec![PathBuf::from("/Applications")];
         if let Some(home) = dirs::home_dir() {
-            out.push(home.join("Applications").join(&bundle));
+            roots.push(home.join("Applications"));
         }
-        out
+        roots.iter().flat_map(|d| app.mac_app_names().map(move |b| d.join(b))).collect()
     }
 
     pub fn detect(app: &CraftApp) -> Option<Installed> {
@@ -142,7 +141,7 @@ pub mod macos {
     pub fn read_bundle(app: &CraftApp, path: &Path) -> Option<Installed> {
         let plist = plist::Value::from_file(path.join("Contents/Info.plist")).ok()?;
         let dict = plist.as_dictionary()?;
-        if dict.get("CFBundleIdentifier")?.as_string()? != app.mac_bundle_id() {
+        if !app.is_mac_bundle_id(dict.get("CFBundleIdentifier")?.as_string()?) {
             return None;
         }
         // `<App>Version` carries the full version including a pre-release suffix;

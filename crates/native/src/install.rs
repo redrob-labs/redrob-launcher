@@ -872,9 +872,12 @@ pub mod macos {
     }
 
     fn copy_app(app: &CraftApp, mount: &Path, existing: Option<&Installed>, expect: &Expect<'_>) -> Result<PathBuf, String> {
-        let bundle = format!("{}.app", app.name);
-        let src = mount.join(&bundle);
-        crate::detect::macos::read_bundle(app, &src).ok_or("the disk image doesn't contain the app")?;
+        // The bundle keeps the file name it ships with, so the app's own updater finds itself.
+        let (bundle, src) = app
+            .mac_app_names()
+            .map(|b| (b.clone(), mount.join(b)))
+            .find(|(_, src)| crate::detect::macos::read_bundle(app, src).is_some())
+            .ok_or("the disk image doesn't contain the app")?;
         let dir = applications_dir(existing)?;
         let dest = dir.join(&bundle);
         let staged = dir.join(format!(".{bundle}.partial"));
