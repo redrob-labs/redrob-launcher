@@ -50,6 +50,11 @@ pub struct CraftApp {
     pub repo: &'static str,
     /// Reverse-DNS id: macOS bundle id and Linux desktop-file id.
     pub bundle: &'static str,
+    /// The macOS `CFBundleIdentifier` a shipped `.app` carries when it isn't `bundle`. Changing
+    /// it in the app would break its own self-update on macOS, so the launcher accepts both.
+    pub mac_bundle: Option<&'static str>,
+    /// The `.app` file name (without `.app`) a shipped build uses when it isn't `name`.
+    pub mac_app: Option<&'static str>,
     /// Older names its release assets may carry.
     pub former_ids: &'static [&'static str],
 }
@@ -63,6 +68,16 @@ impl CraftApp {
     /// macOS bundle id and Linux desktop-file id.
     pub fn bundle_id(&self) -> String {
         self.bundle.to_string()
+    }
+
+    /// Whether a macOS bundle's `CFBundleIdentifier` is this app's.
+    pub fn is_mac_bundle_id(&self, id: &str) -> bool {
+        id == self.bundle || self.mac_bundle == Some(id)
+    }
+
+    /// The `.app` file names this app's macOS bundle may have, `<name>.app` first.
+    pub fn mac_app_names(&self) -> impl Iterator<Item = String> + '_ {
+        std::iter::once(self.name).chain(self.mac_app).map(|n| format!("{n}.app"))
     }
 
     pub fn releases_url(&self) -> String {
@@ -108,6 +123,8 @@ macro_rules! app {
             ink_dark: INK_DARK,
             repo: concat!("redrob-labs/", $id),
             bundle: $bundle,
+            mac_bundle: None,
+            mac_app: None,
             former_ids: &[],
         }
     };
@@ -164,15 +181,18 @@ pub const SUITE: [CraftApp; 9] = [
         [0xc1, 0x62, 0xf4],
         "design.redrob.RedrobDesign"
     ),
-    app!(
-        "redrob-browser",
-        "Redrob Browser",
-        "Browse with AI that reads pages, fills in forms and finishes tasks for you",
-        "Browser",
-        AppGroup::Work,
-        [0xf1, 0x4a, 0xa8],
-        "ai.redrob.browser"
-    ),
+    CraftApp {
+        mac_bundle: Some("ai.redrob.Browser"),
+        ..app!(
+            "redrob-browser",
+            "Redrob Browser",
+            "Browse with AI that reads pages, fills in forms and finishes tasks for you",
+            "Browser",
+            AppGroup::Work,
+            [0xf1, 0x4a, 0xa8],
+            "ai.redrob.browser"
+        )
+    },
     app!(
         "redrob-code",
         "Redrob Code",
@@ -182,24 +202,31 @@ pub const SUITE: [CraftApp; 9] = [
         [0x02, 0xa2, 0x52],
         "ai.redrob.code"
     ),
-    app!(
-        "redrob-cowork",
-        "Redrob Cowork",
-        "Hand off real work. AI agents research, draft and organize your files for you",
-        "Agent workspace",
-        AppGroup::Work,
-        BLUE,
-        "ai.redrob.cowork"
-    ),
-    app!(
-        "redrob-office",
-        "Redrob Office",
-        "Docs, sheets and slides with AI built in. Opens PDF and Hangul files too",
-        "Office suite",
-        AppGroup::Work,
-        [0xfe, 0x4d, 0x3e],
-        "ai.redrob.office"
-    ),
+    CraftApp {
+        mac_bundle: Some("io.redrob.work"),
+        ..app!(
+            "redrob-cowork",
+            "Redrob Cowork",
+            "Hand off real work. AI agents research, draft and organize your files for you",
+            "Agent workspace",
+            AppGroup::Work,
+            BLUE,
+            "ai.redrob.cowork"
+        )
+    },
+    CraftApp {
+        mac_bundle: Some("com.redrob.app"),
+        mac_app: Some("redrob"),
+        ..app!(
+            "redrob-office",
+            "Redrob Office",
+            "Docs, sheets and slides with AI built in. Opens PDF and Hangul files too",
+            "Office suite",
+            AppGroup::Work,
+            [0xfe, 0x4d, 0x3e],
+            "ai.redrob.office"
+        )
+    },
 ];
 
 /// Redrob's website.
@@ -221,6 +248,8 @@ pub const LAUNCHER: CraftApp = CraftApp {
     ink_dark: INK_DARK,
     repo: "redrob-labs/redrob-launcher",
     bundle: "ai.redrob.launcher",
+    mac_bundle: None,
+    mac_app: None,
     former_ids: &[],
 };
 
