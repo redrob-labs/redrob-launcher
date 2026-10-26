@@ -630,11 +630,11 @@ month	Dec	12월
 	No device yet. Open Redrob Chat on the web or the phone app, then allow it here.	아직 연결된 기기가 없어요. 웹의 레드롭 챗이나 폰 앱을 열고 여기서 허락해 주세요.
 	The AI engine isn't running. Open Redrob Code to start it.	AI 엔진이 실행 중이 아니에요. Redrob Code를 열면 시작돼요.
 	Update Redrob Code to use this PC from Redrob Chat on the web and the phone app.	웹의 레드롭 챗과 폰 앱에서 이 PC를 쓰려면 Redrob Code를 업데이트해 주세요.
-	Allow Auto all from phone	폰에서 모두 자동 허용
-	When on, work sent from your phone or the web runs on this PC without asking.	켜면 폰이나 웹에서 보낸 일이 묻지 않고 PC에서 바로 돌아요.
-	Turn on Auto all from phone?	폰에서 모두 자동을 켤까요?
-	Work sent from your phone or the web will run commands and change files on this PC without asking.	폰이나 웹에서 보낸 일이 묻지 않고 이 PC에서 명령을 실행하고 파일을 바꿔요.
-	You can turn it off here at any time.	언제든 여기서 끌 수 있어요.
+	Allow Auto all from phone and web	폰·웹에서 모두 자동 허용
+	When off, choosing Auto all on the phone or the web runs as Auto edits instead.	끄면 폰이나 웹에서 모두 자동을 골라도 수정 자동으로 돌아가요.
+	Auto all on: {device} · {time}	모두 자동 켜짐: {device} · {time}
+	Auto all is on	모두 자동 켜짐
+	{device} turned on Auto all. Redrob Code runs commands and changes files on this PC without asking.	{device}에서 모두 자동을 켰어요. Redrob Code가 묻지 않고 이 PC에서 명령을 실행하고 파일을 바꿔요.
 @msg	Couldn't save the Auto all setting: {e}	모두 자동 설정을 저장하지 못했어요: {e}
 @msg	That device is no longer waiting	그 기기는 더 이상 기다리고 있지 않아요
 @msg	The AI engine refused that ({status})	AI 엔진이 요청을 거절했어요 ({status})
