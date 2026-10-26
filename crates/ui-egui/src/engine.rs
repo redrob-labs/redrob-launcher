@@ -238,6 +238,8 @@ impl LauncherUi {
                 }
             }
         }
+        self.desk_section(ui);
+
         // The attached list changes as apps open and close; look again every few seconds while open.
         ui.ctx().request_repaint_after(std::time::Duration::from_secs(5));
 

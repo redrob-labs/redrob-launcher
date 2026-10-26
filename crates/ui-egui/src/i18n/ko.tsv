@@ -608,3 +608,33 @@ month	Dec	12월
 	For your AI engine	AI 엔진을 위한 앱
 	For your everyday work	업무를 위한 앱
 	For your creative work	창작을 위한 앱
+	Use this PC from the web and phone	웹·폰에서 이 PC 쓰기
+	Use this PC from the web and phone · Sign in	웹·폰에서 이 PC 쓰기 · 로그인
+@plural	Web and phone: {n} device|Web and phone: {n} devices	웹·폰 기기 {n}대 연결됨
+	Phone	폰
+	Web browser	웹 브라우저
+	Device	기기
+	{name} wants to connect to this PC.	{name}에서 이 PC에 연결하려고 해요.
+	Code {code}. Allow or deny it in Redrob Launcher.	코드 {code}. 런처에서 허락하거나 거절해 주세요.
+	Allow this device?	이 기기를 허락할까요?
+	Check that the device shows the same code.	기기에 같은 코드가 보이는지 확인해 주세요.
+	Allow	허락
+	Deny	거절
+	Connected devices	연결된 기기
+	Disconnect	해제
+	Turn on	켜기
+	Open the sign-in page again	로그인 페이지 다시 열기
+	Finish signing in in your browser. Code {code}	브라우저에서 로그인을 마쳐 주세요. 코드 {code}
+	Sign in with your Redrob account, and Redrob Chat on the web and the phone app can use this PC.	레드롭 계정으로 로그인하면 웹의 레드롭 챗과 폰 앱에서 이 PC를 쓸 수 있어요.
+	Turned off. Turn it on so your devices can reach this PC.	꺼져 있어요. 켜면 기기에서 이 PC에 연결할 수 있어요.
+	No device yet. Open Redrob Chat on the web or the phone app, then allow it here.	아직 연결된 기기가 없어요. 웹의 레드롭 챗이나 폰 앱을 열고 여기서 허락해 주세요.
+	The AI engine isn't running. Open Redrob Code to start it.	AI 엔진이 실행 중이 아니에요. Redrob Code를 열면 시작돼요.
+	Update Redrob Code to use this PC from Redrob Chat on the web and the phone app.	웹의 레드롭 챗과 폰 앱에서 이 PC를 쓰려면 Redrob Code를 업데이트해 주세요.
+@msg	That device is no longer waiting	그 기기는 더 이상 기다리고 있지 않아요
+@msg	The AI engine refused that ({status})	AI 엔진이 요청을 거절했어요 ({status})
+@msg	Couldn't reach the AI engine: {e}	AI 엔진에 연결하지 못했어요: {e}
+@msg	The AI engine didn't start: {e}	AI 엔진이 시작되지 않았어요: {e}
+@msg	The sign-in page couldn't be opened: {e}	로그인 페이지를 열지 못했어요: {e}
+@msg	The sign-in page couldn't be opened	로그인 페이지를 열지 못했어요
+@msg	the engine's desk status is too large	엔진이 보낸 연결 상태가 너무 커요
+@msg	the engine's desk status doesn't parse: {e}	엔진이 보낸 연결 상태를 읽지 못했어요: {e}

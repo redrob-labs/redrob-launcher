@@ -22,6 +22,7 @@ pub mod caption;
 mod channels;
 #[cfg(not(target_arch = "wasm32"))]
 mod cjk_font;
+mod desk;
 mod dialogs;
 mod engine;
 mod engine_update;
