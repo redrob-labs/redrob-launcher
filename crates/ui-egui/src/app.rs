@@ -93,6 +93,8 @@ pub(crate) enum Dialog {
     Notes(String),
     ConfirmUninstall(String),
     LauncherUpdate(redrob_launcher_core::Release),
+    /// "Allow Auto all from phone" was switched on: confirm once before it is written.
+    ConfirmAutoAll,
 }
 
 pub struct LauncherUi {

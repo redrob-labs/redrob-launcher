@@ -39,6 +39,8 @@ enum Ask {
     Logout,
     Enable,
     Revoke(String),
+    /// The "Allow Auto all from phone" switch was flipped to this.
+    AutoAll(bool),
 }
 
 /// "Phone", "Web browser": what kind of device it is.
@@ -157,6 +159,7 @@ impl LauncherUi {
         let Some(desk) = self.backend.desk() else { return };
         let shown = view(&desk.state());
         let error = desk.last_error();
+        let mut auto_all = desk.allow_auto_all();
         if shown == DeskView::Hidden && error.is_none() {
             return;
         }
@@ -236,6 +239,15 @@ impl LauncherUi {
                         });
                         ui.add_space(space::S2);
                     }
+                    // Auto all for work from the phone and the web: off by default, turned on
+                    // only here, after a confirmation (the daemon reads the file it writes).
+                    widgets::row_rule(ui, 0.0);
+                    ui.add_space(space::S3);
+                    if widgets::switch(ui, &mut auto_all, tl!("Allow Auto all from phone")).changed() {
+                        ask = Some(Ask::AutoAll(auto_all));
+                    }
+                    ui.add_space(space::S2);
+                    body(ui, tl!("When on, work sent from your phone or the web runs on this PC without asking."));
                     actions.push((tl!("Sign out"), Kind::Secondary, Ask::Logout));
                     if !*enabled {
                         actions.insert(0, (tl!("Turn on"), Kind::Primary, Ask::Enable));
@@ -263,12 +275,25 @@ impl LauncherUi {
             }
         });
         let Some(what) = ask else { return };
+        // Turning Auto all on asks once first; the dialog writes it.
+        if let Ask::AutoAll(true) = what {
+            self.dialog = Some(crate::app::Dialog::ConfirmAutoAll);
+            return;
+        }
         let Some(desk) = self.backend.desk() else { return };
         match what {
             Ask::Login => desk.login(),
             Ask::Logout => desk.logout(),
             Ask::Enable => desk.ensure(),
             Ask::Revoke(id) => desk.revoke(&id),
+            Ask::AutoAll(on) => desk.set_allow_auto_all(on),
+        }
+    }
+
+    /// The confirmation before Auto all goes on: Turn on writes it, Cancel leaves it off.
+    pub(crate) fn desk_allow_auto_all(&mut self) {
+        if let Some(desk) = self.backend.desk() {
+            desk.set_allow_auto_all(true);
         }
     }
 }
