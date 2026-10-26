@@ -45,9 +45,7 @@ fn running_bundle() -> Option<PathBuf> {
 /// Downloads. Anywhere else (Applications, ~/Applications, a folder someone chose) is left alone.
 fn needs_move(bundle: &Path, home: Option<&Path>) -> bool {
     let s = bundle.to_string_lossy();
-    s.starts_with("/Volumes/")
-        || s.contains("/AppTranslocation/")
-        || home.is_some_and(|h| bundle.starts_with(h.join("Downloads")))
+    s.starts_with("/Volumes/") || s.contains("/AppTranslocation/") || home.is_some_and(|h| bundle.starts_with(h.join("Downloads")))
 }
 
 /// The mounted volume a bundle lives on (`/Volumes/Redrob Launcher 0.12.2`).
@@ -60,7 +58,11 @@ fn volume_of(bundle: &Path) -> Option<PathBuf> {
 /// The system's first preferred language is Korean.
 fn korean() -> bool {
     process::capture("/usr/bin/defaults", &["read", "-g", "AppleLanguages"], Duration::from_secs(5))
-        .and_then(|out| out.lines().map(|l| l.trim().trim_matches(|c| c == '"' || c == ',').to_string()).find(|l| l.chars().next().is_some_and(char::is_alphabetic)))
+        .and_then(|out| {
+            out.lines()
+                .map(|l| l.trim().trim_matches(|c| c == '"' || c == ',').to_string())
+                .find(|l| l.chars().next().is_some_and(char::is_alphabetic))
+        })
         .is_some_and(|first| first.starts_with("ko"))
 }
 
@@ -80,9 +82,8 @@ fn ask() -> bool {
         )
     };
     // Fixed strings with no quotes or backslashes, so plain AppleScript string literals are safe.
-    let script = format!(
-        "display dialog \"{message}\" with title \"Redrob Launcher\" buttons {{\"{keep}\", \"{move_}\"}} default button 2 with icon note"
-    );
+    let script =
+        format!("display dialog \"{message}\" with title \"Redrob Launcher\" buttons {{\"{keep}\", \"{move_}\"}} default button 2 with icon note");
     process::capture("/usr/bin/osascript", &["-e", &script], Duration::from_secs(600))
         .is_some_and(|out| out.contains(&format!("button returned:{move_}")))
 }

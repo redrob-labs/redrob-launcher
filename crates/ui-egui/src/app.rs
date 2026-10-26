@@ -296,6 +296,25 @@ impl LauncherUi {
             return;
         }
         let status = entry.status(self.platform, true);
+        // `open/code?engine=1` (Redrob Chat's "turn on Redrob Code"): the engine with desk on and
+        // its page, not Code's terminal.
+        if let DeepLink::Open(app, args) = &link
+            && args.engine
+            && app.id == crate::desk::CODE_APP
+        {
+            if !entry.detected {
+                return;
+            }
+            let installed = entry.installed.is_some();
+            self.pending_link = None;
+            if installed {
+                self.desk_ensure();
+                self.show_engine();
+            } else {
+                self.focus_install = Some(id);
+            }
+            return;
+        }
         let command = match link {
             DeepLink::Open(..) if !entry.detected => return,
             DeepLink::Open(_, args) if entry.installed.is_some() => Some(Command::Launch { app: id.to_string(), args: args.to_args() }),

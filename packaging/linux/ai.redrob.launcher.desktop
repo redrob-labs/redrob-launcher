@@ -10,5 +10,5 @@ Terminal=false
 StartupNotify=true
 StartupWMClass=redrob-launcher
 Categories=Utility;PackageManager;
-MimeType=x-scheme-handler/redrob;
+MimeType=x-scheme-handler/redrob-launcher;x-scheme-handler/redrob;
 Keywords=redrob;launcher;installer;updater;apps;

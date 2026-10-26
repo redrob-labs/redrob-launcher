@@ -1,6 +1,11 @@
-# redrob:// 링크
+# redrob-launcher:// 링크
 
-웹 페이지(레드롭 챗, 웹사이트)는 `redrob://` 링크로 레드롭 런처를 열어 앱 하나를 보여 줍니다.
+웹 페이지(레드롭 챗, 웹사이트)는 `redrob-launcher://` 링크로 레드롭 런처를 열어 앱 하나를 보여 줍니다.
+예전 `redrob://` 표기도 계속 동작하고 계속 등록하지만, 페이지는 `redrob-launcher://`로 먼저 연결합니다.
+`redrob`은 런처만 등록한 스킴이 아니기 때문입니다. Redrob Browser 0.2~0.4가 Windows에서 이 스킴을 자기
+실행 스킴(Chromium의 direct-launch 스킴, 지금은 `redrob-browser`)으로 등록했고, 업데이트해도 그 등록이
+남아 `redrob://`이 브라우저를 열 수 있습니다. 아래 예시는 `redrob://`로 쓰지만 `redrob-launcher://`도
+모든 형식을 받습니다.
 
 | 링크 | 런처가 하는 일 |
 |---|---|
@@ -23,20 +28,26 @@
 
 `redrob://open/code`는 Code 카드의 열기와 마찬가지로 Redrob Code의 공용 데몬이 desk를 켠 채 실행되게
 합니다. 그래서 웹의 레드롭 챗과 폰 앱이 이 PC에 연결할 수 있습니다([engine.md](engine.md#using-this-pc-from-the-web-and-the-phone)).
-새 링크 형식은 없습니다.
+
+`redrob-launcher://open/code?engine=1`은 레드롭 챗의 "레드롭 코드 켜기"입니다. Code 터미널을 띄우지 않고,
+AI 엔진을 desk를 켠 채 시작한 뒤 AI 엔진 페이지(desk 로그인·기기 목록이 있는 곳)를 보여 줍니다. Code가
+설치되지 않았으면 open과 같이 설치 버튼을 보여 줍니다.
 
 ## 링크가 런처에 닿는 길
 
-- **Linux:** 데스크톱 항목이 `MimeType=x-scheme-handler/redrob;`와 `Exec=… %u`를 선언합니다. deb와 rpm은
+- **Linux:** 데스크톱 항목이 `MimeType=x-scheme-handler/redrob-launcher;x-scheme-handler/redrob;`와 `Exec=… %u`를 선언합니다. deb와 rpm은
   설치 뒤 데스크톱 데이터베이스를 갱신합니다. AppImage의 `AppRun`은 `%u`를 남긴 채 항목을
   `~/.local/share/applications`에 쓰고, tarball 설치에는 런처가 직접 항목을 씁니다. 런처는 시작할 때마다
-  `xdg-mime default ai.redrob.launcher.desktop x-scheme-handler/redrob`로 자기 항목을 기본 처리기로 둡니다
+  두 스킴 모두 `xdg-mime default ai.redrob.launcher.desktop x-scheme-handler/<스킴>`으로 자기 항목을 기본 처리기로 둡니다
   (`crates/native/src/url_scheme.rs`).
-- **macOS:** `Info.plist`가 `redrob` 스킴을 선언합니다(`CFBundleURLTypes`). macOS는 링크를 `kAEGetURL`
+- **macOS:** `Info.plist`가 `redrob-launcher`, `redrob` 스킴을 선언합니다(`CFBundleURLTypes`). macOS는 링크를 `kAEGetURL`
   Apple Event로 보내고, `apps/redrob-launcher/src/url_event.rs`가 받습니다.
-- **Windows:** `HKCU\Software\Classes\redrob`(`URL Protocol`, `shell\open\command` = `"<exe>" "%1"`).
-  설치 프로그램이 쓰고, 런처도 시작할 때 다른 곳을 가리키면(포터블 zip, 옮긴 설치) 다시 씁니다. 사용자
-  단위라 관리자 권한이 필요 없습니다. 제거 프로그램이 지웁니다.
+- **Windows:** `HKCU\Software\Classes\redrob-launcher`와 `...\Classes\redrob`(`URL Protocol`,
+  `shell\open\command` = `"<exe>" "%1"`). 설치 프로그램이 쓰고, 런처도 시작할 때 다른 곳을 가리키면(포터블
+  zip, 옮긴 설치) 다시 씁니다. 사용자 단위라 관리자 권한이 필요 없습니다. 제거 프로그램이 지웁니다. 런처는
+  시작할 때마다 두 스킴에 대해 다른 앱을 가리키는 사용자 선택(`...\Shell\Associations\UrlAssociations\<스킴>\UserChoice`)을
+  지우고, 옛 Redrob Browser의 `Capabilities\URLAssociations` 값(`RedrobHTML` ProgId)도 지웁니다. 사용자
+  선택이 클래스 키보다 우선하기 때문입니다.
 
 개발 빌드(`cargo run`)는 등록하지 않으므로 설치된 런처의 링크를 가로채지 않습니다.
 

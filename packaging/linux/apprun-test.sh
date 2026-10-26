@@ -49,7 +49,7 @@ grep -Fxq "$expected_exec" "$DESKTOP" || fail "Exec not rewritten: $(grep '^Exec
 grep -q '^TryExec=' "$DESKTOP" && fail "TryExec kept, the entry would be hidden"
 grep -Fxq "Icon=$APP_ID" "$DESKTOP" || fail "Icon line lost"
 grep -Fxq 'Categories=Utility;PackageManager;' "$DESKTOP" || fail "metadata lines lost"
-grep -Fxq 'MimeType=x-scheme-handler/redrob;' "$DESKTOP" || fail "redrob: scheme handler lost"
+grep -Fxq 'MimeType=x-scheme-handler/redrob-launcher;x-scheme-handler/redrob;' "$DESKTOP" || fail "link scheme handlers lost"
 if command -v desktop-file-validate >/dev/null; then
   desktop-file-validate "$DESKTOP" || fail "generated desktop entry is invalid"
 fi
