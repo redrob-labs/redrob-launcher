@@ -7,6 +7,7 @@
 //! done, like `engine.rs`: the UI sees [`DeskState`] snapshots and never waits. The daemon record's
 //! secret stays in this module.
 
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::{Duration, Instant};
@@ -111,6 +112,42 @@ pub struct Desk {
     /// A request (start, sign-in, approve...) is running.
     busy: Arc<AtomicBool>,
     last_error: Arc<Mutex<Option<String>>>,
+    /// `~/.redrob/desk/settings.json` (`%USERPROFILE%\.redrob\desk\settings.json` on Windows).
+    settings: Option<PathBuf>,
+    /// Its `allowAutoAll`, read once and kept as written.
+    auto_all: bool,
+}
+
+/// The desk settings file the daemon reads: `~/.redrob/desk/settings.json`.
+fn settings_path() -> Option<PathBuf> {
+    Some(dirs::home_dir()?.join(".redrob").join("desk").join("settings.json"))
+}
+
+/// `allowAutoAll` from the settings file: false when the file, the key or a boolean is missing.
+fn read_auto_all(path: &Path) -> bool {
+    std::fs::read_to_string(path)
+        .ok()
+        .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
+        .and_then(|v| v.get("allowAutoAll").and_then(serde_json::Value::as_bool))
+        .unwrap_or(false)
+}
+
+/// Sets `allowAutoAll`, keeping every other key. The folder is made if missing and the file is
+/// replaced in one rename. A file that isn't a JSON object is left alone rather than overwritten.
+fn write_auto_all(path: &Path, on: bool) -> Result<(), String> {
+    let mut object = match std::fs::read_to_string(path) {
+        Ok(text) if text.trim().is_empty() => serde_json::Map::new(),
+        Ok(text) => match serde_json::from_str::<serde_json::Value>(&text) {
+            Ok(serde_json::Value::Object(map)) => map,
+            _ => return Err(format!("{} isn't a settings file", path.display())),
+        },
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => serde_json::Map::new(),
+        Err(e) => return Err(format!("couldn't read {} ({e})", path.display())),
+    };
+    object.insert("allowAutoAll".into(), serde_json::Value::Bool(on));
+    let mut text = serde_json::to_string_pretty(&serde_json::Value::Object(object)).map_err(|e| e.to_string())?;
+    text.push('\n');
+    crate::paths::write_atomic(path, text.as_bytes())
 }
 
 impl Desk {
@@ -119,6 +156,7 @@ impl Desk {
     }
 
     pub fn new(ops: Arc<dyn Ops + Send + Sync>, wake: Wake) -> Self {
+        let settings = settings_path();
         Self {
             ops,
             wake,
@@ -126,6 +164,8 @@ impl Desk {
             looking: Arc::new(AtomicBool::new(false)),
             busy: Arc::new(AtomicBool::new(false)),
             last_error: Arc::new(Mutex::new(None)),
+            auto_all: settings.as_deref().is_some_and(read_auto_all),
+            settings,
         }
     }
 
@@ -268,5 +308,27 @@ impl DeskBackend for Desk {
 
     fn last_error(&self) -> Option<String> {
         self.last_error.lock().unwrap_or_else(PoisonError::into_inner).clone()
+    }
+
+    fn allow_auto_all(&self) -> bool {
+        self.auto_all
+    }
+
+    fn set_allow_auto_all(&mut self, on: bool) {
+        let result = match &self.settings {
+            Some(path) => write_auto_all(path, on),
+            None => Err("no home folder".into()),
+        };
+        let error = match result {
+            Ok(()) => {
+                self.auto_all = on;
+                None
+            }
+            Err(e) => {
+                log::warn!("desk: {e}");
+                Some(format!("Couldn't save the Auto all setting: {e}"))
+            }
+        };
+        *self.last_error.lock().unwrap_or_else(PoisonError::into_inner) = error;
     }
 }

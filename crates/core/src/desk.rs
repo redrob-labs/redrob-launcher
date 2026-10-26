@@ -218,4 +218,13 @@ pub trait DeskBackend {
     fn revoke(&mut self, id: &str);
     /// What the last request said when it failed, in plain words; cleared by the next one.
     fn last_error(&self) -> Option<String>;
+    /// Whether work sent from the phone or the web may run with Auto all (no questions at all):
+    /// `allowAutoAll` in `~/.redrob/desk/settings.json`, false when missing. Only the launcher
+    /// writes it; the daemon reads it on every request.
+    fn allow_auto_all(&self) -> bool {
+        false
+    }
+    /// Writes `allowAutoAll`, keeping the file's other keys. A failure shows in
+    /// [`DeskBackend::last_error`].
+    fn set_allow_auto_all(&mut self, _on: bool) {}
 }
