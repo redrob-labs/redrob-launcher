@@ -7,13 +7,14 @@
 //! done, like `engine.rs`: the UI sees [`DeskState`] snapshots and never waits. The daemon record's
 //! secret stays in this module.
 
+use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::{Duration, Instant};
 
 use redrob_engine_client as engine;
-use redrob_launcher_core::desk::{self, DeskBackend, DeskLogin, DeskState, MAX_STATUS_BYTES, POLL_SECS};
+use redrob_launcher_core::desk::{self, AutoAllEvent, DeskBackend, DeskLogin, DeskState, MAX_EVENTS_BYTES, MAX_STATUS_BYTES, POLL_SECS};
 
 use crate::account::Wake;
 
@@ -116,6 +117,8 @@ pub struct Desk {
     settings: Option<PathBuf>,
     /// Its `allowAutoAll`, read once and kept as written.
     auto_all: bool,
+    /// The newest `auto_all_on` lines of `~/.redrob/desk/events.jsonl`, re-read with each look.
+    events: Arc<Mutex<Option<Vec<AutoAllEvent>>>>,
 }
 
 /// The desk settings file the daemon reads: `~/.redrob/desk/settings.json`.
@@ -123,13 +126,37 @@ fn settings_path() -> Option<PathBuf> {
     Some(dirs::home_dir()?.join(".redrob").join("desk").join("settings.json"))
 }
 
-/// `allowAutoAll` from the settings file: false when the file, the key or a boolean is missing.
+/// The events file Redrob Code appends to: `~/.redrob/desk/events.jsonl`.
+fn events_path() -> Option<PathBuf> {
+    Some(dirs::home_dir()?.join(".redrob").join("desk").join("events.jsonl"))
+}
+
+/// The newest `auto_all_on` lines from the last [`MAX_EVENTS_BYTES`] of the events file; none
+/// when it is missing.
+fn read_events(path: &Path) -> Vec<AutoAllEvent> {
+    let Ok(mut file) = std::fs::File::open(path) else { return Vec::new() };
+    let len = file.metadata().map(|m| m.len()).unwrap_or(0);
+    let from = len.saturating_sub(MAX_EVENTS_BYTES);
+    if file.seek(SeekFrom::Start(from)).is_err() {
+        return Vec::new();
+    }
+    let mut bytes = Vec::new();
+    if file.take(MAX_EVENTS_BYTES).read_to_end(&mut bytes).is_err() {
+        return Vec::new();
+    }
+    let text = String::from_utf8_lossy(&bytes);
+    // A cut first line is half a record.
+    let text = if from > 0 { text.split_once('\n').map_or("", |(_, rest)| rest) } else { &text };
+    desk::parse_auto_all_events(text)
+}
+
+/// `allowAutoAll` from the settings file: true unless it says `false`.
 fn read_auto_all(path: &Path) -> bool {
     std::fs::read_to_string(path)
         .ok()
         .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
         .and_then(|v| v.get("allowAutoAll").and_then(serde_json::Value::as_bool))
-        .unwrap_or(false)
+        .unwrap_or(true)
 }
 
 /// Sets `allowAutoAll`, keeping every other key. The folder is made if missing and the file is
@@ -164,8 +191,9 @@ impl Desk {
             looking: Arc::new(AtomicBool::new(false)),
             busy: Arc::new(AtomicBool::new(false)),
             last_error: Arc::new(Mutex::new(None)),
-            auto_all: settings.as_deref().is_some_and(read_auto_all),
+            auto_all: settings.as_deref().is_none_or(read_auto_all),
             settings,
+            events: Arc::new(Mutex::new(None)),
         }
     }
 
@@ -238,10 +266,18 @@ impl DeskBackend for Desk {
         };
         if due && !self.looking.swap(true, Ordering::SeqCst) {
             let (ops, snapshot, looking, wake) = (self.ops.clone(), self.snapshot.clone(), self.looking.clone(), self.wake.clone());
+            let events = self.events.clone();
             std::thread::spawn(move || {
                 let fresh = Self::look_now(ops.as_ref());
-                let changed = snapshot.lock().unwrap_or_else(PoisonError::into_inner).state != fresh;
+                let mut changed = snapshot.lock().unwrap_or_else(PoisonError::into_inner).state != fresh;
                 Self::store(&snapshot, fresh);
+                let read = events_path().as_deref().map(read_events).unwrap_or_default();
+                let mut kept = events.lock().unwrap_or_else(PoisonError::into_inner);
+                if kept.as_ref() != Some(&read) {
+                    *kept = Some(read);
+                    changed = true;
+                }
+                drop(kept);
                 looking.store(false, Ordering::SeqCst);
                 if changed {
                     wake();
@@ -312,6 +348,10 @@ impl DeskBackend for Desk {
 
     fn allow_auto_all(&self) -> bool {
         self.auto_all
+    }
+
+    fn auto_all_events(&self) -> Option<Vec<AutoAllEvent>> {
+        self.events.lock().unwrap_or_else(PoisonError::into_inner).clone()
     }
 
     fn set_allow_auto_all(&mut self, on: bool) {

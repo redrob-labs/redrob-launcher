@@ -196,6 +196,40 @@ pub fn view(state: &DeskState) -> DeskView {
     }
 }
 
+/// At most this many "Auto all went on" lines are shown.
+pub const MAX_AUTO_ALL_EVENTS: usize = 5;
+/// The tail of `~/.redrob/desk/events.jsonl` read for them.
+pub const MAX_EVENTS_BYTES: u64 = 64 * 1024;
+
+/// A session from the phone or the web went to Auto all: one `auto_all_on` line Redrob Code
+/// appended to `~/.redrob/desk/events.jsonl` (`{ ts, type, sessionId, device? }`).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct AutoAllEvent {
+    /// Unix seconds.
+    pub at: i64,
+    /// The device's name or id as the relay knew it; empty when it sent none.
+    pub device: String,
+    pub session: String,
+}
+
+/// The newest [`MAX_AUTO_ALL_EVENTS`] `auto_all_on` lines, newest first. Lines that aren't JSON,
+/// are another type or carry no usable time are skipped.
+pub fn parse_auto_all_events(text: &str) -> Vec<AutoAllEvent> {
+    let mut events: Vec<AutoAllEvent> = text
+        .lines()
+        .filter_map(|line| serde_json::from_str::<serde_json::Value>(line.trim()).ok())
+        .filter(|v| v.get("type").and_then(serde_json::Value::as_str) == Some("auto_all_on"))
+        .filter_map(|v| {
+            let at = v.get("ts").and_then(serde_json::Value::as_str).and_then(crate::time::parse_rfc3339)?;
+            let text = |key: &str| v.get(key).and_then(serde_json::Value::as_str).map(clean_name).unwrap_or_default();
+            Some(AutoAllEvent { at, device: text("device"), session: text("sessionId") })
+        })
+        .collect();
+    events.reverse();
+    events.truncate(MAX_AUTO_ALL_EVENTS);
+    events
+}
+
 /// The pending devices whose code isn't in `seen`: each gets one notification and brings the
 /// launcher forward once.
 pub fn new_pending<'a>(seen: &BTreeSet<String>, status: &'a DeskStatus) -> Vec<&'a PendingDevice> {
@@ -219,12 +253,16 @@ pub trait DeskBackend {
     /// What the last request said when it failed, in plain words; cleared by the next one.
     fn last_error(&self) -> Option<String>;
     /// Whether work sent from the phone or the web may run with Auto all (no questions at all):
-    /// `allowAutoAll` in `~/.redrob/desk/settings.json`, false when missing. Only the launcher
-    /// writes it; the daemon reads it on every request.
+    /// `allowAutoAll` in `~/.redrob/desk/settings.json`, true when missing: only `false` blocks
+    /// it. Only the launcher writes it; the daemon reads it on every request.
     fn allow_auto_all(&self) -> bool {
-        false
+        true
     }
     /// Writes `allowAutoAll`, keeping the file's other keys. A failure shows in
     /// [`DeskBackend::last_error`].
     fn set_allow_auto_all(&mut self, _on: bool) {}
+    /// The newest sessions that went to Auto all, newest first; `None` until the file was read.
+    fn auto_all_events(&self) -> Option<Vec<AutoAllEvent>> {
+        None
+    }
 }
