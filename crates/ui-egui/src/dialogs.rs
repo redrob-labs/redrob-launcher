@@ -31,6 +31,7 @@ impl LauncherUi {
                 Dialog::Notes(id) => self.notes_dialog(ui, id),
                 Dialog::ConfirmUninstall(id) => self.uninstall_dialog(ui, id),
                 Dialog::LauncherUpdate(r) => self.launcher_update_dialog(ui, r),
+                Dialog::ConfirmAutoAll => self.auto_all_dialog(ui),
             }
         });
         if close || response.should_close() {
@@ -269,6 +270,28 @@ impl LauncherUi {
         Self::modal_foot(ui, width, |ui| {
             if widgets::button(ui, tl!("Uninstall"), Kind::Danger, 110.0).clicked() {
                 self.send(Command::Uninstall { app: id.to_string() });
+                close = true;
+            }
+            if widgets::button(ui, tl!("Cancel"), Kind::Secondary, 90.0).clicked() {
+                close = true;
+            }
+        });
+        close
+    }
+
+    /// "Turn on Auto all from phone?": what it lets the phone and the web do, then Turn on or
+    /// Cancel. Closing it any other way leaves it off.
+    fn auto_all_dialog(&mut self, ui: &mut egui::Ui) -> bool {
+        let width = Self::modal_width(ui, 480.0);
+        let mut close = Self::modal_head(ui, width, crate::icons::app(crate::desk::CODE_APP), tl!("Turn on Auto all from phone?"), "", true);
+        Self::modal_body(ui, width, |ui| {
+            Self::body_text(ui, tl!("Work sent from your phone or the web will run commands and change files on this PC without asking."));
+            ui.add_space(theme::space::S3);
+            Self::body_text(ui, tl!("You can turn it off here at any time."));
+        });
+        Self::modal_foot(ui, width, |ui| {
+            if widgets::button(ui, tl!("Turn on"), Kind::Primary, 90.0).clicked() {
+                self.desk_allow_auto_all();
                 close = true;
             }
             if widgets::button(ui, tl!("Cancel"), Kind::Secondary, 90.0).clicked() {
