@@ -140,16 +140,25 @@ fi
 
 # ---- DMG ---------------------------------------------------------------------------------------
 echo "==> building $DMG"
-STAGE="$WORK/dmg"
-mkdir -p "$STAGE"
-ditto "$APP" "$STAGE/$APP_NAME.app"
-ln -s /Applications "$STAGE/Applications"
-rm -f "$DMG" "$WORK/raw.dmg"
-# makehybrid + convert builds the image without attaching a device, unlike `create -srcfolder`,
-# which is flaky on CI runners ("Resource busy") and hangs in sandboxed sessions.
-hdiutil makehybrid -hfs -hfs-volume-name "$APP_NAME $VERSION" -hfs-openfolder "$STAGE" -o "$WORK/raw.dmg" "$STAGE"
-hdiutil convert "$WORK/raw.dmg" -format UDZO -imagekey zlib-level=9 -o "$DMG"
-rm -f "$WORK/raw.dmg"
+rm -f "$DMG"
+# dmgbuild writes the Finder window layout (background arrow, icon places, no toolbar) that
+# makehybrid can't. Pinned, into a private venv so nothing else on the runner changes.
+DMGBUILD_VENV="$WORK/dmgbuild-venv"
+if [ ! -x "$DMGBUILD_VENV/bin/dmgbuild" ]; then
+  python3 -m venv "$DMGBUILD_VENV"
+  "$DMGBUILD_VENV/bin/pip" install -q dmgbuild==1.6.7 ds_store==1.3.3 mac_alias==2.2.3
+fi
+# It attaches a device to write the layout; CI runners sometimes answer "Resource busy", so try
+# a few times before failing.
+for attempt in 1 2 3; do
+  if "$DMGBUILD_VENV/bin/dmgbuild" -s "$HERE/dmg-settings.py" -D app="$APP" -D background="$HERE/dmg-background.png" \
+    "$APP_NAME $VERSION" "$DMG"; then
+    break
+  fi
+  [ "$attempt" = 3 ] && { echo "error: dmgbuild failed 3 times" >&2; exit 1; }
+  rm -f "$DMG"
+  sleep $((attempt * 5))
+done
 sign "$DMG"
 codesign --verify --strict --verbose=2 "$DMG"
 if [ "$NOTARIZE" = 1 ]; then
