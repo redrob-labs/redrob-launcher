@@ -783,7 +783,13 @@ pub mod macos {
         if let Some(parent) =
             existing.filter(|i| i.source == InstallSource::MacApp).and_then(|i| Path::new(&i.location).parent().map(Path::to_path_buf))
         {
-            return Ok(parent);
+            // A copy run straight from its disk image lives on a read-only volume
+            // (/Volumes/...): install the new one into Applications instead.
+            let probe = parent.join(".redrob-launcher-write-test");
+            if std::fs::write(&probe, b"").is_ok() {
+                let _ = std::fs::remove_file(&probe);
+                return Ok(parent);
+            }
         }
         let system = PathBuf::from("/Applications");
         let probe = system.join(".redrob-launcher-write-test");
