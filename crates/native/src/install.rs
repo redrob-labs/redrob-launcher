@@ -364,7 +364,7 @@ fn launch_path(app: &CraftApp, path: &Path) -> Result<PathBuf, String> {
 
 /// Moves `staged` into place at `dest`, keeping the old copy until the new one is there.
 #[allow(dead_code)]
-fn swap_into_place(staged: &Path, dest: &Path) -> Result<(), String> {
+pub(crate) fn swap_into_place(staged: &Path, dest: &Path) -> Result<(), String> {
     let old = dest.with_extension("old");
     if old.exists() {
         let _ = if old.is_dir() { std::fs::remove_dir_all(&old) } else { std::fs::remove_file(&old) };
@@ -779,7 +779,7 @@ pub mod macos {
     use super::*;
 
     /// `/Applications` when we can write there, else `~/Applications`.
-    fn applications_dir(existing: Option<&Installed>) -> Result<PathBuf, String> {
+    pub(crate) fn applications_dir(existing: Option<&Installed>) -> Result<PathBuf, String> {
         if let Some(parent) =
             existing.filter(|i| i.source == InstallSource::MacApp).and_then(|i| Path::new(&i.location).parent().map(Path::to_path_buf))
         {
