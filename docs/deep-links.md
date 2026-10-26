@@ -1,6 +1,11 @@
-# redrob:// links
+# redrob-launcher:// links
 
-Web pages (Redrob Chat, the website) open Redrob Launcher on one app with a `redrob://` link.
+Web pages (Redrob Chat, the website) open Redrob Launcher on one app with a `redrob-launcher://`
+link. The older `redrob://` spelling still works and is still registered, but pages link with
+`redrob-launcher://` first: `redrob` is not a scheme only the launcher has claimed. Redrob Browser
+0.2 to 0.4 registered it on Windows as its own launch scheme (Chromium's direct-launch scheme, now
+`redrob-browser`), and that claim survives an update, so `redrob://` can open the browser instead.
+The examples below use `redrob://`; `redrob-launcher://` takes every form.
 
 | Link | What the launcher does |
 |---|---|
@@ -24,20 +29,29 @@ a shell or a path: it names one catalog app, and the launcher does what its own 
 
 `redrob://open/code` (like the Code card's Open) also makes sure Redrob Code's shared daemon runs
 with desk on, so Redrob Chat on the web and the phone app can reach this PC: see
-[engine.md](engine.md#using-this-pc-from-the-web-and-the-phone). No new link form.
+[engine.md](engine.md#using-this-pc-from-the-web-and-the-phone).
+
+`redrob-launcher://open/code?engine=1` is Redrob Chat's "turn on Redrob Code": it doesn't start
+Code's terminal. It starts the AI engine with desk on (as above) and shows the AI engine page, where
+the desk's sign-in and devices are. Code not installed: shown with its Install button, as for open.
 
 ## How a link reaches the launcher
 
-- **Linux:** the desktop entry declares `MimeType=x-scheme-handler/redrob;` and `Exec=… %u`. The
+- **Linux:** the desktop entry declares
+  `MimeType=x-scheme-handler/redrob-launcher;x-scheme-handler/redrob;` and `Exec=… %u`. The
   deb and rpm refresh the desktop database after install. The AppImage's `AppRun` writes the entry
   to `~/.local/share/applications`, keeping `%u`; a tarball install gets one from the launcher
   itself. On every start the launcher makes its entry the default handler with `xdg-mime default
-  ai.redrob.launcher.desktop x-scheme-handler/redrob` (`crates/native/src/url_scheme.rs`).
-- **macOS:** `Info.plist` declares the `redrob` scheme (`CFBundleURLTypes`). macOS delivers the
+  ai.redrob.launcher.desktop x-scheme-handler/<scheme>` for both (`crates/native/src/url_scheme.rs`).
+- **macOS:** `Info.plist` declares the `redrob-launcher` and `redrob` schemes (`CFBundleURLTypes`). macOS delivers the
   link as a `kAEGetURL` Apple Event, which `apps/redrob-launcher/src/url_event.rs` receives.
-- **Windows:** `HKCU\Software\Classes\redrob` (`URL Protocol`, `shell\open\command` =
-  `"<exe>" "%1"`), written by the setup and again by the launcher on every start when it points
-  elsewhere (portable zip, moved install). Per-user: no admin rights. The uninstaller removes it.
+- **Windows:** `HKCU\Software\Classes\redrob-launcher` and `...\Classes\redrob` (`URL Protocol`,
+  `shell\open\command` = `"<exe>" "%1"`), written by the setup and again by the launcher on every
+  start when they point elsewhere (portable zip, moved install). Per-user: no admin rights. The
+  uninstaller removes them. On every start the launcher also forgets a recorded user choice for
+  either scheme (`...\Shell\Associations\UrlAssociations\<scheme>\UserChoice`) that names another
+  app, and drops an old Redrob Browser's `Capabilities\URLAssociations` value for them (a
+  `RedrobHTML` ProgId): a recorded choice beats the class key.
 
 Development builds (`cargo run`) never register, so they don't take links from an installed
 launcher.

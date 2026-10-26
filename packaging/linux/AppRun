@@ -36,9 +36,9 @@ integrate() {
   [ -f "$src_desktop" ] || return 0
 
   # Rewrite Exec to this AppImage (the binary is not on the host PATH), keeping %u so
-  # redrob:// links (MimeType=x-scheme-handler/redrob) reach it, and drop TryExec, which
+  # redrob-launcher:// and redrob:// links (MimeType) reach it, and drop TryExec, which
   # would hide the entry; everything else is shipped as packaged. The launcher itself
-  # makes it the default redrob: handler (url_scheme.rs).
+  # makes it the default handler of both (url_scheme.rs).
   apps="$data/applications"
   mkdir -p "$apps" 2>/dev/null || return 0
   tmp="$apps/.$DESK_ID.tmp.$$"

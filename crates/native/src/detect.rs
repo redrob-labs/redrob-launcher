@@ -212,7 +212,7 @@ pub mod windows {
                 let location = text("InstallLocation")
                     .map(|l| PathBuf::from(l.trim_matches('"')))
                     .or_else(|| uninstall_string.as_deref().and_then(command_path).and_then(|p| p.parent().map(Path::to_path_buf)));
-                let icon = text("DisplayIcon").and_then(|i| icon_exe(app, &i));
+                let icon = text("DisplayIcon").and_then(|i| icon_exe(app, &i, location.as_deref()));
                 let exe = icon.or_else(|| exe_path(app, location));
                 out.push(MsiInstall { product_code: code, version, exe, uninstall_string });
             }
@@ -241,8 +241,9 @@ pub mod windows {
     }
 
     /// The exe a `DisplayIcon` value points at (`"C:\...\redrob.exe",0`), when it is this app's exe
-    /// and is there.
-    fn icon_exe(app: &CraftApp, icon: &str) -> Option<PathBuf> {
+    /// and is there. A shared name (`redrob.exe` is Code's and Office's, `chrome.exe` was the
+    /// browser's) only counts in the entry's own folder or one of the app's known folders.
+    fn icon_exe(app: &CraftApp, icon: &str, location: Option<&Path>) -> Option<PathBuf> {
         let mut s = icon.trim();
         if let Some(rest) = s.strip_prefix('"') {
             s = rest.split('"').next()?;
@@ -251,8 +252,23 @@ pub mod windows {
         }
         let p = PathBuf::from(s.trim());
         let name = p.file_name()?.to_str()?;
-        let ours = windows_exe_names(app).iter().any(|n| n.eq_ignore_ascii_case(name));
+        let named = windows_exe_names(app).iter().any(|n| n.eq_ignore_ascii_case(name));
+        let ours = named && (!is_shared_name(app, name) || location.is_some_and(|l| p.parent() == Some(l)) || in_known_dir(app, &p));
         (ours && p.is_file()).then_some(p)
+    }
+
+    /// Whether `name` is an exe name another Redrob app may use too: anything but `<id>.exe` and
+    /// `<name>.exe`.
+    fn is_shared_name(app: &CraftApp, name: &str) -> bool {
+        !name.eq_ignore_ascii_case(&format!("{}.exe", app.id)) && !name.eq_ignore_ascii_case(&format!("{}.exe", app.name))
+    }
+
+    /// Whether `exe` is in one of `app`'s known folders (or their `bin\`), case aside.
+    fn in_known_dir(app: &CraftApp, exe: &Path) -> bool {
+        let Some(parent) = exe.parent() else { return false };
+        let lower = |p: &Path| p.to_string_lossy().trim_end_matches('\\').to_lowercase();
+        let parent = lower(parent);
+        known_dirs(app).iter().any(|d| parent == lower(d) || parent == lower(&d.join("bin")))
     }
 
     /// Folders an app is known to install into besides the recorded one and Program Files:
@@ -288,8 +304,8 @@ pub mod windows {
                 {
                     let p = PathBuf::from(path.trim_matches('"'));
                     // App Paths for a shared name (chrome.exe, redrob.exe) may be another app's: it
-                    // must be in one of this app's folders.
-                    let ours = *exe == format!("{}.exe", app.id) || known_dirs(app).iter().any(|d| p.starts_with(d));
+                    // must be right in one of this app's folders.
+                    let ours = !is_shared_name(app, exe) || in_known_dir(app, &p);
                     if ours && p.is_file() {
                         return Some(p);
                     }
