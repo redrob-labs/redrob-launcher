@@ -167,8 +167,15 @@ pub enum DeskView {
     /// An older Redrob Code: update it to use this.
     NeedsUpdate,
     /// Not signed in. `login` is the sign-in waiting in the browser, if one started.
-    SignIn { login: Option<DeskLogin> },
-    Ready { email: Option<String>, enabled: bool, connected: bool, devices: Vec<DeskDevice> },
+    SignIn {
+        login: Option<DeskLogin>,
+    },
+    Ready {
+        email: Option<String>,
+        enabled: bool,
+        connected: bool,
+        devices: Vec<DeskDevice>,
+    },
     Problem(String),
 }
 
