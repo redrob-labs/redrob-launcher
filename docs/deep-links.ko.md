@@ -21,6 +21,10 @@
 브라우저는 링크를 런처에 넘기기 전에 사용자에게 묻습니다. 링크의 어떤 것도 셸이나 경로에 닿지 않습니다.
 링크는 카탈로그 앱 하나를 가리킬 뿐이고, 런처는 자기 버튼이 하는 일을 합니다.
 
+`redrob://open/code`는 Code 카드의 열기와 마찬가지로 Redrob Code의 공용 데몬이 desk를 켠 채 실행되게
+합니다. 그래서 웹의 레드롭 챗과 폰 앱이 이 PC에 연결할 수 있습니다([engine.md](engine.md#using-this-pc-from-the-web-and-the-phone)).
+새 링크 형식은 없습니다.
+
 ## 링크가 런처에 닿는 길
 
 - **Linux:** 데스크톱 항목이 `MimeType=x-scheme-handler/redrob;`와 `Exec=… %u`를 선언합니다. deb와 rpm은

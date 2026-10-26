@@ -246,4 +246,9 @@ pub trait Backend {
     fn channels(&mut self) -> Option<&mut dyn crate::channels::ChannelsBackend> {
         None
     }
+    /// Using this PC from the web and the phone through the engine's desk relay, where the
+    /// backend can reach the daemon (desktop only).
+    fn desk(&mut self) -> Option<&mut dyn crate::desk::DeskBackend> {
+        None
+    }
 }

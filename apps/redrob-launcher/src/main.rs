@@ -534,6 +534,10 @@ impl Launcher {
                 }
             }
         }
+        if self.ui.take_bring_to_front() {
+            // A device asks to connect: its prompt waits in the window.
+            requests.push(Request::Show);
+        }
         if let Some(t) = self.tray.as_mut() {
             t.set_updates(self.ui.update_count());
         }

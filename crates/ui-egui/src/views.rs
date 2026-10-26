@@ -541,7 +541,11 @@ impl LauncherUi {
         ui.add_space(CARD_ACTIONS_GAP);
         // The version alone, in the lightest ink, with no release date. A narrow tile cuts it short;
         // egui then shows the whole line on hover.
-        ui.add(egui::Label::new(RichText::new(version_line(&entry, &status)).font(meta_font).color(t.faint)).truncate());
+        // Redrob Code's card says whether the web and the phone can use this PC instead, when
+        // there is something to say.
+        if !(app.id == crate::desk::CODE_APP && self.desk_card_line(ui, &meta_font)) {
+            ui.add(egui::Label::new(RichText::new(version_line(&entry, &status)).font(meta_font).color(t.faint)).truncate());
+        }
         ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
             ui.horizontal(|ui| self.actions(ui, &entry, &status, inner.width()));
         });

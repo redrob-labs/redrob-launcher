@@ -22,6 +22,10 @@ longer than 256 characters) opens the launcher's home and does nothing more. The
 The browser asks the person before it hands a link to the launcher. Nothing from the link reaches
 a shell or a path: it names one catalog app, and the launcher does what its own buttons do.
 
+`redrob://open/code` (like the Code card's Open) also makes sure Redrob Code's shared daemon runs
+with desk on, so Redrob Chat on the web and the phone app can reach this PC: see
+[engine.md](engine.md#using-this-pc-from-the-web-and-the-phone). No new link form.
+
 ## How a link reaches the launcher
 
 - **Linux:** the desktop entry declares `MimeType=x-scheme-handler/redrob;` and `Exec=… %u`. The

@@ -11,6 +11,7 @@ pub mod account;
 pub mod app_icons;
 pub mod backend;
 pub mod channels;
+pub mod desk;
 pub mod desktop_entry;
 pub mod detect;
 pub mod device;
