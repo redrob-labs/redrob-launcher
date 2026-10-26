@@ -102,6 +102,8 @@ pub struct NativeBackend {
     engine: crate::engine::Engine,
     /// The engine's chat channels and bridged apps.
     channels: crate::channels::Channels,
+    /// Using this PC from the web and the phone through the engine's desk relay.
+    desk: crate::desk::Desk,
 }
 
 impl NativeBackend {
@@ -153,6 +155,7 @@ impl NativeBackend {
         let models = crate::models::Models::desktop(http.clone(), shared.waker.clone());
         let engine = crate::engine::Engine::desktop(shared.waker.clone());
         let channels = crate::channels::Channels::desktop(shared.waker.clone());
+        let desk = crate::desk::Desk::desktop(shared.waker.clone());
         let backend = Self {
             shared,
             paths,
@@ -164,6 +167,7 @@ impl NativeBackend {
             models,
             engine,
             channels,
+            desk,
         };
         for (app, png) in crate::app_icons::cached(&backend.paths.icons()) {
             backend.shared.emit(Event::Icon { app, png });
@@ -1030,6 +1034,10 @@ impl Backend for NativeBackend {
     fn channels(&mut self) -> Option<&mut dyn redrob_launcher_core::channels::ChannelsBackend> {
         Some(&mut self.channels)
     }
+
+    fn desk(&mut self) -> Option<&mut dyn redrob_launcher_core::desk::DeskBackend> {
+        Some(&mut self.desk)
+    }
 }
 
 /// The launcher's own download for this machine, for "a new launcher is available".
@@ -1290,6 +1298,7 @@ mod tests {
         let models = crate::models::Models::new(Vec::new(), None, Arc::new(|| {}), Arc::new(|_: &str| None));
         let engine = crate::engine::Engine::desktop(Arc::new(|| {}));
         let channels = crate::channels::Channels::desktop(Arc::new(|| {}));
+        let desk = crate::desk::Desk::desktop(Arc::new(|| {}));
         NativeBackend {
             shared,
             paths: Paths::under(root),
@@ -1301,6 +1310,7 @@ mod tests {
             models,
             engine,
             channels,
+            desk,
         }
     }
 
