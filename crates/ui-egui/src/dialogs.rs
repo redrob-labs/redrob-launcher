@@ -16,6 +16,11 @@ const MODAL_ICON: f32 = 40.0;
 
 impl LauncherUi {
     pub(crate) fn dialogs(&mut self, ctx: &egui::Context) {
+        // A device asking to connect comes before anything else: it waits on the person.
+        if self.desk.asking.is_some() {
+            self.desk_prompt(ctx);
+            return;
+        }
         let Some(dialog) = self.dialog.clone() else {
             self.alert_popup(ctx);
             return;
@@ -132,6 +137,37 @@ impl LauncherUi {
     fn body_text(ui: &mut egui::Ui, text: &str) {
         let t = Tokens::get(ui.ctx());
         ui.add(egui::Label::new(RichText::new(text).size(theme::text::CONTROL).color(t.muted)).wrap());
+    }
+
+    /// "Allow this device once": the device's name and kind, the 6-digit code it also shows, and
+    /// Allow / Deny. Only an answer closes it (or the device going away).
+    fn desk_prompt(&mut self, ctx: &egui::Context) {
+        let Some(p) = self.desk.asking.clone() else { return };
+        let t = Tokens::get(ctx);
+        let mut answer: Option<bool> = None;
+        let _ = Self::modal("desk-pending", ctx).show(ctx, |ui| {
+            let width = Self::modal_width(ui, 480.0);
+            let kind = crate::desk::kind_label(p.kind);
+            Self::modal_head(ui, width, crate::icons::app(crate::desk::CODE_APP), tl!("Allow this device?"), kind, false);
+            Self::modal_body(ui, width, |ui| {
+                Self::body_text(ui, &fmt(tl!("{name} wants to connect to this PC."), &[("name", &crate::desk::device_name(&p))]));
+                ui.add_space(theme::space::S4);
+                ui.label(RichText::new(&p.code).size(theme::text::TITLE_2).family(theme::medium()).color(t.ink_strong));
+                ui.add_space(theme::space::S3);
+                Self::body_text(ui, tl!("Check that the device shows the same code."));
+            });
+            Self::modal_foot(ui, width, |ui| {
+                if widgets::button(ui, tl!("Allow"), Kind::Primary, 90.0).clicked() {
+                    answer = Some(true);
+                }
+                if widgets::button(ui, tl!("Deny"), Kind::Secondary, 90.0).clicked() {
+                    answer = Some(false);
+                }
+            });
+        });
+        if let Some(allow) = answer {
+            self.desk_answer(&p.code, allow);
+        }
     }
 
     /// The first alert from the release feed the user hasn't acknowledged, as a popup.

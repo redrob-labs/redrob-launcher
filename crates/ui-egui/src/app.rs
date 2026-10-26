@@ -129,6 +129,8 @@ pub struct LauncherUi {
     pub(crate) settings_tab: crate::channels::SettingsTab,
     /// Settings > Channels, as edited.
     pub(crate) channels: crate::channels::ChannelsPanel,
+    /// Using this PC from the web and the phone: what was announced, the device asking now.
+    pub(crate) desk: crate::desk::DeskUi,
     started: bool,
     applied_theme: Option<theme::ThemeChoice>,
     /// Fonts registered with `set_fonts` only exist from the next frame on; drawing with the named
@@ -202,6 +204,7 @@ impl LauncherUi {
             dialog: None,
             settings_tab: crate::channels::SettingsTab::default(),
             channels: crate::channels::ChannelsPanel::default(),
+            desk: crate::desk::DeskUi::default(),
             started: false,
             applied_theme: None,
             fonts_ready: false,
@@ -314,7 +317,13 @@ impl LauncherUi {
     }
 
     pub(crate) fn send(&mut self, command: Command) {
+        // Opening Redrob Code (its card, its menu, `redrob://open/code`) also makes sure its shared
+        // daemon runs with desk on, so the web and the phone can reach this PC.
+        let opens_code = matches!(&command, Command::Launch { app, .. } if app == crate::desk::CODE_APP);
         self.backend.send(command);
+        if opens_code {
+            self.desk_ensure();
+        }
     }
 
     pub(crate) fn toast(&mut self, ctx: &egui::Context, text: impl Into<String>, error: bool) {
@@ -382,6 +391,7 @@ impl LauncherUi {
         }
         self.engine_update_tick();
         self.resolve_link();
+        self.desk_tick(ctx, host);
         if self.restart_requested {
             // The helper is waiting for this process to exit before it starts the new launcher.
             self.restart_requested = false;
