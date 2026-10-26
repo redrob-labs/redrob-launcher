@@ -47,6 +47,12 @@ fn main() -> ExitCode {
         return ExitCode::SUCCESS;
     }
     let mut hidden = args.iter().any(|a| a == login::HIDDEN_FLAG);
+    // Opened from its disk image or Downloads: offer to move into Applications first, like other
+    // Mac apps. Not at login (hidden), where a dialog would come out of nowhere.
+    #[cfg(target_os = "macos")]
+    if !hidden && redrob_launcher_native::move_to_applications::offer() {
+        return ExitCode::SUCCESS;
+    }
     // Started by the OS for a `redrob:` link (`redrob://open/cad`): see `deep_link`.
     let link = args.iter().find(|a| deep_link::is_link(a)).cloned();
 

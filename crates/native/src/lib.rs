@@ -25,6 +25,8 @@ pub mod log_file;
 pub mod login;
 pub mod manifest;
 pub mod models;
+#[cfg(target_os = "macos")]
+pub mod move_to_applications;
 pub mod packages;
 pub mod paths;
 pub mod process;
