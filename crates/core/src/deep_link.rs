@@ -1,4 +1,10 @@
-//! `redrob://` links: web pages (Redrob Chat) open the launcher on an app.
+//! `redrob-launcher://` links (and the older `redrob://`): web pages (Redrob Chat) open the
+//! launcher on an app.
+//!
+//! The launcher's own scheme is `redrob-launcher`. `redrob` is still read, so links written before
+//! it keep working, but it is not one only the launcher claims: Redrob Browser 0.2 to 0.4 registered
+//! it as its own launch scheme on Windows, and that claim outlives an update. Pages link with
+//! `redrob-launcher://` first.
 //!
 //! - `redrob://open/<app>` starts the installed app, or shows it with its Install button when it
 //!   isn't installed;
@@ -14,11 +20,18 @@
 //! `link=<token>` (a view-link token, at most [`MAX_TOKEN`] of `[A-Za-z0-9._~-]` after
 //! percent-decoding, `--open-link`). A value that doesn't fit is dropped, as is any other
 //! parameter; the link itself still opens the app.
+//!
+//! `open/code?engine=1` doesn't start Redrob Code's terminal: it starts the AI engine with desk on
+//! (what Redrob Chat needs to reach this PC) and shows the AI engine page.
 
 use crate::catalog::{CraftApp, SUITE};
 
-/// The URL scheme the launcher registers with the OS.
-pub const SCHEME: &str = "redrob";
+/// The URL scheme the launcher registers with the OS, and the one its links are written in.
+pub const SCHEME: &str = "redrob-launcher";
+/// The scheme links used before [`SCHEME`]; still read and still registered.
+pub const LEGACY_SCHEME: &str = "redrob";
+/// Every scheme the launcher reads and registers, its own first.
+pub const SCHEMES: [&str; 2] = [SCHEME, LEGACY_SCHEME];
 /// Longer links are refused outright. Room for a `link` token of [`MAX_TOKEN`] percent-encoded.
 pub const MAX_LEN: usize = 2048;
 /// The longest `link` token passed on, decoded.
@@ -36,6 +49,9 @@ pub struct OpenArgs {
     pub file: Option<String>,
     /// `link=`: a view-link token.
     pub link: Option<String>,
+    /// `engine=1` on `open/code`: start the AI engine with desk on and show its page, instead of
+    /// starting Redrob Code. Never an argument.
+    pub engine: bool,
 }
 
 impl OpenArgs {
@@ -60,6 +76,7 @@ impl OpenArgs {
             match key {
                 "file" if args.file.is_none() && is_file_id(&value) => args.file = Some(value),
                 "link" if args.link.is_none() && is_token(&value) => args.link = Some(value),
+                "engine" if value == "1" => args.engine = true,
                 _ => {}
             }
         }
@@ -116,7 +133,7 @@ impl DeepLink {
         }
     }
 
-    /// The link's canonical spelling (`redrob://open/cad`). The query is left out: it may carry a
+    /// The link's canonical spelling (`redrob-launcher://open/cad`). The query is left out: it may carry a
     /// view-link token, and this spelling is what gets logged.
     pub fn to_url(&self) -> String {
         let (action, app) = match self {
@@ -128,22 +145,28 @@ impl DeepLink {
     }
 }
 
-/// Whether a command-line argument is a `redrob:` link at all (valid or not): the launcher was
+/// Which of [`SCHEMES`] `arg` is written in, by its length; `None` for anything else.
+fn scheme_len(arg: &str) -> Option<usize> {
+    SCHEMES
+        .iter()
+        .map(|s| (s, s.len()))
+        .find(|&(s, n)| arg.len() > n && arg.get(..n).is_some_and(|head| head.eq_ignore_ascii_case(s)) && arg.as_bytes().get(n) == Some(&b':'))
+        .map(|(_, n)| n)
+}
+
+/// Whether a command-line argument is a launcher link at all (valid or not): the launcher was
 /// started by the OS for a link, so it shows itself even when the link means nothing.
 pub fn is_link(arg: &str) -> bool {
-    let arg = arg.trim();
-    arg.len() > SCHEME.len()
-        && arg.get(..SCHEME.len()).is_some_and(|s| s.eq_ignore_ascii_case(SCHEME))
-        && arg.as_bytes().get(SCHEME.len()) == Some(&b':')
+    scheme_len(arg.trim()).is_some()
 }
 
 /// Reads a `redrob://<action>/<app>` link. `None` for anything else.
 pub fn parse(url: &str) -> Option<DeepLink> {
     let url = url.trim();
-    if url.len() > MAX_LEN || !url.is_ascii() || !is_link(url) {
+    if url.len() > MAX_LEN || !url.is_ascii() {
         return None;
     }
-    let rest = url.get(SCHEME.len() + 1..)?.strip_prefix("//")?;
+    let rest = url.get(scheme_len(url)? + 1..)?.strip_prefix("//")?;
     // The fragment carries nothing the launcher reads; the query only `open`'s allowlisted args.
     let rest = rest.split('#').next().unwrap_or_default();
     let (rest, query) = rest.split_once('?').unwrap_or((rest, ""));
@@ -264,6 +287,30 @@ mod tests {
         }
         let long = format!("redrob://open/cad?{}", "x".repeat(MAX_LEN));
         assert_eq!(parse(&long), None);
+    }
+
+    #[test]
+    fn the_launcher_scheme_reads_like_the_old_one() {
+        assert_eq!(parse("redrob-launcher://open/cad"), Some(open("redrob-cad")));
+        assert_eq!(parse("REDROB-LAUNCHER://install/cowork"), Some(DeepLink::Install(app("redrob-cowork"))));
+        assert_eq!(DeepLink::Install(app("redrob-cad")).to_url(), "redrob-launcher://install/cad");
+        assert!(is_link("redrob-launcher://open/nonexistent"));
+        assert_eq!(parse("redrob-launcherx://open/cad"), None);
+        assert_eq!(parse("redrob-launcher:open/cad"), None);
+    }
+
+    #[test]
+    fn engine_on_open_code_is_a_flag_never_an_argument() {
+        for url in ["redrob-launcher://open/code?engine=1", "redrob://open/code?engine=1&x=2"] {
+            let Some(DeepLink::Open(a, args)) = parse(url) else { panic!("{url}") };
+            assert_eq!(a.id, "redrob-code");
+            assert!(args.engine, "{url}");
+            assert!(args.to_args().is_empty(), "{url}");
+        }
+        for query in ["engine=0", "engine=", "engine=true", "engine=1%20"] {
+            let Some(DeepLink::Open(_, args)) = parse(&format!("redrob-launcher://open/code?{query}")) else { panic!("{query}") };
+            assert!(!args.engine, "{query}");
+        }
     }
 
     #[test]

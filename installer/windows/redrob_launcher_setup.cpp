@@ -196,9 +196,10 @@ constexpr wchar_t kArpKey[] = L"Software\\Microsoft\\Windows\\CurrentVersion\\Un
 // The launcher's own key: InstallDir (self_update.rs), Language (language.rs), DesktopShortcutChoice.
 constexpr wchar_t kLauncherKey[] = L"Software\\Redrob\\Redrob Launcher";
 constexpr wchar_t kAppPathsKey[] = L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\redrob-launcher.exe";
-// The redrob:// URL scheme (docs/deep-links.md): web pages open the launcher on an app. The launcher
-// registers it on every start as well (url_scheme.rs), so a portable copy gets it too.
-constexpr wchar_t kUrlSchemeKey[] = L"Software\\Classes\\redrob";
+// The redrob-launcher:// URL scheme and the older redrob:// (docs/deep-links.md): web pages open the
+// launcher on an app. The launcher registers both on every start as well (url_scheme.rs), so a
+// portable copy gets them too.
+constexpr const wchar_t* kUrlSchemeKeys[] = {L"Software\\Classes\\redrob-launcher", L"Software\\Classes\\redrob"};
 
 enum class Stage { Preparing, Installing, Opening, Error, Confirm, Removing, Removed, Welcome, Language };
 enum class Mode { Install, Uninstall };
@@ -2184,24 +2185,26 @@ static std::wstring DesktopShortcut() {
   return desktop.empty() ? L"" : desktop + kShortcutName;
 }
 
-// HKCU\Software\Classes\redrob: "URL Protocol", and shell\open\command starts the launcher with the
-// link as its one argument. Per-user, so no admin rights. Must match url_scheme.rs.
+// HKCU\Software\Classes\<scheme>: "URL Protocol", and shell\open\command starts the launcher with
+// the link as its one argument. Per-user, so no admin rights. Must match url_scheme.rs.
 static void RegisterUrlScheme(const std::wstring& exe) {
-  HKEY key = nullptr;
-  if (RegCreateKeyExW(HKEY_CURRENT_USER, kUrlSchemeKey, 0, nullptr, 0, KEY_WRITE, nullptr, &key, nullptr) == ERROR_SUCCESS) {
-    SetArpString(key, nullptr, L"URL:Redrob Launcher");
-    SetArpString(key, L"URL Protocol", L"");
-    RegCloseKey(key);
-  }
-  const std::wstring icon = std::wstring(kUrlSchemeKey) + L"\\DefaultIcon";
-  if (RegCreateKeyExW(HKEY_CURRENT_USER, icon.c_str(), 0, nullptr, 0, KEY_WRITE, nullptr, &key, nullptr) == ERROR_SUCCESS) {
-    SetArpString(key, nullptr, L"\"" + exe + L"\",0");
-    RegCloseKey(key);
-  }
-  const std::wstring command = std::wstring(kUrlSchemeKey) + L"\\shell\\open\\command";
-  if (RegCreateKeyExW(HKEY_CURRENT_USER, command.c_str(), 0, nullptr, 0, KEY_WRITE, nullptr, &key, nullptr) == ERROR_SUCCESS) {
-    SetArpString(key, nullptr, L"\"" + exe + L"\" \"%1\"");
-    RegCloseKey(key);
+  for (const wchar_t* scheme_key : kUrlSchemeKeys) {
+    HKEY key = nullptr;
+    if (RegCreateKeyExW(HKEY_CURRENT_USER, scheme_key, 0, nullptr, 0, KEY_WRITE, nullptr, &key, nullptr) == ERROR_SUCCESS) {
+      SetArpString(key, nullptr, L"URL:Redrob Launcher");
+      SetArpString(key, L"URL Protocol", L"");
+      RegCloseKey(key);
+    }
+    const std::wstring icon = std::wstring(scheme_key) + L"\\DefaultIcon";
+    if (RegCreateKeyExW(HKEY_CURRENT_USER, icon.c_str(), 0, nullptr, 0, KEY_WRITE, nullptr, &key, nullptr) == ERROR_SUCCESS) {
+      SetArpString(key, nullptr, L"\"" + exe + L"\",0");
+      RegCloseKey(key);
+    }
+    const std::wstring command = std::wstring(scheme_key) + L"\\shell\\open\\command";
+    if (RegCreateKeyExW(HKEY_CURRENT_USER, command.c_str(), 0, nullptr, 0, KEY_WRITE, nullptr, &key, nullptr) == ERROR_SUCCESS) {
+      SetArpString(key, nullptr, L"\"" + exe + L"\" \"%1\"");
+      RegCloseKey(key);
+    }
   }
 }
 
@@ -2351,7 +2354,7 @@ DWORD SetupApp::RunUninstall() {
   if (!desktop.empty()) DeleteFileW(desktop.c_str());
   RegDeleteTreeW(HKEY_CURRENT_USER, kArpKey);
   RegDeleteTreeW(HKEY_CURRENT_USER, kAppPathsKey);
-  RegDeleteTreeW(HKEY_CURRENT_USER, kUrlSchemeKey);
+  for (const wchar_t* scheme_key : kUrlSchemeKeys) RegDeleteTreeW(HKEY_CURRENT_USER, scheme_key);
   // The folder is gone, so the launcher's record of it goes too; the language and the shortcut choice
   // stay so the next install preselects them (and the launcher's shared language file is untouched).
   HKEY key = nullptr;
